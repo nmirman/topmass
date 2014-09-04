@@ -51,14 +51,37 @@ Fitter::Fitter(){
    compute_profile = false;
 
    // gaussian process length scales
+/*
+   lxx = 3.0; gn1 = 1.5; gn2 = 12.0;
+
    dists[ "mbl" ] = Distribution( "mbl", "M_{bl}", 13.0, 18.0, 1.5, 12.0 );
    dists[ "mt2_220_nomatchmbl" ] = Distribution( "mt2_220_nomatchmbl", "M_{T2} 220", 13.0, 18.0, 1.5, 12.0 );
-
+//   dists[ "maos220blv" ] = Distribution( "maos220blv","blv mass from Maos neutrinos from M_{T2} 220", 1.0, 29.0, 1.5, 565.0 );
+//   dists[ "maos220blv" ] = Distribution( "maos220blv","blv mass from Maos neutrinos from M_{T2} 220", 13.0, 13.0, 1.5, 12.0 );
+   dists[ "maos220blv" ] = Distribution( "maos220blv","blv mass from Maos neutrinos from M_{T2} 220", lxx, length_maos220, gn1, gn2 );
+*/
 }
 
 Fitter::~Fitter(){
       if (gMinuit) delete gMinuit;
       if (fFunc) delete fFunc;
+}
+
+
+void Fitter::InitializeDists(){
+   // gaussian process length scales
+
+   //lxx = 3.0; gn1 = 1.5; gn2 = 12.0;
+
+   dists[ "mbl" ] = Distribution( "mbl", "M_{bl}", 13.0, 18.0, 1.5, 12.0, 300 );
+   dists[ "mt2_220_nomatchmbl" ] = Distribution( "mt2_220_nomatchmbl", "M_{T2} 220", 13.0, 18.0, 1.5, 12.0, 300 );
+//   dists[ "maos220blv" ] = Distribution( "maos220blv","blv mass from Maos neutrinos from M_{T2} 220", 1.0, 29.0, 1.5, 565.0 );
+//   dists[ "maos220blv" ] = Distribution( "maos220blv","blv mass from Maos neutrinos from M_{T2} 220", 13.0, 13.0, 1.5, 12.0 );
+//   dists[ "maos220blv" ] = Distribution( "maos220blv","blv mass from Maos neutrinos from M_{T2} 220", 13.0, length_maos220, 1.5, 12.0, 500 );
+   dists[ "maos220blv" ] = Distribution( "maos220blv","blv mass from Maos neutrinos from M_{T2} 220", 13.0, 15.0, 1.5, 12.0, 250 );
+   dists[ "maos210blv" ] = Distribution( "maos210blv","blv mass from Maos neutrinos from M_{T2} 210", 13.0, 15.0, 1.5, 12.0, 250 );
+
+cout << "lengthmaos = " << length_maos220 << endl;
 }
 
 
@@ -69,7 +92,7 @@ Fitter::~Fitter(){
 void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
 
    // file path
-   string path = "root://cmseos:1094//eos/uscms/store/user/nmirman/Ntuples/TopMass/20140715/";
+   string path = "root://cmseos:1094//eos/uscms/store/user/nmirman/Ntuples/TopMass/20140730/";
 
    // filenames
    datasets[ "data" ]      = Dataset( path, "ntuple_data.root" );
@@ -174,13 +197,19 @@ void Fitter::ReadNtuple( string path, string process, double mcweight,
    // subset of events to use (for training, testing)
    int start = 0;
    int end = tree->GetEntries();
+   int treesize = tree->GetEntries();
+//   int treesize = min(50,(int)tree->GetEntries());
+
    if( opt == 1 ){
       start = 0;
-      end = tree->GetEntries()/2;
+//      end = tree->GetEntries()/2;
+      end = treesize/2;
    }
    if( opt == 2 ){
-      start = tree->GetEntries()/2;
-      end = tree->GetEntries();
+//      start = tree->GetEntries()/2;
+//      end = tree->GetEntries();
+      start = treesize/2;
+      end = treesize;
    }
 
    // temp
@@ -277,15 +306,67 @@ void Fitter::ReadNtuple( string path, string process, double mcweight,
 
 void Fitter::GetVariables( vector<Event>& eventvec ){
 
+int j=0;
    Mt2Calculator::Calculator Calc;
    for( vector<Event>::iterator ev = eventvec.begin(); ev < eventvec.end(); ev++){
-
+//cout << "j= "<< j<<endl;
+j++;
       Calc.SetParticles( ev->jet1, ev->jet2, ev->lep1, ev->lep2, ev->met );
 
       ev->mt2_221 = Calc.GetMt2(2,1);
       ev->mt2_220 = Calc.GetMt2(2,0);
       ev->mt2_210 = Calc.GetMt2(1,0);
       ev->mbls = Calc.GetBlInvariantMasses();
+
+      //Maos
+      //Declare variables to accept Maos values
+      //neutrino 4-vectors
+      TLorentzVector maos210_neu1p, maos210_neu1m, maos210_neu2p, maos210_neu2m;
+      TLorentzVector maos220_neu1ap, maos220_neu1am, maos220_neu2ap, maos220_neu2am, maos220_neu1bp, maos220_neu1bm, maos220_neu2bp, maos220_neu2bm;
+
+      //blv masses
+      double maos210_blv1ap, maos210_blv1am, maos210_blv2ap, maos210_blv2am, maos210_blv1bp, maos210_blv1bm, maos210_blv2bp, maos210_blv2bm;
+      double maos220_blv1ap, maos220_blv1am, maos220_blv2ap, maos220_blv2am, maos220_blv1bp, maos220_blv1bm, maos220_blv2bp, maos220_blv2bm;
+
+      //calculate values and set above variables to them; then set event variables to these
+      ev->mt2_210grid = Calc.MaosReturn210( maos210_neu1p, maos210_neu1m, maos210_neu2p, maos210_neu2m, maos210_blv1ap, maos210_blv1am, maos210_blv2ap, maos210_blv2am, maos210_blv1bp, maos210_blv1bm, maos210_blv2bp, maos210_blv2bm );
+      std::vector<double> Mt2_220grid = Calc.MaosReturn220( maos220_neu1ap, maos220_neu1am, maos220_neu2ap, maos220_neu2am, maos220_neu1bp, maos220_neu1bm, maos220_neu2bp, maos220_neu2bm, maos220_blv1ap, maos220_blv1am, maos220_blv2ap, maos220_blv2am, maos220_blv1bp, maos220_blv1bm, maos220_blv2bp, maos220_blv2bm);
+      ev->mt2_220grida = Mt2_220grid.at(0);
+      ev->mt2_220gridb = Mt2_220grid.at(1);
+
+      ev->maos210_neutrino1p = maos210_neu1p;
+      ev->maos210_neutrino1m = maos210_neu1m;
+      ev->maos210_neutrino2p = maos210_neu2p;
+      ev->maos210_neutrino2m = maos210_neu2m;
+
+      ev->maos220_neutrino1ap = maos220_neu1ap;
+      ev->maos220_neutrino1am = maos220_neu1am;
+      ev->maos220_neutrino2ap = maos220_neu2ap;
+      ev->maos220_neutrino2am = maos220_neu2am;
+      ev->maos220_neutrino1bp = maos220_neu1bp;
+      ev->maos220_neutrino1bm = maos220_neu1bm;
+      ev->maos220_neutrino2bp = maos220_neu2bp;
+      ev->maos220_neutrino2bm = maos220_neu2bm;
+
+      ev->maos210_blvmass1ap = maos210_blv1ap;
+      ev->maos210_blvmass1am = maos210_blv1am;
+      ev->maos210_blvmass2ap = maos210_blv2ap;
+      ev->maos210_blvmass2am = maos210_blv2am;
+      ev->maos210_blvmass1bp = maos210_blv1bp;
+      ev->maos210_blvmass1bm = maos210_blv1bm;
+      ev->maos210_blvmass2bp = maos210_blv2bp;
+      ev->maos210_blvmass2bm = maos210_blv2bm;
+
+      ev->maos220_blvmass1ap = maos220_blv1ap;
+      ev->maos220_blvmass1am = maos220_blv1am;
+      ev->maos220_blvmass2ap = maos220_blv2ap;
+      ev->maos220_blvmass2am = maos220_blv2am;
+      ev->maos220_blvmass1bp = maos220_blv1bp;
+      ev->maos220_blvmass1bm = maos220_blv1bm;
+      ev->maos220_blvmass2bp = maos220_blv2bp;
+      ev->maos220_blvmass2bm = maos220_blv2bm;
+
+
 
    }
 
@@ -324,7 +405,7 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
    gMinuit->SetPrintLevel(3);
 
    // Dimension of fFunc needs to be changed if adding more variables
-   fFunc = new ROOT::Math::Functor ( this, &Fitter::Min2LL, 3 );
+   fFunc = new ROOT::Math::Functor ( this, &Fitter::Min2LL, 5 );
    gMinuit->SetFunction( *fFunc );
    gMinuit->SetVariable(0, "topMass", 175.0, 0.1);
 
@@ -340,6 +421,20 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
       gMinuit->SetLimitedVariable(2, "norm220", 0.7, 0.1, 0, 1.0);
    } else {
       gMinuit->SetFixedVariable(2, "norm220", 0.70712);
+   }
+
+   //MAOS 220
+   if (dists["maos220blv"].activate){
+      gMinuit->SetLimitedVariable(3, "norm_maos220", 0.7, 0.1, 0, 1.0);
+   } else {
+      gMinuit->SetFixedVariable(3, "norm_maos220", 0.70712);
+   }
+
+   //MAOS 210
+   if (dists["maos210blv"].activate){
+      gMinuit->SetLimitedVariable(4, "norm_maos210", 0.7, 0.1, 0, 1.0);
+   } else {
+      gMinuit->SetFixedVariable(4, "norm_maos210", 0.70712);
    }
 
    // set event vector and minimize
@@ -367,11 +462,13 @@ double Fitter::Min2LL(const double *x){
       int iparam = -1;
       if( name.compare("mbl") == 0 ) iparam = 1;
       if( name.compare("mt2_220_nomatchmbl") == 0 ) iparam = 2;
+      if( name.compare("maos220blv") == 0 ) iparam = 3;
+      if( name.compare("maos210blv") == 0 ) iparam = 4;
 
       if( dist->activate ){// only do this if we're fitting the variable in question
 
          // normalization inside likelihood function (temp)
-         Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2 );
+         Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
          fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr->aGPsig = dist->aGPsig;
          fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
@@ -385,7 +482,7 @@ double Fitter::Min2LL(const double *x){
          delete fshape_tot;
          delete fptr;
 
-         Shapes shape( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2 );
+         Shapes shape( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
          shape.aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          shape.aGPsig = dist->aGPsig;
          shape.aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
@@ -409,12 +506,42 @@ double Fitter::Min2LL(const double *x){
                }
             }
             else if ( name.compare("mt2_220_nomatchmbl") == 0 ){ // for 220
+               for ( unsigned int j=0; j < ev->mbls.size(); j++){
+                  if ( ev->mbls[j] == ev->mt2_220 ) continue;
+               }
                if( ev->mt2_220 > dist->range ) continue;
                //if( ev->mt2_220 > lbnd and ev->mt2_220 < rbnd ) continue;
                double val = shape.Ftot( &(ev->mt2_220), pfit );
                m2ll -= 2.0*ev->weight*log( val );
             }
+            else if ( name.compare("maos220blv") == 0 ){ // for Maos 220
+               double blv220array [] = { ev->maos220_blvmass1ap, ev->maos220_blvmass1am, ev->maos220_blvmass2ap, ev->maos220_blvmass2am, ev->maos220_blvmass1bp, ev->maos220_blvmass1bm, ev->maos220_blvmass2bp, ev->maos220_blvmass2bm };
+      
+               vector<bool> useMaos220 = MaosCut220( ev );
+               for ( unsigned int j=0; j < sizeof(blv220array)/sizeof(blv220array[0]); j++){
+                  if( blv220array[j] > dist->range ) continue;
+                  //if( blv_array[j] > lbnd and blv_array[j] < rbnd ) continue;
+                  if (useMaos220[j]){
+                     double val = shape.Ftot( &(blv220array[j]), pfit );
+                     m2ll -= 2.0*ev->weight*log( val );
+                  }
 
+               }
+            }
+            else if ( name.compare("maos210blv") == 0 ){ // for Maos 210
+               double blv210array [] = { ev->maos210_blvmass1ap, ev->maos210_blvmass1am, ev->maos210_blvmass2ap, ev->maos210_blvmass2am, ev->maos210_blvmass1bp, ev->maos210_blvmass1bm, ev->maos210_blvmass2bp, ev->maos210_blvmass2bm };
+      
+               vector<bool> useMaos210 = MaosCut210( ev );
+               for ( unsigned int j=0; j < sizeof(blv210array)/sizeof(blv210array[0]); j++){
+                  if( blv210array[j] > dist->range ) continue;
+                  //if( blv_array[j] > lbnd and blv_array[j] < rbnd ) continue;
+                  if (useMaos210[j]){
+                     double val = shape.Ftot( &(blv210array[j]), pfit );
+                     m2ll -= 2.0*ev->weight*log( val );
+                  }
+
+               }
+            }
          }
       }
    }
@@ -441,8 +568,8 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_ ){
    TFile *fileout = new TFile( (pathstr+"/plotsFitResults.root").c_str() , "RECREATE" );
    fileout->cd();
 
-   double xmin1s [] = {xmin[1], xmin[1], xmin[2]}; // the background for each variable, as it is positioned in minuit's parameter vector
-   double xerr1s [] = {xerr[1], xerr[1], xerr[2]}; // the background for each variable, as it is positioned in minuit's parameter vector
+   double xmin1s [] = {xmin[1], xmin[1], xmin[2], xmin[3], xmin[4]}; // the background for each variable, as it is positioned in minuit's parameter vector
+   double xerr1s [] = {xerr[1], xerr[1], xerr[2], xerr[3], xerr[4]}; // the background for each variable, as it is positioned in minuit's parameter vector
 
    // loop over distributions
    double chi2 = 0;
@@ -453,11 +580,13 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_ ){
       int iparam = -1;
       if( name.compare("mbl") == 0 ) iparam = 1;
       if( name.compare("mt2_220_nomatchmbl") == 0 ) iparam = 2;
+      if( name.compare("maos220blv") == 0 ) iparam = 3;
+      if( name.compare("maos210blv") == 0 ) iparam = 4;
 
       if( dist->activate ){// only do this if we're fitting the variable in question
 
          // normalization inside likelihood function (temp)
-         Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2 );
+         Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
          fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr->aGPsig = dist->aGPsig;
          fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );

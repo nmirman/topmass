@@ -50,11 +50,11 @@ void Fitter::DeclareHists( map< string, map<string, TH1D*> >& hists_, string lab
       //
 
       hists_["mt2_220"][name] = new TH1D( ("hmt2_220_"+namel).c_str(),
-            "M_{T2} 220;M_{T2} 220 (GeV);Events/2.5 GeV", 100, 0, dists["mt2_220_nomatchmbl"].range );
+            "M_{T2} 220;M_{T2} 220 (GeV);Events/3 GeV", 100, 0, dists["mt2_220_nomatchmbl"].range );
       hists_["mt2_221"][name] = new TH1D( ("hmt2_221_"+namel).c_str(),
             "M_{T2} 221;M_{T2} 221 (GeV);Events/2 GeV", 100, 50, 250 );
       hists_["mbl"][name] = new TH1D( ("hmbl_"+namel).c_str(),
-            "M_{bl};M_{bl} (GeV);Events/3 GeV", 100, 0, 300 );
+            "M_{bl};M_{bl} (GeV);Events/3 GeV", 100, 0, dists["mbl"].range );
       hists_["mbl_fit"][name] = new TH1D( ("hmbl_fit_"+namel).c_str(),
             "M_{bl};M_{bl} (GeV);Events/2.5 GeV", 400, 0, 1000 );
       hists_["mt2_210"][name] = new TH1D( ("hmt2_210_"+namel).c_str(),
@@ -62,7 +62,11 @@ void Fitter::DeclareHists( map< string, map<string, TH1D*> >& hists_, string lab
       hists_["mt2_220_matchmbl"][name] = new TH1D( ("hmt2_220_matchmbl_"+namel).c_str(),
             "M_{T2} 220;M_{T2} 220 (GeV);Events/2.5 GeV", 100, 0, dists["mt2_220_nomatchmbl"].range );
       hists_["mt2_220_nomatchmbl"][name] = new TH1D( ("hmt2_220_nomatchmbl_"+namel).c_str(),
-            "M_{T2} 220;M_{T2} 220 (GeV);Events/2.5 GeV", 100, 0, dists["mt2_220_nomatchmbl"].range );
+            "M_{T2} 220;M_{T2} 220 (GeV);Events/3 GeV", 100, 0, dists["mt2_220_nomatchmbl"].range );
+      hists_["maos220blv"][name] = new TH1D( ("hmaos220blv_"+namel).c_str(),
+            "MAOS from M_{T2} 220;blv mass(GeV);Events/5GeV", 100, 0, dists["maos220blv"].range );
+      hists_["maos210blv"][name] = new TH1D( ("hmaos210blv_"+namel).c_str(),
+            "MAOS from M_{T2} 210;blv mass(GeV);Events/5GeV", 100, 0, dists["maos210blv"].range );
 
       //hists2d_["mblV220"][name] = new TH2D( ("hmblV220_"+namel).c_str(),
       //      "220 vs. mbl", 50, 0, 250, 50, 0, 250 );
@@ -204,6 +208,35 @@ void Fitter::FillHists( map< string, map<string, TH1D*> >& hists_,
          hists_["mt2_220_nomatchmbl"][type]->Fill( ev->mt2_220, ev->weight );
       }
 
+      //MAOS
+
+      double blv210array [] = { ev->maos210_blvmass1ap, ev->maos210_blvmass1am, ev->maos210_blvmass2ap, ev->maos210_blvmass2am, ev->maos210_blvmass1bp, ev->maos210_blvmass1bm, ev->maos210_blvmass2bp, ev->maos210_blvmass2bm };
+      double blv220array [] = { ev->maos220_blvmass1ap, ev->maos220_blvmass1am, ev->maos220_blvmass2ap, ev->maos220_blvmass2am, ev->maos220_blvmass1bp, ev->maos220_blvmass1bm, ev->maos220_blvmass2bp, ev->maos220_blvmass2bm };
+
+      vector<bool> useMaos220 = MaosCut220( ev );
+      for (int i=0; i<8; i++){
+         if (useMaos220[i]){
+            hists_["maos220blv"][type]->Fill( blv220array[i] );
+         }
+      }
+
+      vector<bool> useMaos210 = MaosCut210( ev );
+      for (int i=0; i<8; i++){
+         if (useMaos210[i]){
+            hists_["maos210blv"][type]->Fill( blv210array[i] );
+         }
+      }
+
+/*
+      hists_["maos220blv"][type]->Fill( ev->maos220_blvmass1ap, ev->weight );
+      hists_["maos220blv"][type]->Fill( ev->maos220_blvmass1am, ev->weight );
+      hists_["maos220blv"][type]->Fill( ev->maos220_blvmass2ap, ev->weight );
+      hists_["maos220blv"][type]->Fill( ev->maos220_blvmass2am, ev->weight );
+      hists_["maos220blv"][type]->Fill( ev->maos220_blvmass1bp, ev->weight );
+      hists_["maos220blv"][type]->Fill( ev->maos220_blvmass1bm, ev->weight );
+      hists_["maos220blv"][type]->Fill( ev->maos220_blvmass2bp, ev->weight );
+      hists_["maos220blv"][type]->Fill( ev->maos220_blvmass2bm, ev->weight );
+*/
       //
       // kinematic distributions
       //
@@ -573,6 +606,148 @@ void Fitter::PrintHists( map< string, map<string, TH1D*> >& hists_ ){
    return;
 }
 
+vector<bool> Fitter::MaosCut220( vector<Event>::iterator ev){
+ 
+   bool distcut = 0;
+   bool etadisamb = 0;
+   bool blmatch = 0;
+   double endpt220 = 172.5;
+
+   if (maoscuts220 == 1){ distcut = 1; }
+   else if (maoscuts220 == 2){ etadisamb = 1; }
+   else if (maoscuts220 == 3){distcut = 1; etadisamb = 1; }
+   else if (maoscuts220 == 4){blmatch = 1; }
+   else if (maoscuts220 == 5){distcut = 1; blmatch = 1; }
+   else if (maoscuts220 == 6){etadisamb = 1; blmatch = 1; }
+   else if (maoscuts220 == 7){distcut = 1; etadisamb = 1; blmatch = 1; }
+
+   vector<bool> toreturn;
+   toreturn.clear();
+   for (int i=0; i<8; i++){
+      toreturn.push_back(true);
+   }
+
+   //TLorentzVector neu210array [] = { ev->maos210_neutrino1p, ev->maos210_neutrino1m, ev->maos210_neutrino2p, ev->maos210_neutrino2m };
+   TLorentzVector neuarray [] = { ev->maos220_neutrino1ap, ev->maos220_neutrino1am, ev->maos220_neutrino2ap, ev->maos220_neutrino2am, ev->maos220_neutrino1bp, ev->maos220_neutrino1bm, ev->maos220_neutrino2bp, ev->maos220_neutrino2bm };
+
+   //double blv210array [] = { ev->maos210_blvmass1ap, ev->maos210_blvmass1am, ev->maos210_blvmass2ap, ev->maos210_blvmass2am, ev->maos210_blvmass1bp, ev->maos210_blvmass1bm, ev->maos210_blvmass2bp, ev->maos210_blvmass2bm };
+   //double blv220array [] = { ev->maos220_blvmass1ap, ev->maos220_blvmass1am, ev->maos220_blvmass2ap, ev->maos220_blvmass2am, ev->maos220_blvmass1bp, ev->maos220_blvmass1bm, ev->maos220_blvmass2bp, ev->maos220_blvmass2bm };
+
+   //Nans
+   for (int i=0; i<8; i++){
+//cout<< "i = " <<i<<endl;
+//cout << (neuarray[i]).Pz()<<endl;
+
+      if ( isnan( (neuarray[i]).Pz() ) ){ toreturn[i] = 0; }
+   }
+
+   //Near Endpoint
+   if (distcut){
+      if ( (ev->mt2_220grida < endpt220-20) or (ev->mt2_220grida > endpt220+20) ){
+         for (int i=0; i<4; i++){ toreturn[i] = 0; }
+      }
+      if ( (ev->mt2_220gridb < endpt220-20) or (ev->mt2_220gridb > endpt220+20) ){
+         for (int i=4; i<8; i++){ toreturn[i] = 0; }
+      }
+   }
+
+   //Eta 1
+   if (etadisamb){
+      for (int i=0; i<4; i++){
+         if ( isnan( (neuarray[2*i]).Pz() ) or isnan( (neuarray[2*i+1]).Pz() ) ) continue;
+         if ( abs( (neuarray[2*i]).Eta() ) < abs( (neuarray[2*i+1]).Eta() ) ){
+            toreturn[2*i+1] = 0;
+         } else {
+            toreturn[2*i] = 0;
+         }
+      }
+   }
+
+   //Bl matching
+   if (blmatch){
+      if ( ev->mt2_220grida < ev->mt2_220gridb ){
+         for (int i=4; i<8; i++){ toreturn[i] = 0; }
+      }
+
+      if ( ev->mt2_220grida > ev->mt2_220gridb ){
+         for (int i=0; i<4; i++){ toreturn[i] = 0; }
+      }
+
+   } 
+
+   return toreturn;
+
+}
+
+vector<bool> Fitter::MaosCut210( vector<Event>::iterator ev){
+  
+   bool distcut = 0;
+   bool etadisamb = 0;
+   bool blmatch = 0;
+   double endpt210 = 80.4;
+
+   if (maoscuts210 == 1){ distcut = 1; }
+   else if (maoscuts210 == 2){ etadisamb = 1; }
+   else if (maoscuts210 == 3){distcut = 1; etadisamb = 1; }
+   else if (maoscuts210 == 4){blmatch = 1; }
+   else if (maoscuts210 == 5){distcut = 1; blmatch = 1; }
+   else if (maoscuts210 == 6){etadisamb = 1; blmatch = 1; }
+   else if (maoscuts210 == 7){distcut = 1; etadisamb = 1; blmatch = 1; }
+ 
+   vector<bool> toreturn;
+   toreturn.clear();
+   for (int i=0; i<8; i++){
+      toreturn.push_back(true);
+   }
+
+   TLorentzVector neuarray [] = { ev->maos210_neutrino1p, ev->maos210_neutrino1m, ev->maos210_neutrino2p, ev->maos210_neutrino2m };
+   //double blv210array [] = { ev->maos210_blvmass1ap, ev->maos210_blvmass1am, ev->maos210_blvmass2ap, ev->maos210_blvmass2am, ev->maos210_blvmass1bp, ev->maos210_blvmass1bm, ev->maos210_blvmass2bp, ev->maos210_blvmass2bm };
+
+   //Nans
+   for (int i=0; i<8; i++){
+//cout<< "i = " <<i<<endl;
+//cout << (neuarray[i]).Pz()<<endl;
+
+      if ( isnan( (neuarray[i]).Pz() ) ){ toreturn[i] = 0; toreturn[i+4] = 0; }
+   }
+
+   //Near Endpoint
+   if (distcut){
+      if ( (ev->mt2_210grid < endpt210-30) or (ev->mt2_210grid > endpt210+20) ){
+         for (int i=0; i<8; i++){ toreturn[i] = 0; }
+      }
+   }
+
+   //Eta 1
+   if (etadisamb){
+      for (int i=0; i<2; i++){
+         if ( isnan( (neuarray[2*i]).Pz() ) or isnan( (neuarray[2*i+1]).Pz() ) ) continue;
+         if ( abs( (neuarray[2*i]).Eta() ) < abs( (neuarray[2*i+1]).Eta() ) ){
+            toreturn[2*i+1] = 0;
+            toreturn[2*i+1+4] = 0;
+         } else {
+            toreturn[2*i] = 0;
+            toreturn[2*i+4] = 0;
+         }
+      }
+   }
+
+   //Bl matching
+   if (blmatch){
+      if ( ev->mt2_220grida < ev->mt2_220gridb ){
+         for (int i=4; i<8; i++){ toreturn[i] = 0; }
+      }
+
+      if ( ev->mt2_220grida > ev->mt2_220gridb ){
+         for (int i=0; i<4; i++){ toreturn[i] = 0; }
+      }
+
+   } 
+
+   return toreturn;
+
+}
+
 void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
 
    std::string pathstr;
@@ -585,7 +760,6 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
 
    TFile *fileout = new TFile( (pathstr+"/plotsTemplates.root").c_str(), "RECREATE" );
    fileout->cd();
-
 
    // templates for all masses
    string sb[] = {"sig","bkg"};
@@ -666,11 +840,12 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
                hmc->SetMarkerStyle(20);
                hmc->DrawCopy();
 
-               Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2 );
+               Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
                fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
                fptr->aGPsig = dist->aGPsig;
                fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
                fptr->aGPbkg = dist->aGPbkg;
+
                TF1 *ftemplate = new TF1("ftemplate", fptr, &Shapes::Ftot, 0, dist->range, 5);
                ftemplate->SetNpx(500);
 
@@ -724,7 +899,7 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
    fileout->cd();
 
    // plot template as a function of top mass
-
+/*
    for( map<string, Distribution>::iterator it = dists.begin(); it != dists.end(); it++ ){
 
       string name = it->first;
@@ -749,7 +924,7 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
 
                // graph with template value at mbl = x
                TGraph *gtemplate = new TGraph();
-               Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2 );
+               Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
                fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
                fptr->aGPsig = dist->aGPsig;
                fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
@@ -812,7 +987,7 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
          }
       }
    }
-
+*/
 
    // TODO
    // need to figure out variance band for this plot
@@ -920,7 +1095,7 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
 
          // mbl likelihood
 
-         Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2 );
+         Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
          fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr->aGPsig = dist->aGPsig;
          fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );

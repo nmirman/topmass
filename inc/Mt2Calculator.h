@@ -67,6 +67,17 @@ namespace Mt2Calculator{
 			double GetMct(const int, const int);
 			double GetMctPerp(const int, const int);
 
+                        double GetMt2Grid(const int, const int, const int);
+                        double GetMt2GridReturn(const int, const int, const int,
+                                        double&, double&, double&, double& );
+                        std::vector<double> ReturnNeutrinoPt();
+                        double CalculateDelta(const TLorentzVector, const double, const double);
+                        double Calculateb(const int, const double, const double, const double, const double);
+                        double CalcTransverseMass(const TLorentzVector, const TLorentzVector, const long double);
+                
+                        std::vector<double> MaosReturn220(TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, double&, double&, double&, double&, double&, double&, double&, double&);
+                        double MaosReturn210( TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, double&, double&, double&, double&, double&, double&, double&, double&);
+                        
 			std::vector<double> GetAllMt2_220();
 			std::vector<double> GetAllMt2Perp_220();
 			std::vector<double> GetAllMct_220();
@@ -80,6 +91,7 @@ namespace Mt2Calculator{
 			double GetUpstreamPhiResolution();
 			TMatrixD GetObjCovarianceMatrix(TLorentzVector&, double, double);
 			double GetMt2Perp221Resolution();
+			double GetMt2Perp220Resolution();
 			double GetMctPerp221Resolution();
 			std::vector<double> GetBlInvariantMassResolutions();
 
@@ -116,6 +128,11 @@ namespace Mt2Calculator{
 					const long double);
 			double CalcMct(const TLorentzVector&, const TLorentzVector&);
 
+                        double CalcMt2Grid(const TLorentzVector, const TLorentzVector, const TLorentzVector, const long double);       
+                        double CalcMt2GridZooming(const TLorentzVector, const TLorentzVector, const TLorentzVector, const long double);
+                        
+                        double child1_Px_min, child1_Py_min, child2_Px_min, child2_Py_min;
+                        
 			TLorentzVector W1a();
 			TLorentzVector W2a();
 			TLorentzVector W1b();

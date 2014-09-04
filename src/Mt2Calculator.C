@@ -6,6 +6,10 @@
 
 #include "TLorentzVector.h"
 
+#include <cstdlib>
+#include <sstream>
+#include <iostream>
+
 namespace Mt2Calculator{
 	Calculator::Calculator() : metResM(TMatrixD(2,2))
 	{
@@ -446,6 +450,41 @@ namespace Mt2Calculator{
 		const long double partd = pt2/(ET2*tan(b2.DeltaPhi(Up)))*(ET1*pt2+alpha*ET2*pt1)*sqrt(sigTh2*sigTh2+sigUp2*sigUp2);
 		return sqrt(part1*part1*(parta*parta+partb*partb+partc*partc+partd*partd));
 	}
+
+        double Calculator::GetMt2Perp220Resolution(){
+                const TLorentzVector b1=jet1;
+                const TLorentzVector b2=jet2;
+                const TLorentzVector Up=jet1+jet2+lep1+lep2+met;
+                const long double sigUp2=GetUpstreamPhiResolution();
+                const long double MT2=GetMt2Perp(2,0);
+                const long double sigPT = jet1Res[0];
+                const long double sigTh = jet1Res[1];
+                const long double sigPT2 = jet2Res[0];
+                const long double sigTh2 = jet2Res[1];
+                const long double mc=neutrino_test_mass;
+
+                long double alpha = 1.0L;
+                TVector3 hold1 = b1.Vect().Cross(Up.Vect());
+                TVector3 hold2 = b2.Vect().Cross(Up.Vect());
+                if (hold1.Dot(hold2) < 0.0L){
+                        alpha = -1.0L;
+                }
+                const long double pt1 = b1.Pt()*fabs(sin(b1.DeltaPhi(Up)));
+                const long double pt2 = b2.Pt()*fabs(sin(b2.DeltaPhi(Up)));
+                const long double ET1 = sqrt(b1.M2()+pt1*pt1);
+                const long double ET2 = sqrt(b2.M2()+pt2*pt2);
+                const long double AT = ET1*ET2+alpha*pt1*pt2;
+                const long double msq = b1.M2()+b2.M2();
+                const long double M = b1.M()*b2.M();
+                const long double numerator = 4.0L*AT*AT*AT+AT*AT*(4.0L*msq+4.0L*mc*mc)+AT*(msq*msq+4.0L*mc*mc*msq)+4.0L*mc*mc*M*M;
+                const long double denominator = (MT2*MT2-mc*mc-AT)*(2.0L*AT+msq)*(2.0L*AT+msq);
+                const long double part1 = 0.5L*(numerator/denominator + 1.0L)/MT2;
+                const long double parta = pt1/(ET1*b1.Pt())*(ET2*pt1+alpha*ET1*pt2)*sigPT;
+                const long double partb = pt2/(ET2*b2.Pt())*(ET1*pt2+alpha*ET2*pt1)*sigPT2;
+                const long double partc = pt1/(ET1*tan(b1.DeltaPhi(Up)))*(ET2*pt1+alpha*ET1*pt2)*sqrt(sigTh*sigTh+sigUp2*sigUp2);
+                const long double partd = pt2/(ET2*tan(b2.DeltaPhi(Up)))*(ET1*pt2+alpha*ET2*pt1)*sqrt(sigTh2*sigTh2+sigUp2*sigUp2);
+                return sqrt(part1*part1*(parta*parta+partb*partb+partc*partc+partd*partd));
+        }
 
 	double Calculator::ResIM(const TLorentzVector &b1, const TLorentzVector &l1, const long double bres[]){
 		const long double sigPT = bres[0];
@@ -924,4 +963,355 @@ namespace Mt2Calculator{
 		const long double AT=PosSqrt((vis1.M2()+vis1.Px()*vis1.Px()+vis1.Py()*vis1.Py())*(vis2.M2()+vis2.Px()*vis2.Px()+vis2.Py()*vis2.Py()))+vis1.Px()*vis2.Px()+vis1.Py()*vis2.Py();
 		return (double)(PosSqrt(mc*mc+AT+PosSqrt((1.0L+4.0L*mc*mc/(2.0L*AT-vis1.M2()-vis2.M2()))*(AT*AT-vis1.M2()*vis2.M2()))));
 	}
+
+	// possibly may be able to get rid of this
+	std::vector<double> Calculator::ReturnNeutrinoPt(){
+		std::vector<double> neutrinoPtvec;
+		neutrinoPtvec.push_back(child1_Px_min);
+		neutrinoPtvec.push_back(child1_Py_min);
+		neutrinoPtvec.push_back(child2_Px_min);
+		neutrinoPtvec.push_back(child2_Py_min);
+		return neutrinoPtvec;
+	}
+
+	//This is the naive grid method; it is slow, not used anymore. Instead, CalcMt2GridZooming is used.
+	double Calculator::CalcMt2Grid(const TLorentzVector vis1, const TLorentzVector vis2,
+			const TLorentzVector child, const long double mc_test){
+                //does the minimisation over neutrino pt's and calculated Mt2, given input parent and child momenta
+		TLorentzVector child1;
+		TLorentzVector child2;
+		double vis1_transP = PosSqrt( pow(vis1.Px(), 2) + pow(vis1.Py(), 2) );
+		double vis2_transP = PosSqrt( pow(vis2.Px(), 2) + pow(vis2.Py(), 2) );
+		double vis1_transE = PosSqrt( pow(vis1.M(), 2) + pow(vis1_transP, 2) );
+		double vis2_transE = PosSqrt( pow(vis2.M(), 2) + pow(vis2_transP, 2) );
+		double child_transP = PosSqrt( pow(child.Px(), 2) + pow(child.Py(), 2) );
+		
+		double rangeFactor = 10.0;
+		double rangeInc = 2.0;
+		double Mt2_min = 1000000.0;
+		child1_Px_min = 0;
+		child1_Py_min = 0;
+		child2_Px_min = 0;
+		child2_Py_min = 0;
+		for (double child1_Px = -rangeFactor*(child_transP); child1_Px < rangeFactor*(child_transP); child1_Px += rangeInc){
+			for (double child1_Py = -rangeFactor*(child_transP); child1_Py < rangeFactor*(child_transP); child1_Py += rangeInc){
+
+				double child2_Px = child.Px() - child1_Px;
+				double child2_Py = child.Py() - child1_Py;
+
+				double child1_transP = PosSqrt( pow(child1_Px, 2) + pow(child1_Py, 2) );
+				double child2_transP = PosSqrt( pow(child2_Px, 2) + pow(child2_Py, 2) );
+				double child1_transE = PosSqrt( pow(mc_test, 2) + pow(child1_transP, 2) );
+				double child2_transE = PosSqrt( pow(mc_test, 2) + pow(child2_transP, 2) );
+				
+				double mTrans2 = PosSqrt( pow(vis2.M(), 2) + pow(mc_test, 2) + 2*( vis2_transE*child2_transE - vis2.Px()*child2_Px - vis2.Py()*child2_Py ) );
+				double mTrans1 = PosSqrt( pow(vis1.M(), 2) + pow(mc_test, 2) + 2*( vis1_transE*child1_transE - vis1.Px()*child1_Px - vis1.Py()*child1_Py ) );
+
+				double mTrans = std::max(mTrans1, mTrans2);
+
+				if (mTrans < Mt2_min){
+					Mt2_min = mTrans;
+					child1_Px_min = child1_Px;
+					child1_Py_min = child1_Py;
+					child2_Px_min = child2_Px;
+					child2_Py_min = child2_Py;
+				}
+			}//end for loop over child1_Py
+		}//end for loop over child1_Px
+
+		return Mt2_min;
+	}
+
+	double Calculator::CalcMt2GridZooming(const TLorentzVector vis1, const TLorentzVector vis2,
+			const TLorentzVector child, const long double mc_test){
+                //does the minimisation over neutrino pt's and calculated Mt2, given input parent and child momenta
+		// does several iterations using increasingly smaller grid resolutions.
+		TLorentzVector child1;
+		TLorentzVector child2;
+		double vis1_transP = PosSqrt( pow(vis1.Px(), 2) + pow(vis1.Py(), 2) );
+		double vis2_transP = PosSqrt( pow(vis2.Px(), 2) + pow(vis2.Py(), 2) );
+		double vis1_transE = PosSqrt( pow(vis1.M(), 2) + pow(vis1_transP, 2) );
+		double vis2_transE = PosSqrt( pow(vis2.M(), 2) + pow(vis2_transP, 2) );
+		double child_transP = PosSqrt( pow(child.Px(), 2) + pow(child.Py(), 2) );
+		
+		// this times MET is the overall range of scanning over neutrino 1 px and py space
+		double rangeFactor = 10.0;
+
+		// list of increasingly smaller grid resolutions
+		double rangeInc [] = {200.0, 40.0, 8.0, 1.6, 0.32};
+
+		//initialise values
+		double Mt2_min = 1000000.0;
+		child1_Px_min = 0;
+		child1_Py_min = 0;
+		child2_Px_min = 0;
+		child2_Py_min = 0;
+
+		for (unsigned int i=0; i < sizeof(rangeInc)/sizeof(rangeInc[0]); i++){
+			double startx, starty, endx, endy;
+			if (i==0){
+				startx = -rangeFactor*(child_transP);
+				starty = -rangeFactor*(child_transP);
+				endx = rangeFactor*(child_transP);
+				endy = rangeFactor*(child_transP);
+			} else {
+				//factor of 2 is important for accurate MT2 when MT2 is near 0
+				startx = -2*rangeInc[i-1] + child1_Px_min;
+				starty = -2*rangeInc[i-1] + child1_Py_min;
+				endx = 2*rangeInc[i-1] + child1_Px_min;
+				endy = 2*rangeInc[i-1] + child1_Py_min;
+			}
+
+			for (double child1_Px = startx; child1_Px < endx + rangeInc[i]; child1_Px += rangeInc[i]){
+				for (double child1_Py = starty; child1_Py < endy + rangeInc[i]; child1_Py += rangeInc[i]){
+
+					double child2_Px = child.Px() - child1_Px;
+					double child2_Py = child.Py() - child1_Py;
+
+					double child1_transP = PosSqrt( pow(child1_Px, 2) + pow(child1_Py, 2) );
+					double child2_transP = PosSqrt( pow(child2_Px, 2) + pow(child2_Py, 2) );
+					double child1_transE = PosSqrt( pow(mc_test, 2) + pow(child1_transP, 2) );
+					double child2_transE = PosSqrt( pow(mc_test, 2) + pow(child2_transP, 2) );
+				
+					double mTrans2 = PosSqrt( pow(vis2.M(), 2) + pow(mc_test, 2) + 2*( vis2_transE*child2_transE - vis2.Px()*child2_Px - vis2.Py()*child2_Py ) );
+					double mTrans1 = PosSqrt( pow(vis1.M(), 2) + pow(mc_test, 2) + 2*( vis1_transE*child1_transE - vis1.Px()*child1_Px - vis1.Py()*child1_Py ) );
+
+					double mTrans = std::max(mTrans1, mTrans2);
+
+					if (mTrans < Mt2_min){
+						Mt2_min = mTrans;
+						child1_Px_min = child1_Px;
+						child1_Py_min = child1_Py;
+						child2_Px_min = child2_Px;
+						child2_Py_min = child2_Py;
+					}
+				}//end for loop over child1_Py
+			}//end for loop over child1_Px
+
+		}// end for loop over list of range decrements
+
+		return Mt2_min;
+	}
+
+	double Calculator::GetMt2Grid(const int p, const int c, const int y){
+		// This isn't really used; use GetMt2GridReturn instead
+		// p is second digit of 3-digit Mt2 code; c is third digit
+		// y refers to which pairing for 220: 0 is a pairing, 1 is b pairing
+		if (p==1 && c==0){
+			return CalcMt2Grid(lep1, lep2, met, neutrino_test_mass);
+		}else if (p==2 && c==0 && y==0){
+		//Pair jet1 with lep1 in W1a, jet2 with lep2 in W2a
+			return CalcMt2Grid(W1a(), W2a(), met, neutrino_test_mass);
+		}else if (p==2 && c==0 && y==1){
+		//Pair jet2 with lep1 in W1b, jet1 with lep2 in W2b
+			return CalcMt2Grid(W1b(), W2b(), met, neutrino_test_mass);
+		}else if (p==2 && c==1){
+			return CalcMt2Grid(jet1, jet2, lep1+lep2+met, W_test_mass);
+		}else{
+			return -1.0;
+		}
+
+	}
+
+	double Calculator::GetMt2GridReturn(const int p, const int c, const int y, double &child1_Px, double &child1_Py, double &child2_Px, double &child2_Py){
+                // p is second digit of 3-digit Mt2 code; c is third digit
+                // y refers to which pairing for 220: 0 is a pairing, 1 is b pairing
+		// also sets input child Pt's to the value given by the minimisation in calculating Mt2
+
+		double toreturn = -1.0;
+		if (p==1 && c==0){
+			toreturn = CalcMt2GridZooming(lep1, lep2, met, neutrino_test_mass);
+		}else if (p==2 && c==0 && y==0){
+		//Pair jet1 with lep1 in W1a, jet2 with lep2 in W2a
+			toreturn = CalcMt2GridZooming(W1a(), W2a(), met, neutrino_test_mass);
+		}else if (p==2 && c==0 && y==1){
+		//Pair jet2 with lep1 in W1b, jet1 with lep2 in W2b
+			toreturn = CalcMt2GridZooming(W1b(), W2b(), met, neutrino_test_mass);
+		}else if (p==2 && c==1){
+			toreturn = CalcMt2GridZooming(jet1, jet2, lep1+lep2+met, W_test_mass);
+		}
+
+		child1_Px = child1_Px_min;
+		child1_Py = child1_Py_min;
+		child2_Px = child2_Px_min;
+		child2_Py = child2_Py_min;
+
+		return toreturn;
+
+	}
+
+	double Calculator::CalcTransverseMass(const TLorentzVector vis, const TLorentzVector child, const long double mc_test){
+		double vis_transP = PosSqrt( pow(vis.Px(), 2) + pow(vis.Py(), 2) );
+		double vis_transE = PosSqrt( pow(vis.M(), 2) + pow(vis_transP, 2) );
+		double child_transP = PosSqrt( pow(child.Px(), 2) + pow(child.Py(), 2) );
+		double child_transE = PosSqrt( pow(mc_test, 2) + pow(child_transP, 2) );
+
+		double mTrans = PosSqrt( pow(vis.M(), 2) + pow(mc_test, 2) + 2*( vis_transE*child_transE - vis.Px()*child.Px() - vis.Py()*child.Py() ) );
+
+		return mTrans;
+
+	}
+
+	double Calculator::CalculateDelta(const TLorentzVector lepton, const double neutrino_Px, const double neutrino_Py){
+
+		double lep_transP = PosSqrt( pow(lepton.Px(), 2) + pow(lepton.Py(), 2) );
+		double lep_transE = PosSqrt( pow(lepton.M(), 2) + pow(lep_transP, 2) );
+		double neu_transP = PosSqrt( pow(neutrino_Px, 2) + pow(neutrino_Py, 2) );
+		double neu_transE = PosSqrt( pow(neutrino_test_mass, 2) + pow(neu_transP, 2) );
+
+		//generally not a good idea to set only 2 components of a 4-vector, but this is just done temporarily in order to put the result into CalcTransverseMass, which uses only Px and Py.
+		TLorentzVector neutrino;
+		neutrino.SetPx(neutrino_Px);
+		neutrino.SetPy(neutrino_Py);
+
+		double mTrans = CalcTransverseMass(lepton, neutrino, neutrino_test_mass);
+
+		double c = 1 + ( ( pow(W_test_mass, 2) - pow(mTrans, 2) )/( 2*lep_transE*neu_transE ) );
+
+		double delta = acosh(c);
+
+		//This part is used to print out values for nan neutrinos.
+		//if (std::isnan(delta)){
+		//	std::cout << "mTrans = " << mTrans << std::endl;
+		//	std::cout << "delta = " << delta << std::endl;
+		//}
+
+		return delta;
+
+	}
+
+	//probably don't actually need this
+	double Calculator::Calculateb(const int y, const double neutrino1_Px, const double neutrino1_Py, const double neutrino2_Px, const double neutrino2_Py){
+		TLorentzVector bl1, bl2;
+		if ( y==0){ bl1 = W1a(); bl2 = W2a(); }
+		else if ( y==1 ){ bl1 = W1b(); bl2 = W2b(); }
+
+		double bl1_transP = PosSqrt( pow(bl1.Px(), 2) + pow(bl1.Py(), 2) );
+		double bl1_transE = PosSqrt( pow(bl1.M(), 2) + pow(bl1_transP, 2) );
+		double bl2_transP = PosSqrt( pow(bl2.Px(), 2) + pow(bl2.Py(), 2) );
+		double bl2_transE = PosSqrt( pow(bl2.M(), 2) + pow(bl2_transP, 2) );
+		double neu1_transP = PosSqrt( pow(neutrino1_Px, 2) + pow(neutrino1_Py, 2) );
+		double neu1_transE = PosSqrt( pow(neutrino_test_mass, 2) + pow(neu1_transP, 2) );
+		double neu2_transP = PosSqrt( pow(neutrino2_Px, 2) + pow(neutrino2_Py, 2) );
+		double neu2_transE = PosSqrt( pow(neutrino_test_mass, 2) + pow(neu2_transP, 2) );
+		
+		double a = ( (bl2_transE*neu2_transE)/(bl1_transE*neu1_transE) );
+		double b = 1 - a + ( ( pow(bl2.M(), 2) - pow(bl1.M(), 2) )/( 2*bl1_transE*neu1_transE ) );
+
+		return b;
+
+	}
+
+	double Calculator::MaosReturn210(TLorentzVector &neutrino1p, TLorentzVector &neutrino1m, TLorentzVector &neutrino2p, TLorentzVector &neutrino2m, double &topmass1ap, double &topmass1am, double &topmass2ap, double &topmass2am, double &topmass1bp, double &topmass1bm, double &topmass2bp, double &topmass2bm){
+
+		//Calculates Maos neutrinos from Mt2 210.  
+		//Sets first four inputs to Maos neutrino 4-vectors; ssets last 8 inputs to 8 blv masses from maos neutrinos..
+		//Returns calculated Mt2 210 value.
+
+		double child1_Px, child1_Py, child2_Px, child2_Py;
+
+		double Mt2_210 = GetMt2GridReturn(1,0,0, child1_Px, child1_Py, child2_Px, child2_Py);
+		double delta1 = CalculateDelta(lep1, child1_Px, child1_Py);
+		double delta2 = CalculateDelta(lep2, child2_Px, child2_Py);
+
+		double neu1_transP = sqrt( pow( child1_Px, 2) + pow( child1_Py, 2) );
+		double neu2_transP = sqrt( pow( child2_Px, 2) + pow( child2_Py, 2) );
+		double neu1_phi = atan2( child1_Py, child1_Px );
+		double neu2_phi = atan2( child2_Py, child2_Px );
+
+		//Calculate Maos neutrino 4-momenta; p and m represent the sign ambiguity
+		TLorentzVector neu1p, neu1m, neu2p, neu2m;
+		neu1p.SetPtEtaPhiM( neu1_transP, lep1.Eta() + delta1, neu1_phi, neutrino_test_mass);
+		neu1m.SetPtEtaPhiM( neu1_transP, lep1.Eta() - delta1, neu1_phi, neutrino_test_mass);
+		neu2p.SetPtEtaPhiM( neu2_transP, lep2.Eta() + delta2, neu2_phi, neutrino_test_mass);
+		neu2m.SetPtEtaPhiM( neu2_transP, lep2.Eta() - delta2, neu2_phi, neutrino_test_mass);
+
+		//Set inputs to Maos neutrino 4-momemnta		
+		neutrino1p = neu1p;
+		neutrino1m = neu1m;
+		neutrino2p = neu2p;
+		neutrino2m = neu2m;
+
+		//sets inputs to blv masses
+		topmass1ap = (jet1 + lep1 + neu1p).M();
+		topmass1am = (jet1 + lep1 + neu1m).M();
+		topmass2ap = (jet2 + lep2 + neu2p).M();
+		topmass2am = (jet2 + lep2 + neu2m).M();
+		topmass1bp = (jet2 + lep1 + neu1p).M();
+		topmass1bm = (jet2 + lep1 + neu1m).M();
+		topmass2bp = (jet1 + lep2 + neu2p).M();
+		topmass2bm = (jet1 + lep2 + neu2m).M();
+
+		return Mt2_210;
+
+	}
+
+	std::vector<double> Calculator::MaosReturn220(TLorentzVector &neutrino1ap, TLorentzVector &neutrino1am, TLorentzVector &neutrino2ap, TLorentzVector &neutrino2am, TLorentzVector &neutrino1bp, TLorentzVector &neutrino1bm, TLorentzVector &neutrino2bp, TLorentzVector &neutrino2bm, double &topmass1ap, double &topmass1am, double &topmass2ap, double &topmass2am, double &topmass1bp, double &topmass1bm, double &topmass2bp, double &topmass2bm){
+
+		//Calculates Maos neutrinos from Mt2 220.
+		//Sets first 8 inputs to 8 Maos neutrinos.
+		//Sets last 8 inputs to 8 blv values from maos neutrinos.
+		//Returns both calculated Mt2 220 values (a and b) as a vector.
+
+		//a and b to take into account bl pairings.
+		double child1a_Px, child1a_Py, child2a_Px, child2a_Py;
+		double child1b_Px, child1b_Py, child2b_Px, child2b_Py;
+
+		double Mt2_220a = GetMt2GridReturn(2,0,0, child1a_Px, child1a_Py, child2a_Px, child2a_Py);
+		double Mt2_220b = GetMt2GridReturn(2,0,1, child1b_Px, child1b_Py, child2b_Px, child2b_Py);
+		double delta1a = CalculateDelta(lep1, child1a_Px, child1a_Py);
+		double delta2a = CalculateDelta(lep2, child2a_Px, child2a_Py);
+		double delta1b = CalculateDelta(lep1, child1b_Px, child1b_Py);
+		double delta2b = CalculateDelta(lep2, child2b_Px, child2b_Py);
+
+		double neu1a_transP = sqrt( pow( child1a_Px, 2) + pow( child1a_Py, 2) );
+		double neu2a_transP = sqrt( pow( child2a_Px, 2) + pow( child2a_Py, 2) );
+		double neu1a_phi = atan2( child1a_Py, child1a_Px );
+		double neu2a_phi = atan2( child2a_Py, child2a_Px );
+		double neu1b_transP = sqrt( pow( child1b_Px, 2) + pow( child1b_Py, 2) );
+		double neu2b_transP = sqrt( pow( child2b_Px, 2) + pow( child2b_Py, 2) );
+		double neu1b_phi = atan2( child1b_Py, child1b_Px );
+		double neu2b_phi = atan2( child2b_Py, child2b_Px );
+
+		//Calculate Maos neutrino 4-momenta; p and m represent the sign ambiguity
+		TLorentzVector neu1ap, neu1am, neu2ap, neu2am, neu1bp, neu1bm, neu2bp, neu2bm;
+		neu1ap.SetPtEtaPhiM( neu1a_transP, lep1.Eta() + delta1a, neu1a_phi, neutrino_test_mass);
+		neu1am.SetPtEtaPhiM( neu1a_transP, lep1.Eta() - delta1a, neu1a_phi, neutrino_test_mass);
+		neu2ap.SetPtEtaPhiM( neu2a_transP, lep2.Eta() + delta2a, neu2a_phi, neutrino_test_mass);
+		neu2am.SetPtEtaPhiM( neu2a_transP, lep2.Eta() - delta2a, neu2a_phi, neutrino_test_mass);
+		neu1bp.SetPtEtaPhiM( neu1b_transP, lep1.Eta() + delta1b, neu1b_phi, neutrino_test_mass);
+		neu1bm.SetPtEtaPhiM( neu1b_transP, lep1.Eta() - delta1b, neu1b_phi, neutrino_test_mass);
+		neu2bp.SetPtEtaPhiM( neu2b_transP, lep2.Eta() + delta2b, neu2b_phi, neutrino_test_mass);
+		neu2bm.SetPtEtaPhiM( neu2b_transP, lep2.Eta() - delta2b, neu2b_phi, neutrino_test_mass);
+
+		//Set inputs to Maos neutrino 4-momemnta		
+		neutrino1ap = neu1ap;
+		neutrino1am = neu1am;
+		neutrino2ap = neu2ap;
+		neutrino2am = neu2am;
+		neutrino1bp = neu1bp;
+		neutrino1bm = neu1bm;
+		neutrino2bp = neu2bp;
+		neutrino2bm = neu2bm;
+
+		//sets inputs to blv masses
+		topmass1ap = (jet1 + lep1 + neu1ap).M();
+		topmass1am = (jet1 + lep1 + neu1am).M();
+		topmass2ap = (jet2 + lep2 + neu2ap).M();
+		topmass2am = (jet2 + lep2 + neu2am).M();
+		topmass1bp = (jet2 + lep1 + neu1bp).M();
+		topmass1bm = (jet2 + lep1 + neu1bm).M();
+		topmass2bp = (jet1 + lep2 + neu2bp).M();
+		topmass2bm = (jet1 + lep2 + neu2bm).M();
+
+		//return both Mt2 220 values (a and b) as a vector
+		std::vector<double> toreturn;
+		toreturn.clear();
+		toreturn.push_back(Mt2_220a);
+		toreturn.push_back(Mt2_220b);
+
+		return toreturn;
+
+	}
+
 }

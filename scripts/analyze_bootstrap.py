@@ -97,6 +97,7 @@ hpull = TH1D('hpull', 'Pull for M_{t}(MC) = 172.5;(M_{ti}-#mu)/#sigma_{MIGRAD};P
 for i in range( tree.GetEntries() ):
    tree.GetEntry(i)
    if tree.mcmass == 172.5:
+#   if tree.mcmass == 166.5:
       hpull.Fill( (tree.mt - meanmt[4])/tree.mt_err )
 
 cpull = TCanvas('cpull','cpull',800,800)
@@ -114,7 +115,11 @@ for i in range(8):
    print str(mcmasses[i])+': '+str(meanmt[i])+' +- '+str(sqrt(varmt[i]))
 
 print 'chi2 = '+str(chi2)
+title = sys.argv[2]
 gresults.SetMarkerStyle(20)
+gresults.SetTitle(title)
+gresults.GetXaxis().SetTitle('GEN Top Mass (GeV)')
+gresults.GetYaxis().SetTitle('MEAS-GEN Top Mass (GeV)')
 
 fline = TF1('fline','[0]*x',150,200)
 fline.SetParameter(0,0.0)
@@ -123,8 +128,8 @@ fline.SetLineStyle(7)
 canvas = TCanvas('canvas','canvas',800,800)
 canvas.cd()
 
-gresults.SetMaximum(1.5)
-gresults.SetMinimum(-1.5)
+gresults.SetMaximum(4.0)
+gresults.SetMinimum(-4.0)
 gresults.Draw('AEP')
 fline.Draw('same')
 

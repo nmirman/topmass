@@ -30,8 +30,8 @@ void print_usage(){
    cout << setw(25) << "\t-c --fracevts" << "Fit fraction of events.\n";
    cout << setw(25) << "\t-b --mbl" << "Activate Mbl distribution.\n";
    cout << setw(25) << "\t-t --mt2_220" << "Activate MT2 220 distribution.\n";
-   cout << setw(25) << "\t-t --maos220" << "Activate MAOS 220 distribution.\n";
-   cout << setw(25) << "\t-t --maos210" << "Activate MAOS 210 distribution.\n";
+   cout << setw(25) << "\t-2 --maos220" << "Activate MAOS 220 distribution.\n";
+   cout << setw(25) << "\t-1 --maos210" << "Activate MAOS 210 distribution.\n";
    cout << setw(25) << "\t-h --help" << "Display this menu.\n";
    cout << endl;
    return;
@@ -49,6 +49,9 @@ int main(int argc, char* argv[]){
    map< string, map<string, TH1D*> > hists_all_;
    map< string, map<string, TH1D*> > hists_train_;
    map< string, map<string, TH1D*> > hists_test_;
+   map< string, map<string, TH2D*> > hists2d_all_;
+   map< string, map<string, TH2D*> > hists2d_train_;
+   map< string, map<string, TH2D*> > hists2d_test_;
 
    // output fit results
    int run_number=-1;
@@ -276,6 +279,9 @@ int main(int argc, char* argv[]){
       string name = it->first;
       Dataset *dat = &(it->second);
 
+      // turn off data
+      if( !use_data and name.compare("data") == 0 ) continue;
+
       datacount[name] = 0;
 
       TFile file( (dat->path+dat->file).c_str() );
@@ -285,7 +291,7 @@ int main(int argc, char* argv[]){
       cout << "... " << setw(25) << name
          << ": " << trees->GetEntries() << " events" << endl;
 
-      if( do_diagnostics or use_data ){
+      if( do_diagnostics ){
          fitter.ReadNtuple( dat->path+dat->file, name, dat->mc_xsec/dat->mc_nevts,
                "RealData", eventvec_datamc, 0, 0, -1 );
       }
@@ -298,9 +304,9 @@ int main(int argc, char* argv[]){
                   "RealData", eventvec_train, 0, randseed, -1 );
          }else{
             fitter.ReadNtuple( dat->path+dat->file, name, dat->mc_xsec/dat->mc_nevts,
-                  "RealData", eventvec_train, 1, randseed, -1 );
+                  "RealData", eventvec_train, 2, randseed, -1 );
             fitter.ReadNtuple( dat->path+dat->file, name, dat->mc_xsec/dat->mc_nevts,
-                  "RealData", eventvec_test, 2, randseed, fracevts );
+                  "RealData", eventvec_test, 1, randseed, fracevts );
          }
 
       }
@@ -312,16 +318,16 @@ int main(int argc, char* argv[]){
    fitter.GetVariables( eventvec_train );
    fitter.GetVariables( eventvec_test );
 
-   fitter.DeclareHists( hists_train_, "train" );
-   fitter.FillHists( hists_train_, eventvec_train );
+   fitter.DeclareHists( hists_train_, hists2d_train_, "train" );
+   fitter.FillHists( hists_train_, hists2d_train_, eventvec_train );
 
-   fitter.DeclareHists( hists_test_, "test" );
-   fitter.FillHists( hists_test_, eventvec_test );
+   fitter.DeclareHists( hists_test_, hists2d_test_, "test" );
+   fitter.FillHists( hists_test_, hists2d_test_, eventvec_test );
 
    if( do_diagnostics ){ 
-      fitter.DeclareHists( hists_all_, "all" );
-      fitter.FillHists( hists_all_, eventvec_datamc );
-      fitter.PrintHists( hists_all_ );
+      fitter.DeclareHists( hists_all_, hists2d_all_, "all" );
+      fitter.FillHists( hists_all_, hists2d_all_, eventvec_datamc );
+      fitter.PrintHists( hists_all_, hists2d_all_ );
    }
 
    if( do_fit ){
@@ -329,7 +335,7 @@ int main(int argc, char* argv[]){
       vector<Event> eventvec_fit;
       vector<Event> eventvec_fit_bkgcontrol;
       map< string, map<string, TH1D*> > hists_fit_;
-      map< string, map<string, TH1D*> > hists_fit_bkgcontrol_;
+      map< string, map<string, TH2D*> > hists2d_fit_;
 
       if( use_data ){ // added 220 distribution to the data fit too, but haven't tested it
 
@@ -496,10 +502,8 @@ int main(int argc, char* argv[]){
                cout << "... " << setw(25) << it->first << ": " << it->second << " events" << endl;
             }
 
-            fitter.DeclareHists( hists_fit_, "fit" );
-            fitter.FillHists( hists_fit_, eventvec_fit, true );
-            fitter.DeclareHists( hists_fit_bkgcontrol_, "fit_bkgcontrol" );
-            fitter.FillHists( hists_fit_bkgcontrol_, eventvec_fit_bkgcontrol, true );
+            fitter.DeclareHists( hists_fit_, hists2d_fit_, "fit" );
+            fitter.FillHists( hists_fit_, hists2d_fit_, eventvec_fit, true );
 
             // do GP training
             for( map<string, Distribution>::iterator it = fitter.dists.begin(); it != fitter.dists.end(); it++ ){
@@ -560,12 +564,9 @@ int main(int argc, char* argv[]){
             kmaos210_err = par_err[4]; 
             fitchi2 = fitter.fitchi2;
 
-            tree->Fill();
-
             eventvec_fit.clear();
             eventvec_fit_bkgcontrol.clear();
-            fitter.DeleteHists( hists_fit_ );
-            fitter.DeleteHists( hists_fit_bkgcontrol_ );
+            fitter.DeleteHists( hists_fit_, hists2d_fit_ );
 
          }
 
@@ -612,11 +613,38 @@ int main(int argc, char* argv[]){
    }
 
    if( do_learnparams ){
-      string name = "mbl";
+      //string name = "mbl";
+      //string name = "mt2_220_nomatchmbl";
+      string name = "maos220blv";
       Distribution *dist = &(fitter.dists[name]);
+      Shapes * fptrtmp = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
+      fptrtmp->LearnGPparams( hists_train_ );
+
+      dist->glx = fptrtmp->lx;
+      dist->glmt = fptrtmp->lmass;
+      dist->gnorm1 = fptrtmp->gnorm1;
+      dist->gnorm2 = fptrtmp->gnorm2;
+
+      double m2llsig, m2llbkg;
       Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
-      fptr->LearnGPparams( hists_train_ );
+      fptr->TrainGP( hists_train_, m2llsig, m2llbkg );
+
+      dist->aGPsig.ResizeTo( fptr->aGPsig.GetNoElements() );
+      dist->aGPsig = fptr->aGPsig;
+      dist->aGPbkg.ResizeTo( fptr->aGPbkg.GetNoElements() );
+      dist->aGPbkg = fptr->aGPbkg;
+
+      dist->Ainv_sig.ResizeTo( fptr->aGPsig.GetNoElements(), fptr->aGPsig.GetNoElements() );
+      dist->Ainv_sig = fptr->Ainv_sig;
+      dist->Ainv_bkg.ResizeTo( fptr->aGPbkg.GetNoElements(), fptr->aGPbkg.GetNoElements() );
+      dist->Ainv_bkg = fptr->Ainv_bkg;
+
+      cout << "begin PlotTemplates" << endl;
+      fitter.PlotTemplates( hists_train_ );
+      cout << "end PlotTemplates" << endl;
+
       delete fptr;
+      delete fptrtmp;
    }
 
    if( do_fit or do_templates ){

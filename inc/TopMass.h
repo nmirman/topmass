@@ -201,10 +201,10 @@ class Fitter{
       ROOT::Minuit2::Minuit2Minimizer* gMinuit;
 
       // diagnostics
-      void DeclareHists( map< string, map<string, TH1D*> >&, string label );
-      void DeleteHists( map< string, map<string, TH1D*> >& );
-      void FillHists( map< string, map<string, TH1D*> >&, vector<Event>&, bool=false );
-      void PrintHists( map< string, map<string, TH1D*> >& );
+      void DeclareHists( map< string, map<string, TH1D*> >&, map< string, map<string, TH2D*> >&, string label );
+      void DeleteHists( map< string, map<string, TH1D*> >&, map< string, map<string, TH2D*> >& );
+      void FillHists( map< string, map<string, TH1D*> >&, map< string, map<string, TH2D*> >&, vector<Event>&, bool=false );
+      void PrintHists( map< string, map<string, TH1D*> >&, map< string, map<string, TH2D*> >& );
       vector<bool> MaosCut220( vector<Event>::iterator ev );
       vector<bool> MaosCut210( vector<Event>::iterator ev );
       void PlotTemplates( map< string, map<string, TH1D*> >& );

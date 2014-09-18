@@ -25,12 +25,14 @@ class Shapes{
       string name;
       double lx, lmass, gnorm1, gnorm2;
       double lbx, rbx;
+      double rtrain;
 
       vector<double> ptrain;
       TMatrixD Ainv_sig;
       TMatrixD Ainv_bkg;
       TVectorD aGPsig;
       TVectorD aGPbkg;
+      TMatrixD Kinv;
       void SetGPopts();
       void TrainGP( map< string, map<string, TH1D*> >&, double&, double& );
       double GPkern(double, double, double, double, double, double);
@@ -42,6 +44,7 @@ class Shapes{
    private:
       double GPm2ll(const double*);
       double GPm2llX(const double*);
+      double GPm2llLOOCV(const double*);
       ROOT::Math::IMultiGenFunction* fFunc;
       map< string, map<string, TH1D*> >* hists_train_;
 

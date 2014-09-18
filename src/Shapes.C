@@ -26,7 +26,7 @@ Shapes::Shapes( string var, double gplength_x, double gplength_mt, double norm1,
    gnorm1 = norm1;
    gnorm2 = norm2;
    int ntrain = 100;
-   double rtrain = range;
+   rtrain = range;
    for(int i=0; i < ntrain; i++) ptrain.push_back( (i+0.5)*rtrain/ntrain );
 
    // right and left bounds -- set to zero unless needed
@@ -205,6 +205,24 @@ void Shapes::TrainGP( map< string, map<string, TH1D*> > & hists_,
      }
    }
 
+   cout << "K MATRIX:" << endl;
+   for(int i=0; i < ntrain; i++){
+      int imass = 4;
+      double Kzoom [7];
+      for(int n=-3; n<=3; n++){
+         if( i+n >= 0 and i+n < ntrain ) Kzoom[n+3] = K[imass*ntrain+i][imass*ntrain+i+n];
+      }
+      cout << "row " << i << ": ";
+      for(int n=0; n<7; n++) cout << Kzoom[n] << " ";
+      cout << endl;
+   }
+
+   cout << "Nsig DIAGONALS:" << endl;
+   for(int i=0; i < ntrain; i++){
+      int imass = 4;
+      cout << "row " << i << ": " << Nsig[imass*ntrain+i][imass*ntrain+i] << endl;
+   }
+
    // inverse of sum
    TMatrixD Asig = K + Nsig;
    TMatrixD Abkg = K + Nbkg;
@@ -212,6 +230,7 @@ void Shapes::TrainGP( map< string, map<string, TH1D*> > & hists_,
    TDecompChol Cholbkg(Abkg);
    TMatrixD AsigU = Cholsig.GetU();
    TMatrixD AbkgU = Cholbkg.GetU();
+
    bool status = 0;
    TMatrixDSym Asinv_sig = Cholsig.Invert(status);
    TMatrixDSym Asinv_bkg = Cholbkg.Invert(status);
@@ -222,6 +241,14 @@ void Shapes::TrainGP( map< string, map<string, TH1D*> > & hists_,
    Ainv_sig = (TMatrixD)Asinv_sig;
    Ainv_bkg = (TMatrixD)Asinv_bkg;
 
+   TMatrixD Ktmp = K;
+   for(int i=0; i < ntrain*nmasses; i++) Ktmp[i][i] += 10E-9;
+   TDecompChol CholK(Ktmp);
+   status = 0;
+   TMatrixDSym Ksinv = CholK.Invert(status);
+   Kinv.Clear();
+   Kinv.ResizeTo( ntrain*nmasses, ntrain*nmasses );
+   Kinv = (TMatrixD)Ksinv;
 
    TMatrixD Ainv_sigtemp = Ainv_sig;
    TMatrixD Ainv_bkgtemp = Ainv_bkg;
@@ -281,34 +308,49 @@ void Shapes::LearnGPparams( map< string, map<string, TH1D*> > & hists_ ){
    // set training hist
    hists_train_ = &hists_;
 
+   //fFunc = new ROOT::Math::Functor ( this, &Shapes::GPm2llLOOCV, 4 );
    fFunc = new ROOT::Math::Functor ( this, &Shapes::GPm2llX, 4 );
-   gMinuit->SetTolerance(1000.0);
+   //gMinuit->SetTolerance(1000.0);
    gMinuit->SetFunction( *fFunc );
 
+   
    // stage 1 -- use bin errros as variance
    cout << "**************** Cross Validation Round 1 *****************" << endl;
-   do_gpvar = false;
-   gMinuit->SetLowerLimitedVariable(0, "gpnorm1", 5.0, 0.1, 0.0);
+   //do_gpvar = false;
+   do_gpvar = true;
+   gMinuit->SetLowerLimitedVariable(0, "gpnorm1", 1.0, 0.1, 0.0);
    gMinuit->SetLowerLimitedVariable(1, "gpnorm2", 10.0, 0.1, 0.0);
-   gMinuit->SetLowerLimitedVariable(2, "lx", 15, 1, 0.0);
-   gMinuit->SetLowerLimitedVariable(3, "lmass", 30, 1, 0.0);
+   gMinuit->SetLowerLimitedVariable(2, "lx", 10, 1, 0.0);
+   gMinuit->SetLowerLimitedVariable(3, "lmass", 10, 1, 0.0);
 
    gMinuit->Minimize();
 
-   const double *xstmp = gMinuit->X();
+   //const double *xstmp = gMinuit->X();
+   /*
+   double xstmp [] = {6.78,9.6,10.4,22.6};
    gnorm1 = xstmp[0];
    gnorm2 = xstmp[1];
    lx = xstmp[2];
    lmass = xstmp[3];
 
+   // stage 2 -- use gp variance band
+   
    cout << "**************** Cross Validation Round 2 *****************" << endl;
-   do_gpvar = false;
+   do_gpvar = true;
+   
    gMinuit->SetLimitedVariable(0, "gpnorm1", xstmp[0], 1, 0.5*xstmp[0], 2*xstmp[0]);
-   gMinuit->SetLowerLimitedVariable(1, "gpnorm2", xstmp[1], 1, 0.0);
+   gMinuit->SetLowerLimitedVariable(1, "gpnorm2", 50*xstmp[1], 1, 0.0);
    gMinuit->SetLimitedVariable(2, "lx", xstmp[2], 1, 0.8*xstmp[2], 1.2*xstmp[2]);
    gMinuit->SetLimitedVariable(3, "lmass", xstmp[3], 1, 0.8*xstmp[3], 1.2*xstmp[3]);
+   */
+   /*
+   gMinuit->SetLimitedVariable(0, "gpnorm1", xstmp[0], 1, 0.9*xstmp[0], 1.1*xstmp[0]);
+   gMinuit->SetLowerLimitedVariable(1, "gpnorm2", xstmp[1], 1, 0.0);
+   gMinuit->SetLimitedVariable(2, "lx", xstmp[2], 1, 0.9*xstmp[2], 1.1*xstmp[2]);
+   gMinuit->SetLimitedVariable(3, "lmass", xstmp[3], 1, 0.9*xstmp[3], 1.1*xstmp[3]);
+   */
 
-   gMinuit->Minimize();
+   //gMinuit->Minimize();
 
    const double *xs = gMinuit->X();
    gnorm1 = xs[0];
@@ -354,15 +396,13 @@ double Shapes::GPm2llX( const double *x ){
       string smass = ssmass.str();
 
       // signal shape
-      hgp_sig.push_back( (TH1D*)(*hists_train_)["mbl"]["ttbar"+smass+"_signal"]
+      hgp_sig.push_back( (TH1D*)(*hists_train_)[name]["ttbar"+smass+"_signal"]
             ->Clone( ("hgp_sigx"+smass).c_str()) );
       hgp_sig[j]->Scale( 1.0/hgp_sig[j]->Integral("width") );
 
    }
 
-   // set up training vector for cross validation
    int ntrain = 100;
-   double rtrain = 300;
 
    int nval = 3;
    double m2ll_tot = 0;
@@ -371,7 +411,13 @@ double Shapes::GPm2llX( const double *x ){
       ptrain.clear();
       vector<double> ptrainX;
       for(int i=0; i < ntrain; i++){ // exclude every nth point
-         if( i%nval != c ){
+         // check for zero bins
+         bool zerobin = false;
+         for(int j=0; j < nmasses; j++){
+            double val = hgp_sig[j]->GetBinContent( hgp_sig[j]->FindBin( (i+0.5)*rtrain/ntrain ) );
+            if( val == 0 ) zerobin = true;
+         }
+         if( i%nval != c or zerobin ){
             ptrain.push_back( (i+0.5)*rtrain/ntrain );
          }else{
             ptrainX.push_back( (i+0.5)*rtrain/ntrain );
@@ -405,5 +451,62 @@ double Shapes::GPm2llX( const double *x ){
    }
 
    return m2ll_tot;
+
+}
+
+double Shapes::GPm2llLOOCV( const double *x ){
+   cout << "gnorm: " << x[0] << ", " << x[1] << endl;
+   cout << "lx, lmt: " << x[2] << ", " << x[3] << endl;
+
+   gnorm1 = x[0];
+   gnorm2 = x[1];
+   lx = x[2];
+   lmass = x[3];
+
+   int ntrain = 100;
+   int nmasses = 8;
+   double masspnts [] = {161.5, 163.5, 166.5, 169.5, 172.5, 175.5, 178.5, 181.5};
+
+   // histograms
+   vector<TH1D*> hgp_sig;
+   for(int j=0; j < nmasses; j++){
+
+      stringstream ssmass;
+      ssmass << floor(masspnts[j]);
+      string smass = ssmass.str();
+
+      // signal shape
+      hgp_sig.push_back( (TH1D*)(*hists_train_)[name]["ttbar"+smass+"_signal"]
+            ->Clone( ("hgp_sigx"+smass).c_str()) );
+      hgp_sig[j]->Scale( 1.0/hgp_sig[j]->Integral("width") );
+
+   }
+
+   // precompute Ky vector
+   double m2llsig, m2llbkg;
+   TrainGP( *hists_train_, m2llsig, m2llbkg );
+
+   // vector of training points
+   TVectorD ysig(ntrain*nmasses);
+   for(int i=0; i < ntrain*nmasses; i++){
+      int im = i % ntrain;
+      int imass = i / ntrain;
+      ysig[i] = hgp_sig[imass]->GetBinContent( hgp_sig[imass]->FindBin(ptrain[im]) );
+   }
+
+   TVectorD Ky = Kinv*ysig;
+
+   double m2ll = 0;
+   for(int i=0; i < ntrain*nmasses; i++){
+      if( ysig[i] == 0 ) continue;
+
+      double ui = ysig[i] - Ky[i]/Kinv[i][i];
+      double vi = 1/Kinv[i][i];
+
+      m2ll += log(vi) + pow(ui-ysig[i],2)/vi + log(2*TMath::Pi());
+
+   }
+
+   return m2ll;
 
 }

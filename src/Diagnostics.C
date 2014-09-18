@@ -26,7 +26,7 @@
 using namespace std;
 
 
-void Fitter::DeclareHists( map< string, map<string, TH1D*> >& hists_, string label ){
+void Fitter::DeclareHists( map< string, map<string, TH1D*> >& hists_, map< string, map<string, TH2D*> >& hists2d_, string label ){
 
    vector<string> type;
    type.push_back("data");
@@ -55,8 +55,6 @@ void Fitter::DeclareHists( map< string, map<string, TH1D*> >& hists_, string lab
             "M_{T2} 221;M_{T2} 221 (GeV);Events/2 GeV", 100, 50, 250 );
       hists_["mbl"][name] = new TH1D( ("hmbl_"+namel).c_str(),
             "M_{bl};M_{bl} (GeV);Events/3 GeV", 100, 0, dists["mbl"].range );
-      hists_["mbl_fit"][name] = new TH1D( ("hmbl_fit_"+namel).c_str(),
-            "M_{bl};M_{bl} (GeV);Events/2.5 GeV", 400, 0, 1000 );
       hists_["mt2_210"][name] = new TH1D( ("hmt2_210_"+namel).c_str(),
             "M_{T2} 210;M_{T2} 210 (GeV);Events/1.5 GeV", 100, 0, 150 );
       hists_["mt2_220_matchmbl"][name] = new TH1D( ("hmt2_220_matchmbl_"+namel).c_str(),
@@ -68,8 +66,18 @@ void Fitter::DeclareHists( map< string, map<string, TH1D*> >& hists_, string lab
       hists_["maos210blv"][name] = new TH1D( ("hmaos210blv_"+namel).c_str(),
             "MAOS from M_{T2} 210;blv mass(GeV);Events/5GeV", 100, 0, dists["maos210blv"].range );
 
-      //hists2d_["mblV220"][name] = new TH2D( ("hmblV220_"+namel).c_str(),
-      //      "220 vs. mbl", 50, 0, 250, 50, 0, 250 );
+      hists2d_["220Vmbl"][name] = new TH2D( ("h220Vmbl_"+namel).c_str(),
+            "MT2 220 vs. mbl;M_{bl} (GeV);M_{T2} (GeV) ", 50, 0, dists["mbl"].range, 50, 0, dists["mt2_220_nomatchmbl"].range );
+      hists2d_["maos220blvVmbl"][name] = new TH2D( ("hmaos220blvVmbl_"+namel).c_str(),
+            "MAOS 220 bl#nu vs. mbl;M_{bl} (GeV);MAOS bl#nu (GeV)", 50, 0, dists["mbl"].range, 50, 0, dists["maos220blv"].range );
+      hists2d_["maos210blvVmbl"][name] = new TH2D( ("hmaos210blvVmbl_"+namel).c_str(),
+            "MAOS 210 bl#nu vs. mbl;M_{bl} (GeV);MAOS bl#nu (GeV)", 50, 0, dists["mbl"].range, 50, 0, dists["maos210blv"].range );
+      hists2d_["maos220blvV220"][name] = new TH2D( ("hmaos220blvV220_"+namel).c_str(),
+            "MAOS 220 bl#nu vs. M_{T2} 220;M_{T2} (GeV);MAOS bl#nu (GeV)", 50, 0, dists["mt2_220_nomatchmbl"].range, 50, 0, dists["maos220blv"].range );
+      hists2d_["maos210blvV220"][name] = new TH2D( ("hmaos210blvV220_"+namel).c_str(),
+            "MAOS 210 bl#nu vs. M_{T2} 220;M_{T2} (GeV);MAOS bl#nu (GeV)", 50, 0, dists["mt2_220_nomatchmbl"].range, 50, 0, dists["maos210blv"].range );
+      hists2d_["maos220blvVmaos210blv"][name] = new TH2D( ("hmaos220blvVmaos210blv_"+namel).c_str(),
+            "MAOS 220 bl#nu vs. MAOS 210 bl#nu;MAOS bl#nu (GeV);MAOS bl#nu (GeV)", 50, 0, dists["maos210blv"].range, 50, 0, dists["maos220blv"].range );
 
       //
       // kinematic distributions
@@ -139,7 +147,7 @@ void Fitter::DeclareHists( map< string, map<string, TH1D*> >& hists_, string lab
    return;
 }
 
-void Fitter::DeleteHists( map< string, map<string, TH1D*> >& hists_ ){
+void Fitter::DeleteHists( map< string, map<string, TH1D*> >& hists_, map< string, map<string, TH2D*> >& hists2d_ ){
 
    typedef map<string, TH1D*> tmap;
    typedef map<string, tmap> hmap;
@@ -150,10 +158,20 @@ void Fitter::DeleteHists( map< string, map<string, TH1D*> >& hists_ ){
       }
    }
 
+   
+   typedef map<string, TH2D*> t2map;
+   typedef map<string, t2map> h2map;
+
+   for( h2map::iterator h = hists2d_.begin(); h != hists2d_.end(); h++){
+      for( t2map::iterator t = h->second.begin(); t != h->second.end(); t++){
+         delete (t->second);
+      }
+   }
+
 
 }
 
-void Fitter::FillHists( map< string, map<string, TH1D*> >& hists_,
+void Fitter::FillHists( map< string, map<string, TH1D*> >& hists_, map< string, map<string, TH2D*> >& hists2d_,
       vector<Event>& eventvec, bool fit_events ){
 
    // event loop
@@ -188,44 +206,67 @@ void Fitter::FillHists( map< string, map<string, TH1D*> >& hists_,
          hists_["mt2_221"][type]->Fill( ev->mt2_221, ev->weight );
       }
 
-      bool matchmbl = false;
-      hists_["mt2_220"][type]->Fill( ev->mt2_220, ev->weight );
-      if( ev->mt2_210 > 1 ) hists_["mt2_210"][type]->Fill( ev->mt2_210, ev->weight );
-
-      for( unsigned int m=0; m < ev->mbls.size(); m++ ){
-         //if( !(fit_events and ev->mbls[m] > lbnd and ev->mbls[m] < rbnd) ){
-         hists_["mbl"][type]->Fill( ev->mbls[m], ev->weight );
-         hists_["mbl_fit"][type]->Fill( ev->mbls[m], ev->weight );
-         //}
-         //hists2d_["mblV220"][type]->Fill( ev->mt2_220, ev->mbls[m], ev->weight );
-         if( ev->mbls[m] == ev->mt2_220 ) matchmbl = true;
-      }
-
-      if( matchmbl){
-         hists_["mt2_220_matchmbl"][type]->Fill( ev->mt2_220, ev->weight ); 
-      }
-      else{
-         hists_["mt2_220_nomatchmbl"][type]->Fill( ev->mt2_220, ev->weight );
-      }
-
       //MAOS
-
       double blv210array [] = { ev->maos210_blvmass1ap, ev->maos210_blvmass1am, ev->maos210_blvmass2ap, ev->maos210_blvmass2am, ev->maos210_blvmass1bp, ev->maos210_blvmass1bm, ev->maos210_blvmass2bp, ev->maos210_blvmass2bm };
       double blv220array [] = { ev->maos220_blvmass1ap, ev->maos220_blvmass1am, ev->maos220_blvmass2ap, ev->maos220_blvmass2am, ev->maos220_blvmass1bp, ev->maos220_blvmass1bm, ev->maos220_blvmass2bp, ev->maos220_blvmass2bm };
 
       vector<bool> useMaos220 = MaosCut220( ev );
       for (int i=0; i<8; i++){
          if (useMaos220[i]){
-            hists_["maos220blv"][type]->Fill( blv220array[i] );
+            hists_["maos220blv"][type]->Fill( blv220array[i], ev->weight );
          }
       }
-      
+
       vector<bool> useMaos210 = MaosCut210( ev );
       for (int i=0; i<8; i++){
          if (useMaos210[i]){
-            hists_["maos210blv"][type]->Fill( blv210array[i] );
+            hists_["maos210blv"][type]->Fill( blv210array[i], ev->weight );
          }
       }
+
+
+      // mbl
+      bool matchmbl = false;
+      for( unsigned int m=0; m < ev->mbls.size(); m++ ){
+
+         if( ev->mbls[m] == ev->mt2_220 ) matchmbl = true;
+         else hists2d_["220Vmbl"][type]->Fill( ev->mbls[m], ev->mt2_220, ev->weight );
+
+         hists_["mbl"][type]->Fill( ev->mbls[m], ev->weight );
+         for(int i=0; i<8; i++){
+            if (useMaos220[i]){
+               hists2d_["maos220blvVmbl"][type]->Fill( ev->mbls[m], blv220array[i], ev->weight );
+            }
+            if (useMaos210[i]){
+               hists2d_["maos210blvVmbl"][type]->Fill( ev->mbls[m], blv210array[i], ev->weight );
+            }
+         }
+      }
+
+      // mt2
+      hists_["mt2_220"][type]->Fill( ev->mt2_220, ev->weight );
+      if( ev->mt2_210 > 1 ) hists_["mt2_210"][type]->Fill( ev->mt2_210, ev->weight );
+
+      if( matchmbl){
+         hists_["mt2_220_matchmbl"][type]->Fill( ev->mt2_220, ev->weight ); 
+      }
+      else{
+         hists_["mt2_220_nomatchmbl"][type]->Fill( ev->mt2_220, ev->weight );
+         for(int i=0; i<8; i++){
+            if (useMaos220[i]){
+               hists2d_["maos220blvV220"][type]->Fill( ev->mt2_220, blv220array[i], ev->weight );
+               for(int j=0; j<8; j++){
+                  if (useMaos210[j]){
+                     hists2d_["maos220blvVmaos210blv"][type]->Fill( blv210array[j], blv220array[i], ev->weight );
+                  }
+               }
+            }
+            if (useMaos210[i]){
+               hists2d_["maos210blvV220"][type]->Fill( ev->mt2_220, blv210array[i], ev->weight );
+            }
+         }
+      }
+      
 
       //
       // kinematic distributions
@@ -288,11 +329,14 @@ void Fitter::FillHists( map< string, map<string, TH1D*> >& hists_,
    return;
 }
 
-void Fitter::PrintHists( map< string, map<string, TH1D*> >& hists_ ){
+void Fitter::PrintHists( map< string, map<string, TH1D*> >& hists_, map< string, map<string, TH2D*> >& hists2d_ ){
    cout << "Printing data/mc plots." << endl;
 
    typedef map<string, TH1D*> tmap;
    typedef map<string, tmap> hmap;
+
+   typedef map<string, TH2D*> t2map;
+   typedef map<string, t2map> h2map;
 
    std::string pathstr;
    char* path = std::getenv("WORKING_DIR");
@@ -308,7 +352,7 @@ void Fitter::PrintHists( map< string, map<string, TH1D*> >& hists_ ){
    TDirectory *dall = fileout->mkdir( "all" );
    TDirectory *dkin = fileout->mkdir( "kinematics" );
    TDirectory *dmass = fileout->mkdir( "masses" );
-
+   TDirectory *d2dim = fileout->mkdir( "2dim" );
 
    // print all hists, all channels
    dall->cd();
@@ -316,6 +360,16 @@ void Fitter::PrintHists( map< string, map<string, TH1D*> >& hists_ ){
       TDirectory *dtemp = dall->mkdir( (h->first).c_str() );
       dtemp->cd();
       for( tmap::iterator t = h->second.begin(); t != h->second.end(); t++){
+         t->second->Write();
+      }
+   }
+
+   // print all hists, all channels
+   d2dim->cd();
+   for( h2map::iterator h = hists2d_.begin(); h != hists2d_.end(); h++){
+      TDirectory *dtemp = d2dim->mkdir( (h->first).c_str() );
+      dtemp->cd();
+      for( t2map::iterator t = h->second.begin(); t != h->second.end(); t++){
          t->second->Write();
       }
    }
@@ -347,7 +401,7 @@ void Fitter::PrintHists( map< string, map<string, TH1D*> >& hists_ ){
       hallmc->Add( httbar_hadronic );
       hallmc->Add( hother );
 
-      double norm = hdata->Integral("width") / hallmc->Integral("width");
+      double norm = 1.0;//hdata->Integral("width") / hallmc->Integral("width");
 
       // renormalize distribution in mc for all processes
       httbar_signal->Scale( norm );
@@ -356,17 +410,6 @@ void Fitter::PrintHists( map< string, map<string, TH1D*> >& hists_ ){
       httbar_hadronic->Scale( norm );
       hother->Scale( norm );
       hallmc->Scale( norm );
-
-      if( name.compare("mbl_fit") == 0 ){
-         httbar_signal->Rebin(4);
-         httbar_mistag->Rebin(4);
-         httbar_taus->Rebin(4);
-         httbar_hadronic->Rebin(4);
-         hother->Rebin(4);
-         hallmc->Rebin(4);
-         hdata->Rebin(4);
-         hdata->GetYaxis()->SetTitle("Events/10 GeV");
-      }
 
       TCanvas * canvas = new TCanvas( ("c"+name).c_str(), ("c"+name).c_str(), 800, 800 );
       canvas->SetFillColor(0);
@@ -405,11 +448,11 @@ void Fitter::PrintHists( map< string, map<string, TH1D*> >& hists_ ){
       hstack->GetXaxis()->SetTitleFont(42);
       hstack->GetYaxis()->SetTitleFont(42);
 
-      hdata->SetMarkerStyle(20);
-      hdata->Draw( "same EP" );
+      //hdata->SetMarkerStyle(20);
+      //hdata->Draw( "same EP" );
 
       TLegend * legend = new TLegend(0.717,0.650,0.874,0.870);
-      legend->AddEntry( hdata, "data" );
+      //legend->AddEntry( hdata, "data" );
       legend->AddEntry( httbar_signal, "signal", "f" );
       legend->AddEntry( httbar_mistag, "mistag bkg", "f" );
       legend->AddEntry( httbar_taus, "tau decays", "f" );
@@ -518,7 +561,7 @@ void Fitter::PrintHists( map< string, map<string, TH1D*> >& hists_ ){
          hallmc->Add( hist[dname+"_hadronic"] );
          hallmc->Add( hist["other"] );
 
-         double chi2 = hdata->Chi2Test(hallmc,"UW CHI2");
+         double chi2 = 0.0;//hdata->Chi2Test(hallmc,"UW CHI2");
 
          gchi2->SetPoint(i, masspnts[i], chi2);
 
@@ -561,11 +604,11 @@ void Fitter::PrintHists( map< string, map<string, TH1D*> >& hists_ ){
 
       gStyle->SetOptFit();
 
-      double pb = func->GetParameter(1);
-      double pa = func->GetParameter(2);
-      double minimum = -pb/(2*pa);
+      //double pb = func->GetParameter(1);
+      //double pa = func->GetParameter(2);
+      double minimum = 0.0;//-pb/(2*pa);
 
-      cout << hname << " minimum = " << minimum << endl;
+      //cout << hname << " minimum = " << minimum << endl;
 
       stringstream minstr;
       minstr << minimum;
@@ -590,6 +633,7 @@ void Fitter::PrintHists( map< string, map<string, TH1D*> >& hists_ ){
       delete func;
       delete canvas;
       delete text;
+      
    }
    fileout->Close();
 
@@ -802,11 +846,6 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
                   hmc->Add( hists_[name]["other"] );
                }
 
-               if( name.compare("mbl_fit") == 0 ){
-                  hmc->Rebin(4);
-                  hmc->GetYaxis()->SetTitle("Events/10 GeV");
-               }
-
                hmc->SetTitle( hmc->GetTitle()+TString(" "+sb[k]+" shape @ "+smass+".5") );
                hmc->GetXaxis()->SetTitleSize(0.00);
                hmc->GetYaxis()->SetLabelSize(0.07);
@@ -897,7 +936,9 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
    fileout->cd();
 
    // plot template as a function of top mass
-
+   // TODO
+   return;
+   
    for( map<string, Distribution>::iterator it = dists.begin(); it != dists.end(); it++ ){
 
       string name = it->first;

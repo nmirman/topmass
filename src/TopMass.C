@@ -60,9 +60,15 @@ Fitter::~Fitter(){
 void Fitter::InitializeDists(){
    // gaussian process length scales
 
-   dists[ "mbl" ] = Distribution( "mbl", "M_{bl}", 13.0, 18.0, 1.5, 12.0, 300 );
+   //dists[ "mbl" ] = Distribution( "mbl", "M_{bl}", 9.84, 8.29, 0.82, 5.72, 300 );
+   dists[ "mbl" ] = Distribution( "mbl", "M_{bl}", 13.0, 25.95, 4.18, 10.89, 300 );
    dists[ "mt2_220_nomatchmbl" ] = Distribution( "mt2_220_nomatchmbl", "M_{T2} 220", 13.0, 18.0, 1.5, 12.0, 300 );
-   dists[ "maos220blv" ] = Distribution( "maos220blv","blv mass from Maos neutrinos from M_{T2} 220", 13.0, 15.0, 1.5, 12.0, 500 );
+   //dists[ "mt2_220_nomatchmbl" ] = Distribution( "mt2_220_nomatchmbl", "M_{T2} 220", 10.4, 22.6, 6.78, 9.6, 300 );
+   //dists[ "mt2_220_nomatchmbl" ] = Distribution( "mt2_220_nomatchmbl", "M_{T2} 220", 19.3, 17.7, 1.6, 6.1, 300 );
+   //dists[ "maos220blv" ] = Distribution( "maos220blv","blv mass from Maos neutrinos from M_{T2} 220", 13.0, 15.0, 1.5, 12.0, 500 );
+   //dists[ "maos220blv" ] = Distribution( "maos220blv","blv mass from Maos neutrinos from M_{T2} 220", 13.0, 10.0, 1.5, 12.0, 500 );
+   dists[ "maos220blv" ] = Distribution( "maos220blv","blv mass from Maos neutrinos from M_{T2} 220", 19.3, 17.7, 1.6, 6.1, 500 );
+   //dists[ "maos220blv" ] = Distribution( "maos220blv","blv mass from Maos neutrinos from M_{T2} 220", 13.0, 25.0, 1.5, 12.0, 500 );
    dists[ "maos210blv" ] = Distribution( "maos210blv","blv mass from Maos neutrinos from M_{T2} 210", 13.0, 15.0, 1.5, 12.0, 500 );
 
 }
@@ -74,8 +80,8 @@ void Fitter::InitializeDists(){
 void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
 
    // file path
-   string path = "root://cmseos:1094//eos/uscms/store/user/nmirman/Ntuples/TopMass/20140730/";
-   //string path = "/afs/cern.ch/work/n/nmirman/public/Ntuples/TopMass/20140730/";
+   //string path = "root://cmseos:1094//eos/uscms/store/user/nmirman/Ntuples/TopMass/20140730/";
+   string path = "/afs/cern.ch/work/n/nmirman/public/Ntuples/TopMass/20140730/";
 
    // filenames
    datasets[ "data" ]      = Dataset( path, "ntuple_data.root" );

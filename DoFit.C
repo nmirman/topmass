@@ -483,7 +483,9 @@ int main(int argc, char* argv[]){
             for(vector<Event>::iterator ev = eventvec_test.begin(); ev < eventvec_test.end(); ev++){
                if( ev->type.find(dname) != string::npos or ev->type.find("other") != string::npos ){
                   if( ev->type.find("bkgcontrol") == string::npos ){
-                     eventvec_fit.push_back(*ev);
+                     if( ev->type.find("signal") != string::npos ){
+                        eventvec_fit.push_back(*ev);
+                     }
                   }else{
                      eventvec_fit_bkgcontrol.push_back(*ev);
                   }

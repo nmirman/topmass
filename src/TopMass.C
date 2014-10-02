@@ -394,6 +394,7 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
    gMinuit->SetFunction( *fFunc );
    gMinuit->SetVariable(0, "topMass", 175.0, 0.1);
 
+   /*
    // If we're fitting mbl, set mbl background as a limited variable, otherwise set it as a fixed variable
    if (dists["mbl"].activate){
       gMinuit->SetLimitedVariable(1, "norm", 0.7, 0.1, 0, 1.0);
@@ -421,6 +422,12 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
    } else {
       gMinuit->SetFixedVariable(4, "norm_maos210", 0.70712);
    }
+   */
+   gMinuit->SetFixedVariable(1, "norm", 1.0);
+   gMinuit->SetFixedVariable(2, "norm220", 1.0);
+   gMinuit->SetFixedVariable(3, "norm_maos220", 1.0);
+   gMinuit->SetFixedVariable(4, "norm_maos210", 1.0);
+
 
    // set event vector and minimize
    eventvec_fit = &eventvec;
@@ -459,11 +466,24 @@ double Fitter::Min2LL(const double *x){
          fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
          fptr->aGPbkg = dist->aGPbkg;
 
+         double lbound = 0;
+         double rbound = dist->range;
+         if( iparam == 1 ){
+            lbound = 30;
+            rbound = 130;
+         } else if( iparam == 2 ){
+            lbound = 70;
+            rbound = 170;
+         } else if( iparam == 3 or iparam == 4 ){
+            lbound = 130;
+            rbound = 230;
+         }
+
          TF1 *fshape_tot = new TF1( ("f"+name+"_tot").c_str(), fptr, &Shapes::Ftot, 0, dist->range, 5);
          fshape_tot->SetParameters( x[0], 1.0, 1.0, 1.0, 1.0 );
-         double integralsig = fshape_tot->Integral(0,dist->range);
+         double integralsig = fshape_tot->Integral(lbound,rbound);
          fshape_tot->SetParameters( x[0], 0.0, 1.0, 1.0, 1.0 );
-         double integralbkg = fshape_tot->Integral(0,dist->range);
+         double integralbkg = fshape_tot->Integral(lbound,rbound);
          delete fshape_tot;
          delete fptr;
 
@@ -484,8 +504,7 @@ double Fitter::Min2LL(const double *x){
 
             if ( name.compare("mbl") == 0 ){ // for mbl
                for( unsigned int j=0; j < ev->mbls.size(); j++ ){
-                  if( ev->mbls[j] > dist->range ) continue;
-                  //if( ev->mbls[j] > lbnd and ev->mbls[j] < rbnd ) continue;
+                  if( ev->mbls[j] < lbound or ev->mbls[j] > rbound ) continue;
                   double val = shape.Ftot( &(ev->mbls[j]), pfit );
                   m2ll -= 2.0*ev->weight*log( val );
                }
@@ -494,8 +513,7 @@ double Fitter::Min2LL(const double *x){
                for ( unsigned int j=0; j < ev->mbls.size(); j++){
                   if ( ev->mbls[j] == ev->mt2_220 ) continue;
                }
-               if( ev->mt2_220 > dist->range ) continue;
-               //if( ev->mt2_220 > lbnd and ev->mt2_220 < rbnd ) continue;
+               if( ev->mt2_220 < lbound or ev->mt2_220 > rbound ) continue;
                double val = shape.Ftot( &(ev->mt2_220), pfit );
                m2ll -= 2.0*ev->weight*log( val );
             }
@@ -504,8 +522,7 @@ double Fitter::Min2LL(const double *x){
                
                vector<bool> useMaos220 = MaosCut220( ev );
                for ( unsigned int j=0; j < sizeof(blv220array)/sizeof(blv220array[0]); j++){           
-                  if( blv220array[j] > dist->range ) continue;
-                  //if( blv_array[j] > lbnd and blv_array[j] < rbnd ) continue;
+                  if( blv220array[j] < lbound or blv220array[j] > rbound ) continue;
                   if (useMaos220[j]){
                      double val = shape.Ftot( &(blv220array[j]), pfit );
                      m2ll -= 2.0*ev->weight*log( val );
@@ -518,8 +535,7 @@ double Fitter::Min2LL(const double *x){
                
                vector<bool> useMaos210 = MaosCut210( ev );
                for ( unsigned int j=0; j < sizeof(blv210array)/sizeof(blv210array[0]); j++){           
-                  if( blv210array[j] > dist->range ) continue;
-                  //if( blv_array[j] > lbnd and blv_array[j] < rbnd ) continue;
+                  if( blv210array[j] < lbound and blv210array[j] > rbound ) continue;
                   if (useMaos210[j]){
                      double val = shape.Ftot( &(blv210array[j]), pfit );
                      m2ll -= 2.0*ev->weight*log( val );

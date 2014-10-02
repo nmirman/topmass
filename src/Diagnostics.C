@@ -935,7 +935,7 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
    fileout->cd();
 
    // plot template as a function of top mass
-
+/*
    for( map<string, Distribution>::iterator it = dists.begin(); it != dists.end(); it++ ){
 
       string name = it->first;
@@ -1023,7 +1023,7 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
          }
       }
    }
-
+*/
 
    // TODO
    // need to figure out variance band for this plot

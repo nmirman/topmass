@@ -192,8 +192,9 @@ void Shapes::TrainGP( map< string, map<string, TH1D*> > & hists_,
       int imass = i / ntrain;
       double binerr_sig = hgp_sig[imass]->GetBinError( hgp_sig[imass]->FindBin(ptrain[im]) );
       double binerr_bkg = hgp_bkg[imass]->GetBinError( hgp_bkg[imass]->FindBin(ptrain[im]) );
-      binerr_sig *= sqrt(gnorm2);
-      binerr_bkg *= sqrt(gnorm2);
+      // TODO
+      binerr_sig = sqrt(10E-6*gnorm2);
+      binerr_bkg = sqrt(10E-6*gnorm2);
       for(int j=0; j < ntrain*nmasses; j++){
          if( i==j ){
             Nsig[i][j] = binerr_sig*binerr_sig;//pow( max(binerr_sig,0.001), 2 );
@@ -289,12 +290,12 @@ void Shapes::LearnGPparams( map< string, map<string, TH1D*> > & hists_ ){
    // set training hist
    hists_train_ = &hists_;
 
-   fFunc = new ROOT::Math::Functor ( this, &Shapes::GPm2llX, 4 );
+   fFunc = new ROOT::Math::Functor ( this, &Shapes::GPm2llLOOCV, 4 );
    gMinuit->SetFunction( *fFunc );
 
    do_gpvar = true;
    gMinuit->SetLowerLimitedVariable(0, "gpnorm1", 10, 1, 0.0);
-   gMinuit->SetLowerLimitedVariable(1, "gpnorm2", 10, 1, 0.0);
+   gMinuit->SetLowerLimitedVariable(1, "gpnorm2", 1, 1, 0.0);
    gMinuit->SetLowerLimitedVariable(2, "lx", 10, 1, 0.0);
    gMinuit->SetLowerLimitedVariable(3, "lmass", 10, 1, 0.0);
 

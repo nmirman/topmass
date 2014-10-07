@@ -630,6 +630,7 @@ int main(int argc, char* argv[]){
 
          if( dist->activate ){
             cout << "Learning hyperparameters for distribution " << name << "..." << endl;
+            cout << "TEST 2" << endl;
             Shapes * fptrtmp = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
             fptrtmp->LearnGPparams( hists_train_ );
 

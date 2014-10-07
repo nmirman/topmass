@@ -25,6 +25,7 @@ Shapes::Shapes( string var, double gplength_x, double gplength_mt, double norm1,
    lmass = gplength_mt;
    gnorm1 = norm1;
    gnorm2 = norm2;
+   gpnoise = 0.0;
    int ntrain = 100;
    rtrain = range;
    for(int i=0; i < ntrain; i++) ptrain.push_back( (i+0.5)*rtrain/ntrain );
@@ -192,13 +193,10 @@ void Shapes::TrainGP( map< string, map<string, TH1D*> > & hists_,
       int imass = i / ntrain;
       double binerr_sig = hgp_sig[imass]->GetBinError( hgp_sig[imass]->FindBin(ptrain[im]) );
       double binerr_bkg = hgp_bkg[imass]->GetBinError( hgp_bkg[imass]->FindBin(ptrain[im]) );
-      // TODO
-      binerr_sig = sqrt(10E-6*gnorm2);
-      binerr_bkg = sqrt(10E-6*gnorm2);
       for(int j=0; j < ntrain*nmasses; j++){
          if( i==j ){
-            Nsig[i][j] = binerr_sig*binerr_sig;//pow( max(binerr_sig,0.001), 2 );
-            Nbkg[i][j] = binerr_bkg*binerr_bkg;//pow( max(binerr_bkg,0.001), 2 );
+            Nsig[i][j] = binerr_sig*binerr_sig + 10E-08*gpnoise;//pow( max(binerr_sig,0.001), 2 );
+            Nbkg[i][j] = binerr_bkg*binerr_bkg + 10E-08*gpnoise;//pow( max(binerr_bkg,0.001), 2 );
          }else{
             Nsig[i][j] = 0;
             Nbkg[i][j] = 0;
@@ -290,7 +288,7 @@ void Shapes::LearnGPparams( map< string, map<string, TH1D*> > & hists_ ){
    // set training hist
    hists_train_ = &hists_;
 
-   fFunc = new ROOT::Math::Functor ( this, &Shapes::GPm2llLOOCV, 4 );
+   fFunc = new ROOT::Math::Functor ( this, &Shapes::GPm2llX, 5 );
    gMinuit->SetFunction( *fFunc );
 
    do_gpvar = true;
@@ -298,6 +296,7 @@ void Shapes::LearnGPparams( map< string, map<string, TH1D*> > & hists_ ){
    gMinuit->SetLowerLimitedVariable(1, "gpnorm2", 1, 1, 0.0);
    gMinuit->SetLowerLimitedVariable(2, "lx", 10, 1, 0.0);
    gMinuit->SetLowerLimitedVariable(3, "lmass", 10, 1, 0.0);
+   gMinuit->SetLowerLimitedVariable(4, "gpnoise", 1.0, 1, 0.0);
 
    gMinuit->SetTolerance(1);
    gMinuit->Minimize();
@@ -307,6 +306,7 @@ void Shapes::LearnGPparams( map< string, map<string, TH1D*> > & hists_ ){
    gnorm2 = xs[1];
    lx = xs[2];
    lmass = xs[3];
+   gpnoise = xs[4];
 
    return;
 }
@@ -328,11 +328,13 @@ double Shapes::GPm2ll( const double *x ){
 double Shapes::GPm2llX( const double *x ){
    cout << "gnorm: " << x[0] << ", " << x[1] << endl;
    cout << "lx, lmt: " << x[2] << ", " << x[3] << endl;
+   cout << "gnoise: " << x[4] << endl;
 
    gnorm1 = x[0];
    gnorm2 = x[1];
    lx = x[2];
    lmass = x[3];
+   gpnoise = x[4];
 
    int nmasses = 8;
    double masspnts [] = {161.5, 163.5, 166.5, 169.5, 172.5, 175.5, 178.5, 181.5};
@@ -407,11 +409,13 @@ double Shapes::GPm2llX( const double *x ){
 double Shapes::GPm2llLOOCV( const double *x ){
    cout << "gnorm: " << x[0] << ", " << x[1] << endl;
    cout << "lx, lmt: " << x[2] << ", " << x[3] << endl;
+   cout << "gnoise: " << x[4] << endl;
 
    gnorm1 = x[0];
    gnorm2 = x[1];
    lx = x[2];
    lmass = x[3];
+   gpnoise = x[4];
 
    int ntrain = 100;
    int nmasses = 8;

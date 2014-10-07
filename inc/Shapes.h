@@ -23,7 +23,7 @@ class Shapes{
       double Fmbl_gp_var(double, double, string);
 
       string name;
-      double lx, lmass, gnorm1, gnorm2;
+      double lx, lmass, gnorm1, gnorm2, gpnoise;
       double lbx, rbx;
       double rtrain;
 

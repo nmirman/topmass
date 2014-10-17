@@ -17,7 +17,7 @@ using namespace std;
 // constructor and destructor
 //
 
-Shapes::Shapes( string var, double gplength_x, double gplength_mt, double norm1, double norm2, double range ){
+Shapes::Shapes( string var, vector<Event>& eventvec, double gplength_x, double gplength_mt, double norm1, double norm2, double range ){
 
    name = var;
    // GP options
@@ -27,7 +27,59 @@ Shapes::Shapes( string var, double gplength_x, double gplength_mt, double norm1,
    gnorm2 = norm2;
    int ntrain = 100;
    rtrain = range;
-   for(int i=0; i < ntrain; i++) ptrain.push_back( (i+0.5)*rtrain/ntrain );
+   for(int i=0; i < ntrain; i++){
+      double ledge = double(i*rtrain)/ntrain;
+      double redge = double((i+1)*rtrain)/ntrain;
+      double cent = double((i+0.5)*rtrain)/ntrain;
+
+      double sum=0, norm=0;
+      for( vector<Event>::iterator ev = eventvec.begin(); ev < eventvec.end(); ev++){
+         if ( name.compare("mbl") == 0 ){ // for mbl
+            for( unsigned int j=0; j < ev->mbls.size(); j++ ){
+               if( ev->mbls[j] >= ledge and ev->mbls[j] < redge ){
+                  sum += ev->weight*ev->mbls[j];
+                  norm += ev->weight;
+               }
+            }
+         }
+         else if ( name.compare("mt2_220_nomatchmbl") == 0 ){ // for 220
+            bool matchmbl = false;
+            for ( unsigned int j=0; j < ev->mbls.size(); j++){
+               if ( ev->mbls[j] == ev->mt2_220 ) matchmbl = true;
+            }
+            if( matchmbl ) continue;
+            sum += ev->weight*ev->mt2_220;
+            norm += ev->weight;
+         }
+         else if ( name.compare("maos220blv") == 0 ){ // for Maos 220
+            double blv220array [] = { ev->maos220_blvmass1ap, ev->maos220_blvmass1am, ev->maos220_blvmass2ap, ev->maos220_blvmass2am, ev->maos220_blvmass1bp, ev->maos220_blvmass1bm, ev->maos220_blvmass2bp, ev->maos220_blvmass2bm };
+
+            vector<bool> useMaos220 = MaosCut220( ev );
+            for ( unsigned int j=0; j < sizeof(blv220array)/sizeof(blv220array[0]); j++){           
+               if (useMaos220[j]){
+                  sum += ev->weight*blv220array[j];
+                  norm += ev->weight;
+               }
+
+            }
+         }
+         else if ( name.compare("maos210blv") == 0 ){ // for Maos 210
+            double blv210array [] = { ev->maos210_blvmass1ap, ev->maos210_blvmass1am, ev->maos210_blvmass2ap, ev->maos210_blvmass2am, ev->maos210_blvmass1bp, ev->maos210_blvmass1bm, ev->maos210_blvmass2bp, ev->maos210_blvmass2bm };
+
+            vector<bool> useMaos210 = MaosCut210( ev );
+            for ( unsigned int j=0; j < sizeof(blv210array)/sizeof(blv210array[0]); j++){           
+               if (useMaos210[j]){
+                  sum += ev->weight*blv210array[j];
+                  norm += ev->weight;
+               }
+
+            }
+         }
+      }
+
+      if( norm > 0 ) ptrain.push_back( double(sum)/norm );
+      else ptrain.push_back( cent );
+   }
 
    // right and left bounds -- set to zero unless needed
    lbx = 0.0;

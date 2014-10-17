@@ -14,7 +14,7 @@ class Shapes{
 
    public:
 
-      Shapes( string, double, double, double, double, double );
+      Shapes( string, vector<Event>&, double, double, double, double, double );
       ~Shapes();
 
       double Ftot(double*, double*);

@@ -860,7 +860,7 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
                hmc->SetMarkerStyle(20);
                hmc->DrawCopy();
 
-               Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
+               Shapes * fptr = new Shapes( name, *eventvec_train, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
                fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
                fptr->aGPsig = dist->aGPsig;
                fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
@@ -960,7 +960,7 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
 
                // graph with template value at mbl = x
                TGraph *gtemplate = new TGraph();
-               Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
+               Shapes * fptr = new Shapes( name, *eventvec_train, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
                fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
                fptr->aGPsig = dist->aGPsig;
                fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
@@ -1131,7 +1131,7 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
 
          // mbl likelihood
 
-         Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
+         Shapes * fptr = new Shapes( name, *eventvec_train, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
          fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr->aGPsig = dist->aGPsig;
          fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );

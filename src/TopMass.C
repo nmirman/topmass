@@ -383,7 +383,7 @@ void Fitter::ReweightMC( vector<Event>& eventvec, string name ){
 
 }
 
-void Fitter::RunMinimizer( vector<Event>& eventvec ){
+void Fitter::RunMinimizer( vector<Event>& eventvec_fittemp, vector<Event>& eventvec_traintemp ){
 
 
    gMinuit = new ROOT::Minuit2::Minuit2Minimizer ( ROOT::Minuit2::kMigrad );
@@ -423,7 +423,8 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
    }
 
    // set event vector and minimize
-   eventvec_fit = &eventvec;
+   eventvec_fit = &eventvec_fittemp;
+   eventvec_train = &eventvec_traintemp;
 
    cout << "\nFitting " << eventvec_fit->size() << " events." << endl;
    gMinuit->Minimize();
@@ -453,7 +454,7 @@ double Fitter::Min2LL(const double *x){
       if( dist->activate ){// only do this if we're fitting the variable in question
 
          // normalization inside likelihood function (temp)
-         Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
+         Shapes * fptr = new Shapes( name, *eventvec_train, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
          fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr->aGPsig = dist->aGPsig;
          fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
@@ -467,7 +468,7 @@ double Fitter::Min2LL(const double *x){
          delete fshape_tot;
          delete fptr;
 
-         Shapes shape( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
+         Shapes shape( name, *eventvec_train, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
          shape.aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          shape.aGPsig = dist->aGPsig;
          shape.aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
@@ -574,7 +575,7 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_ ){
       if( dist->activate ){// only do this if we're fitting the variable in question
 
          // normalization inside likelihood function (temp)
-         Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
+         Shapes * fptr = new Shapes( name, *eventvec_train, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
          fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr->aGPsig = dist->aGPsig;
          fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );

@@ -28,7 +28,7 @@ job=$(($1-1))
 iter=$(($job/50))
 
 #./DoFit --run_number $job --bootstrap --fit --masspnt ${mass[$iter]} --mbl
-./DoFit --fit --masspnt ${mass[$job]} --mt2_220
+./DoFit --fit --masspnt ${mass[$job]} --mbl
 
 cd ..
 mv topmass/fitresults.root .

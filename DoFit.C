@@ -525,7 +525,7 @@ int main(int argc, char* argv[]){
                double m2llsig, m2llbkg;
 
                if( dist->activate ){
-                  Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
+                  Shapes * fptr = new Shapes( name, eventvec_train, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
                   fptr->TrainGP( hists_train_, m2llsig, m2llbkg );
 
                   dist->aGPsig.ResizeTo( fptr->aGPsig.GetNoElements() );
@@ -551,7 +551,7 @@ int main(int argc, char* argv[]){
             }
 
             // events for fitting, hists for training
-            fitter.RunMinimizer( eventvec_fit );
+            fitter.RunMinimizer( eventvec_fit, eventvec_train );
             fitter.PlotResults( hists_fit_ ); // plot fitted events
 
             cout << "Fit Chi2 = " << fitter.fitchi2 << endl;
@@ -595,7 +595,7 @@ int main(int argc, char* argv[]){
                double m2llsig, m2llbkg;
 
                if( dist->activate ){
-                  Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
+                  Shapes * fptr = new Shapes( name, eventvec_train, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
                   fptr->TrainGP( hists_train_, m2llsig, m2llbkg );
 
                   dist->aGPsig.ResizeTo( fptr->aGPsig.GetNoElements() );
@@ -630,7 +630,7 @@ int main(int argc, char* argv[]){
 
          if( dist->activate ){
             cout << "Learning hyperparameters for distribution " << name << "..." << endl;
-            Shapes * fptrtmp = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
+            Shapes * fptrtmp = new Shapes( name, eventvec_train, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
             fptrtmp->LearnGPparams( hists_train_ );
 
             dist->glx = fptrtmp->lx;
@@ -639,7 +639,7 @@ int main(int argc, char* argv[]){
             dist->gnorm2 = fptrtmp->gnorm2;
 
             double m2llsig, m2llbkg;
-            Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
+            Shapes * fptr = new Shapes( name, eventvec_train, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
             fptr->TrainGP( hists_train_, m2llsig, m2llbkg );
 
             dist->aGPsig.ResizeTo( fptr->aGPsig.GetNoElements() );

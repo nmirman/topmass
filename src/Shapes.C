@@ -1,4 +1,5 @@
 #include "Shapes.h"
+#include "TopMass.h"
 
 #include "TH1.h"
 #include "TMath.h"
@@ -19,6 +20,7 @@ using namespace std;
 
 Shapes::Shapes( string var, vector<Event>& eventvec, double gplength_x, double gplength_mt, double norm1, double norm2, double range ){
 
+   Fitter fitter;
    name = var;
    // GP options
    lx = gplength_x;
@@ -54,7 +56,7 @@ Shapes::Shapes( string var, vector<Event>& eventvec, double gplength_x, double g
          else if ( name.compare("maos220blv") == 0 ){ // for Maos 220
             double blv220array [] = { ev->maos220_blvmass1ap, ev->maos220_blvmass1am, ev->maos220_blvmass2ap, ev->maos220_blvmass2am, ev->maos220_blvmass1bp, ev->maos220_blvmass1bm, ev->maos220_blvmass2bp, ev->maos220_blvmass2bm };
 
-            vector<bool> useMaos220 = MaosCut220( ev );
+            vector<bool> useMaos220 = fitter.MaosCut220( ev );
             for ( unsigned int j=0; j < sizeof(blv220array)/sizeof(blv220array[0]); j++){           
                if (useMaos220[j]){
                   sum += ev->weight*blv220array[j];
@@ -66,7 +68,7 @@ Shapes::Shapes( string var, vector<Event>& eventvec, double gplength_x, double g
          else if ( name.compare("maos210blv") == 0 ){ // for Maos 210
             double blv210array [] = { ev->maos210_blvmass1ap, ev->maos210_blvmass1am, ev->maos210_blvmass2ap, ev->maos210_blvmass2am, ev->maos210_blvmass1bp, ev->maos210_blvmass1bm, ev->maos210_blvmass2bp, ev->maos210_blvmass2bm };
 
-            vector<bool> useMaos210 = MaosCut210( ev );
+            vector<bool> useMaos210 = fitter.MaosCut210( ev );
             for ( unsigned int j=0; j < sizeof(blv210array)/sizeof(blv210array[0]); j++){           
                if (useMaos210[j]){
                   sum += ev->weight*blv210array[j];

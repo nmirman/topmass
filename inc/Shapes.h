@@ -2,6 +2,7 @@
 #include "TVectorD.h"
 #include "Math/Functor.h"
 #include "Minuit2/Minuit2Minimizer.h"
+#include "Configuration.h"
 
 #include <map>
 

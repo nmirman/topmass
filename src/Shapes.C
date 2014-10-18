@@ -36,6 +36,7 @@ Shapes::Shapes( string var, vector<Event>& eventvec, double gplength_x, double g
 
       double sum=0, norm=0;
       for( vector<Event>::iterator ev = eventvec.begin(); ev < eventvec.end(); ev++){
+         if( ev->type.find("signal") == string::npos ) continue;
          if ( name.compare("mbl") == 0 ){ // for mbl
             for( unsigned int j=0; j < ev->mbls.size(); j++ ){
                if( ev->mbls[j] >= ledge and ev->mbls[j] < redge ){

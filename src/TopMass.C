@@ -394,6 +394,7 @@ void Fitter::RunMinimizer( vector<Event>& eventvec_fittemp, vector<Event>& event
    gMinuit->SetFunction( *fFunc );
    gMinuit->SetVariable(0, "topMass", 175.0, 0.1);
 
+   /*
    // If we're fitting mbl, set mbl background as a limited variable, otherwise set it as a fixed variable
    if (dists["mbl"].activate){
       gMinuit->SetLimitedVariable(1, "norm", 0.7, 0.1, 0, 1.0);
@@ -421,6 +422,11 @@ void Fitter::RunMinimizer( vector<Event>& eventvec_fittemp, vector<Event>& event
    } else {
       gMinuit->SetFixedVariable(4, "norm_maos210", 0.70712);
    }
+   */
+   gMinuit->SetFixedVariable(1, "norm", 1.0);
+   gMinuit->SetFixedVariable(2, "norm2", 1.0);
+   gMinuit->SetFixedVariable(3, "norm3", 1.0);
+   gMinuit->SetFixedVariable(4, "norm4", 1.0);
 
    // set event vector and minimize
    eventvec_fit = &eventvec_fittemp;

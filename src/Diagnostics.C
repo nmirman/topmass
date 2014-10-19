@@ -233,7 +233,7 @@ void Fitter::FillHists( map< string, map<string, TH1D*> >& hists_, map< string, 
          if( ev->mbls[m] == ev->mt2_220 ) matchmbl = true;
          else hists2d_["220Vmbl"][type]->Fill( ev->mbls[m], ev->mt2_220, ev->weight );
 
-         hists_["mbl"][type]->Fill( ev->mbls[m], ev->weight );
+         hists_["mbl"][type]->Fill( ev->mbls[m]/*, ev->weight*/ );
          for(int i=0; i<8; i++){
             if (useMaos220[i]){
                hists2d_["maos220blvVmbl"][type]->Fill( ev->mbls[m], blv220array[i], ev->weight );

@@ -30,7 +30,7 @@ class Fitter{
       void GetVariables(vector<Event>&);
       void ReweightMC(vector<Event>&, string);
 
-      void RunMinimizer(vector<Event>&, vector<Event>&);
+      void RunMinimizer(vector<Event>&, vector<Event>&, map< string, map<string, TH1D*> >&);
       void PlotResults(map< string, map<string, TH1D*> >&);
 
       ROOT::Minuit2::Minuit2Minimizer* gMinuit;
@@ -63,6 +63,7 @@ class Fitter{
 
       vector<Event>* eventvec_fit;
       vector<Event>* eventvec_train;
+      map< string, map<string, TH1D*> >* hists_fit;
 
 };
 

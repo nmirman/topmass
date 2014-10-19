@@ -34,6 +34,7 @@ Shapes::Shapes( string var, vector<Event>& eventvec, double gplength_x, double g
       double redge = double((i+1)*rtrain)/ntrain;
       double cent = double((i+0.5)*rtrain)/ntrain;
 
+      /*
       double sum=0, norm=0;
       for( vector<Event>::iterator ev = eventvec.begin(); ev < eventvec.end(); ev++){
          if( ev->type.find("signal") == string::npos ) continue;
@@ -81,7 +82,9 @@ Shapes::Shapes( string var, vector<Event>& eventvec, double gplength_x, double g
       }
 
       if( norm > 0 ) ptrain.push_back( double(sum)/norm );
-      else ptrain.push_back( cent );
+      else 
+      */
+      ptrain.push_back( cent );
    }
 
    // right and left bounds -- set to zero unless needed

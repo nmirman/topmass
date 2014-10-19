@@ -383,7 +383,7 @@ void Fitter::ReweightMC( vector<Event>& eventvec, string name ){
 
 }
 
-void Fitter::RunMinimizer( vector<Event>& eventvec_fittemp, vector<Event>& eventvec_traintemp ){
+void Fitter::RunMinimizer( vector<Event>& eventvec_fittemp, vector<Event>& eventvec_traintemp, map< string, map<string, TH1D*> >& hists){
 
 
    gMinuit = new ROOT::Minuit2::Minuit2Minimizer ( ROOT::Minuit2::kMigrad );
@@ -393,6 +393,7 @@ void Fitter::RunMinimizer( vector<Event>& eventvec_fittemp, vector<Event>& event
    fFunc = new ROOT::Math::Functor ( this, &Fitter::Min2LL, 5 );
    gMinuit->SetFunction( *fFunc );
    gMinuit->SetVariable(0, "topMass", 175.0, 0.1);
+   //gMinuit->SetFixedVariable(0, "topMass", 172.5);
 
    /*
    // If we're fitting mbl, set mbl background as a limited variable, otherwise set it as a fixed variable
@@ -431,6 +432,7 @@ void Fitter::RunMinimizer( vector<Event>& eventvec_fittemp, vector<Event>& event
    // set event vector and minimize
    eventvec_fit = &eventvec_fittemp;
    eventvec_train = &eventvec_traintemp;
+   hists_fit = &hists;
 
    cout << "\nFitting " << eventvec_fit->size() << " events." << endl;
    gMinuit->Minimize();
@@ -482,7 +484,21 @@ double Fitter::Min2LL(const double *x){
 
          double pfit [] = {x[0], x[iparam], 1.0, integralsig, integralbkg};
 
+         TH1D *hist = (*hists_fit)[name]["fitevts"];
+         hist->Scale(1.0/hist->Integral("width"));
+         int numbins = hist->GetNbinsX();
+         for(int bin=0; bin <= numbins; bin++){
+            double bincent = hist->GetBinCenter(bin);
+            double binerr = hist->GetBinError(bin);
+            double binval = hist->GetBinContent(bin);
+            double gpmean = shape.Ftot( &bincent, pfit );
+            double var = binerr > 0 ? binerr*binerr: 1.0;
+            m2ll += log(var) + pow(gpmean-binval,2)/var + log(2*TMath::Pi());
+            //cout << "bin @ " << bincent << ": " << log(var) + pow(gpmean-binval,2)/var + log(2*TMath::Pi()) << endl;
+         }
+
          // evaluate likelihood
+         /*
          for( vector<Event>::iterator ev = eventvec_fit->begin(); ev < eventvec_fit->end(); ev++ ){
             if( !(ev->fit_event) ) continue;
 
@@ -493,7 +509,7 @@ double Fitter::Min2LL(const double *x){
                for( unsigned int j=0; j < ev->mbls.size(); j++ ){
                   if( ev->mbls[j] > dist->range ) continue;
                   //if( ev->mbls[j] > lbnd and ev->mbls[j] < rbnd ) continue;
-                  double val = shape.Ftot( &(ev->mbls[j]), pfit );
+                  double val = shape.Ftot( hists_fit["mbl"]["fitevents"].GetBinCenter(), pfit );
                   m2ll -= 2.0*ev->weight*log( val );
                }
             }
@@ -538,6 +554,7 @@ double Fitter::Min2LL(const double *x){
             }
 
          }
+         */
       }
    }
 

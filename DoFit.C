@@ -551,7 +551,7 @@ int main(int argc, char* argv[]){
             }
 
             // events for fitting, hists for training
-            fitter.RunMinimizer( eventvec_fit );
+            fitter.RunMinimizer( eventvec_fit, hists_fit_ );
             fitter.PlotResults( hists_fit_ ); // plot fitted events
 
             cout << "Fit Chi2 = " << fitter.fitchi2 << endl;

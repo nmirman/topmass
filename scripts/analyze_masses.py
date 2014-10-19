@@ -3,7 +3,7 @@
 from ROOT import *
 import sys
 
-file = TFile( 'fitresults.root' )
+file = TFile( sys.argv[1] )
 tree = file.Get('FitResults')
 
 gresults = TGraphErrors()

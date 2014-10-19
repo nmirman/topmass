@@ -383,7 +383,7 @@ void Fitter::ReweightMC( vector<Event>& eventvec, string name ){
 
 }
 
-void Fitter::RunMinimizer( vector<Event>& eventvec ){
+void Fitter::RunMinimizer( vector<Event>& eventvec, map< string, map<string, TH1D*> >& hists ){
 
 
    gMinuit = new ROOT::Minuit2::Minuit2Minimizer ( ROOT::Minuit2::kMigrad );
@@ -424,6 +424,7 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
 
    // set event vector and minimize
    eventvec_fit = &eventvec;
+   hists_fit = &hists;
 
    cout << "\nFitting " << eventvec_fit->size() << " events." << endl;
    gMinuit->Minimize();
@@ -476,61 +477,18 @@ double Fitter::Min2LL(const double *x){
          double pfit [] = {x[0], x[iparam], 1.0, integralsig, integralbkg};
 
          // evaluate likelihood
-         for( vector<Event>::iterator ev = eventvec_fit->begin(); ev < eventvec_fit->end(); ev++ ){
-            if( !(ev->fit_event) ) continue;
-
-            // B MASS CUT
-            if ( !(ev->jet1.M() < 40 and ev->jet2.M() < 40) ) continue;
-
-            if ( name.compare("mbl") == 0 ){ // for mbl
-               for( unsigned int j=0; j < ev->mbls.size(); j++ ){
-                  if( ev->mbls[j] > dist->range ) continue;
-                  //if( ev->mbls[j] > lbnd and ev->mbls[j] < rbnd ) continue;
-                  double val = shape.Ftot( &(ev->mbls[j]), pfit );
-                  m2ll -= 2.0*ev->weight*log( val );
-               }
-            }
-            else if ( name.compare("mt2_220_nomatchmbl") == 0 ){ // for 220
-               bool matchmbl = false;
-               for ( unsigned int j=0; j < ev->mbls.size(); j++){
-                  if ( ev->mbls[j] == ev->mt2_220 ) matchmbl = true;
-               }
-               if( matchmbl ) continue;
-               if( ev->mt2_220 > dist->range ) continue;
-               //if( ev->mt2_220 > lbnd and ev->mt2_220 < rbnd ) continue;
-               double val = shape.Ftot( &(ev->mt2_220), pfit );
-               m2ll -= 2.0*ev->weight*log( val );
-            }
-            else if ( name.compare("maos220blv") == 0 ){ // for Maos 220
-               double blv220array [] = { ev->maos220_blvmass1ap, ev->maos220_blvmass1am, ev->maos220_blvmass2ap, ev->maos220_blvmass2am, ev->maos220_blvmass1bp, ev->maos220_blvmass1bm, ev->maos220_blvmass2bp, ev->maos220_blvmass2bm };
-               
-               vector<bool> useMaos220 = MaosCut220( ev );
-               for ( unsigned int j=0; j < sizeof(blv220array)/sizeof(blv220array[0]); j++){           
-                  if( blv220array[j] > dist->range ) continue;
-                  //if( blv_array[j] > lbnd and blv_array[j] < rbnd ) continue;
-                  if (useMaos220[j]){
-                     double val = shape.Ftot( &(blv220array[j]), pfit );
-                     m2ll -= 2.0*ev->weight*log( val );
-                  }
-               
-               }
-            }
-            else if ( name.compare("maos210blv") == 0 ){ // for Maos 210
-               double blv210array [] = { ev->maos210_blvmass1ap, ev->maos210_blvmass1am, ev->maos210_blvmass2ap, ev->maos210_blvmass2am, ev->maos210_blvmass1bp, ev->maos210_blvmass1bm, ev->maos210_blvmass2bp, ev->maos210_blvmass2bm };
-               
-               vector<bool> useMaos210 = MaosCut210( ev );
-               for ( unsigned int j=0; j < sizeof(blv210array)/sizeof(blv210array[0]); j++){           
-                  if( blv210array[j] > dist->range ) continue;
-                  //if( blv_array[j] > lbnd and blv_array[j] < rbnd ) continue;
-                  if (useMaos210[j]){
-                     double val = shape.Ftot( &(blv210array[j]), pfit );
-                     m2ll -= 2.0*ev->weight*log( val );
-                  }
-               
-               }
-            }
-
+         TH1D *hist = (*hists_fit)[name]["fitevts"];
+         hist->Scale(1.0/hist->Integral("width"));
+         int numbins = hist->GetNbinsX();
+         for(int bin=0; bin <= numbins; bin++){
+            double bincent = hist->GetBinCenter(bin);
+            double binerr = hist->GetBinError(bin);
+            double binval = hist->GetBinContent(bin);
+            double gpmean = shape.Ftot( &bincent, pfit );
+            double var = binerr > 0 ? binerr*binerr: 1.0;
+            m2ll += log(var) + pow(gpmean-binval,2)/var + log(2*TMath::Pi());
          }
+
       }
    }
 

@@ -639,6 +639,148 @@ void Fitter::PrintHists( map< string, map<string, TH1D*> >& hists_, map< string,
    return;
 }
 
+void Fitter::CompareMasspoints( map< string, map<string, TH1D*> >& hists_train_, map< string, map<string, TH1D*> >& hists_test_ ){
+
+   std::string pathstr;
+   char* path = std::getenv("WORKING_DIR");
+   if (path==NULL) {
+      pathstr = "./results";
+   }else {
+      pathstr = path;
+   }
+
+   TFile *fileout = new TFile( (pathstr+"/plotsCompareMasspoints.root").c_str(), "RECREATE" );
+   fileout->cd();
+
+   // histograms
+   string name = "mbl";
+   double masspnts [] = {161.5,163.5,166.5,169.5,172.5,175.5,178.5,181.5};
+   vector<TH1D*> hist_train;
+   vector<TH1D*> hist_test;
+   vector<TH1D*> hist_ratio;
+   for(int i=0; i < 8; i++){
+
+      stringstream ssmass;
+      ssmass << floor(masspnts[i]);
+      string smass = ssmass.str();
+
+      // signal shape
+      hist_train.push_back( (TH1D*)hists_train_[name]["ttbar"+smass+"_signal"]
+            ->Clone( ("hgp_sig"+smass).c_str()) );
+      hist_test.push_back( (TH1D*)hists_test_[name]["ttbar"+smass+"_signal"]
+            ->Clone( ("hgp_sig"+smass).c_str()) );
+      // background shape
+      hist_train[i]->Add( hists_train_[name]["ttbar"+smass+"_mistag"] );
+      hist_train[i]->Add( hists_train_[name]["ttbar"+smass+"_hadronic"] );
+      hist_train[i]->Add( hists_train_[name]["ttbar"+smass+"_taus"] );
+      hist_train[i]->Add( hists_train_[name]["other"] );
+      hist_test[i]->Add( hists_test_[name]["ttbar"+smass+"_mistag"] );
+      hist_test[i]->Add( hists_test_[name]["ttbar"+smass+"_hadronic"] );
+      hist_test[i]->Add( hists_test_[name]["ttbar"+smass+"_taus"] );
+      hist_test[i]->Add( hists_test_[name]["other"] );
+
+      hist_train[i]->SetTitle(("Masspoint "+smass).c_str());
+      hist_train[i]->Scale( 1.0/hist_train[i]->Integral("width") );
+      hist_test[i]->Scale( 1.0/hist_test[i]->Integral("width") );
+
+      hist_ratio.push_back( (TH1D*)hist_test[i]->Clone( ("hgp_ratio"+smass).c_str() ) );
+      hist_ratio[i]->Divide( hist_train[i] );
+      hist_ratio[i]->SetTitle(";"+TString(hist_train[i]->GetXaxis()->GetTitle())+";test/train");
+      hist_ratio[i]->GetYaxis()->CenterTitle();
+      hist_ratio[i]->SetStats(0);
+
+      TCanvas * canvas = new TCanvas( ("cmbl"+smass).c_str(), ("c"+name).c_str(), 800, 800 );
+      canvas->SetFillColor(0);
+      TPad *pad1 = new TPad("pad1","pad1",0,0.33,1,1);
+      TPad *pad2 = new TPad("pad2","pad2",0,0,1,0.33);
+      pad1->SetTopMargin(0.1);
+      pad1->SetBottomMargin(0.01);
+      pad1->SetRightMargin(0.1);
+      pad1->SetFillColor(0);
+      pad2->SetTopMargin(0.01);
+      pad2->SetBottomMargin(0.3);
+      pad2->SetRightMargin(0.1);
+      pad2->SetFillColor(0);
+      pad1->Draw();
+      pad2->Draw();
+
+      pad1->cd();
+      hist_train[i]->SetLineColor(2);
+      hist_train[i]->Draw("HIST");
+      hist_test[i]->SetMarkerStyle(20);
+      hist_test[i]->Draw("same");
+
+      hist_train[i]->GetXaxis()->SetTitleSize(0.00);
+      hist_train[i]->GetYaxis()->SetLabelSize(0.07);
+      hist_train[i]->GetYaxis()->SetTitleSize(0.08);
+      hist_train[i]->GetYaxis()->SetTitleOffset(1.0);
+      hist_train[i]->GetXaxis()->SetLabelFont(42);
+      hist_train[i]->GetYaxis()->SetLabelFont(42);
+      hist_train[i]->GetXaxis()->SetTitleFont(42);
+      hist_train[i]->GetYaxis()->SetTitleFont(42);
+
+      TLegend * legend = new TLegend(0.577,0.567,0.844,0.739);
+      legend->AddEntry( hist_train[i], "training events", "l" );
+      legend->AddEntry( hist_test[i], "testing events" );
+
+      legend->SetFillStyle(0);
+      legend->SetBorderSize(0);
+      legend->Draw( "same" );
+
+      pad2->cd();
+      hist_ratio[i]->GetXaxis()->SetTitleSize(0.14);
+      hist_ratio[i]->GetXaxis()->SetLabelSize(0.14);
+      hist_ratio[i]->GetYaxis()->SetLabelSize(0.11);
+      hist_ratio[i]->GetYaxis()->SetTitleSize(0.14);
+      hist_ratio[i]->GetYaxis()->SetTitleOffset(0.28);
+      hist_ratio[i]->GetXaxis()->SetLabelFont(42);
+      hist_ratio[i]->GetYaxis()->SetLabelFont(42);
+      hist_ratio[i]->GetXaxis()->SetTitleFont(42);
+      hist_ratio[i]->GetYaxis()->SetTitleFont(42);
+      hist_ratio[i]->SetMaximum( 1.6 );
+      hist_ratio[i]->SetMinimum( 0.4 );
+      hist_ratio[i]->GetYaxis()->SetNdivisions(505);
+      hist_ratio[i]->Draw("EP");
+
+      TF1 *func = new TF1("func","[0]",-10E6,10E6);
+      func->SetParameter(0,1.0);
+      func->SetLineWidth(1);
+      func->SetLineStyle(7);
+      func->SetLineColor(1);
+      func->Draw("same");
+
+      TF1 *func2 = new TF1("func2","pol1",15,150);
+      hist_ratio[i]->Fit(func2,"NR");
+      gStyle->SetOptFit();
+      func2->SetLineColor(2);
+      func2->Draw("same");
+      
+      stringstream stemp;
+      stemp.precision(3);
+      stemp << func2->GetParameter(1);
+      string slope = stemp.str();
+      stemp.str(std::string());
+      stemp << func2->GetParError(1);
+      string err = stemp.str();
+
+      TLatex *text = new TLatex();
+      text->SetTextSize(0.05);
+      text->SetTextColor(2);
+      text->DrawLatex(35, 1.3, ("slope = "+slope+" #pm "+err).c_str() );
+
+      canvas->Write();
+
+      delete canvas;
+      delete legend;
+      delete func;
+      delete func2;
+   }
+
+   fileout->Close();
+
+   return;
+}
+
 vector<bool> Fitter::MaosCut220( vector<Event>::iterator ev){
  
    bool distcut = 0;
@@ -935,7 +1077,7 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
    fileout->cd();
 
    // plot template as a function of top mass
-
+/*
    for( map<string, Distribution>::iterator it = dists.begin(); it != dists.end(); it++ ){
 
       string name = it->first;
@@ -1023,7 +1165,7 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
          }
       }
    }
-
+*/
 
    // TODO
    // need to figure out variance band for this plot

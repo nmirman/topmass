@@ -317,7 +317,7 @@ int main(int argc, char* argv[]){
             fitter.ReadNtuple( dat->path+dat->file, name, dat->mc_xsec/dat->mc_nevts,
                   "RealData", eventvec_train, 1, 0, -1, -1, -1 );
             fitter.ReadNtuple( dat->path+dat->file, name, dat->mc_xsec/dat->mc_nevts,
-                  "RealData", eventvec_test, 2, randseed, fracevts, statval_numPE, statval_PE );
+                  "RealData", eventvec_test, 1, randseed, fracevts, statval_numPE, statval_PE );
          }
 
       }
@@ -334,6 +334,9 @@ int main(int argc, char* argv[]){
 
    fitter.DeclareHists( hists_test_, hists2d_test_, "test" );
    fitter.FillHists( hists_test_, hists2d_test_, eventvec_test );
+
+   //fitter.CompareMasspoints( hists_train_, hists_test_ );
+   //return 0;
 
    if( do_diagnostics ){ 
       fitter.DeclareHists( hists_all_, hists2d_all_, "all" );

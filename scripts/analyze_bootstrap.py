@@ -50,6 +50,8 @@ for i in range( tree.GetEntries() ):
       iter=7
 
 #   hmt[iter].Fill( tree.mt )
+   if tree.mcmass == 178.5 and tree.mt < 177.6:
+      continue
    countmt[iter] += 1
    meanmt[iter] += tree.mt
    varmt[iter] += (tree.mt)**2
@@ -111,7 +113,7 @@ for i in range(8):
    if varmt[i] != 0:
       chi = (meanmt[i]-mcmasses[i])/sqrt(varmt[i])
    chi2 += chi*chi
-   print str(mcmasses[i])+': '+str(meanmt[i])+' +- '+str(sqrt(varmt[i]))
+   print "%.2f " % str(mcmasses[i])+': '+str(meanmt[i])+' +- '+str(sqrt(varmt[i]))
 
 print 'chi2 = '+str(chi2)
 gresults.SetMarkerStyle(20)

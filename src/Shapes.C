@@ -296,7 +296,7 @@ void Shapes::LearnGPparams( map< string, map<string, TH1D*> > & hists_ ){
    gMinuit->SetLowerLimitedVariable(0, "gpnorm1", 10, 1, 0.0);
    gMinuit->SetLowerLimitedVariable(1, "gpnorm2", 10, 1, 0.0);
    gMinuit->SetLowerLimitedVariable(2, "lx", 10, 1, 0.0);
-   gMinuit->SetLowerLimitedVariable(3, "lmass", 10, 1, 0.0);
+   gMinuit->SetLowerLimitedVariable(3, "lmass", 30, 1, 0.0);
 
    gMinuit->SetTolerance(1);
    gMinuit->Minimize();

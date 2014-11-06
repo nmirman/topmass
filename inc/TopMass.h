@@ -205,6 +205,7 @@ class Fitter{
       void DeleteHists( map< string, map<string, TH1D*> >&, map< string, map<string, TH2D*> >& );
       void FillHists( map< string, map<string, TH1D*> >&, map< string, map<string, TH2D*> >&, vector<Event>&, bool=false );
       void PrintHists( map< string, map<string, TH1D*> >&, map< string, map<string, TH2D*> >& );
+      void CompareMasspoints( map< string, map<string, TH1D*> >&, map< string, map<string, TH1D*> >& );
       vector<bool> MaosCut220( vector<Event>::iterator ev );
       vector<bool> MaosCut210( vector<Event>::iterator ev );
       void PlotTemplates( map< string, map<string, TH1D*> >& );

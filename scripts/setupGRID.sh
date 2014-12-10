@@ -1,1 +1,1 @@
-tar czf topmassforgrid.tar.gz DoFit
+tar czf topmassforgrid.tar.gz DoFit scripts/

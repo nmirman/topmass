@@ -1,7 +1,6 @@
 #ifndef TOPMASS_H
 #define TOPMASS_H
 
-#include "Shapes.h"
 #include "TMath.h"
 #include "TLorentzVector.h"
 #include "Math/Functor.h"
@@ -196,7 +195,7 @@ class Fitter{
       void ReweightMC(vector<Event>&, string);
       void Resample(vector<Event>&, int);
 
-      void RunMinimizer(vector<Event>&);
+      void RunMinimizer(vector<Event>&,vector<Event>&);
       void PlotResults(map< string, map<string, TH1D*> >&);
 
       ROOT::Minuit2::Minuit2Minimizer* gMinuit;
@@ -228,6 +227,7 @@ class Fitter{
       ROOT::Math::IMultiGenFunction* fFunc;
 
       vector<Event>* eventvec_fit;
+      vector<Event>* eventvec_train;
 
 };
 

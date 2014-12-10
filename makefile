@@ -33,7 +33,7 @@ obj/Mt2Calculator.o : Mt2Calculator.C Mt2Calculator.h
 obj/Diagnostics.o : Diagnostics.C TopMass.h Shapes.h
 	$(COMPILE) src/Diagnostics.C -o obj/Diagnostics.o
 
-obj/Shapes.o : Shapes.C Shapes.h
+obj/Shapes.o : Shapes.C Shapes.h TopMass.h
 	$(COMPILE) src/Shapes.C -o obj/Shapes.o
 
 .PHONY : clean

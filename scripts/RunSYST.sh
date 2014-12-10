@@ -53,7 +53,7 @@ syst[27]=PtTopReweightingUP
 
 job=$(($1-1))
 
-./DoFit --syst ${syst[$job]} --fit --masspnt 172.5 --mt2_220
+./DoFit --syst ${syst[$job]} --fit --masspnt 172.5 --mbl
 
 cd ..
 mv topmass/fitresults.root .

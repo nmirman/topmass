@@ -82,7 +82,7 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
    // file path
    string path;
    if( pch != NULL ) path = "root://cmseos:1094//eos/uscms/store/user/nmirman/Ntuples/TopMass/20141030/";
-   if( pch == NULL ) path = "/afs/cern.ch/work/n/nmirman/public/Ntuples/TopMass/20141125/";
+   if( pch == NULL ) path = "/afs/cern.ch/work/n/nmirman/public/Ntuples/TopMass/20141205_nocuts/";
 
    // filenames
    datasets[ "data" ]      = Dataset( path, "ntuple_data.root" );
@@ -168,6 +168,7 @@ void Fitter::ReadNtuple( string path, string process, double mcweight,
    float puMyWeight = 1.0;
 
    // open ntuple
+   cout << path << ": " << selection.c_str() << endl;
    TFile file( path.c_str() );
    TTree *tree = (TTree*)file.Get(selection.c_str());
 
@@ -413,7 +414,7 @@ void Fitter::Resample( vector<Event>& eventvec, int randseed ){
    eventvec = eventvec_resampled;
 }
 
-void Fitter::RunMinimizer( vector<Event>& eventvec ){
+void Fitter::RunMinimizer( vector<Event>& eventvec, vector<Event>& eventvec_traintemp ){
 
 
    gMinuit = new ROOT::Minuit2::Minuit2Minimizer ( ROOT::Minuit2::kMigrad );
@@ -422,11 +423,11 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
    // Dimension of fFunc needs to be changed if adding more variables
    fFunc = new ROOT::Math::Functor ( this, &Fitter::Min2LL, 5 );
    gMinuit->SetFunction( *fFunc );
-   gMinuit->SetVariable(0, "topMass", 175.0, 0.1);
+   gMinuit->SetVariable(0, "topMass", 170.0, 0.1);
 
    // If we're fitting mbl, set mbl background as a limited variable, otherwise set it as a fixed variable
    if (dists["mbl"].activate){
-      gMinuit->SetLimitedVariable(1, "norm", 0.7, 0.1, 0, 1.0);
+      gMinuit->SetLimitedVariable(1, "norm", 0.5, 0.1, 0, 1.0);
    } else {
       gMinuit->SetFixedVariable(1, "norm", 0.70712);
    }
@@ -454,6 +455,7 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
 
    // set event vector and minimize
    eventvec_fit = &eventvec;
+   eventvec_train = &eventvec_traintemp;
 
    cout << "\nFitting " << eventvec_fit->size() << " events." << endl;
    gMinuit->Minimize();
@@ -483,7 +485,7 @@ double Fitter::Min2LL(const double *x){
       if( dist->activate ){// only do this if we're fitting the variable in question
 
          // normalization inside likelihood function (temp)
-         Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
+         Shapes * fptr = new Shapes( name, *eventvec_train, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
          fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr->aGPsig = dist->aGPsig;
          fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
@@ -497,7 +499,7 @@ double Fitter::Min2LL(const double *x){
          delete fshape_tot;
          delete fptr;
 
-         Shapes shape( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
+         Shapes shape( name, *eventvec_train, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
          shape.aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          shape.aGPsig = dist->aGPsig;
          shape.aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
@@ -604,7 +606,7 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_ ){
       if( dist->activate ){// only do this if we're fitting the variable in question
 
          // normalization inside likelihood function (temp)
-         Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
+         Shapes * fptr = new Shapes( name, *eventvec_train, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
          fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr->aGPsig = dist->aGPsig;
          fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );

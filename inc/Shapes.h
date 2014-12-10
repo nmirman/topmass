@@ -2,6 +2,7 @@
 #include "TVectorD.h"
 #include "Math/Functor.h"
 #include "Minuit2/Minuit2Minimizer.h"
+#include "TopMass.h"
 
 #include <map>
 
@@ -14,7 +15,7 @@ class Shapes{
 
    public:
 
-      Shapes( string, double, double, double, double, double );
+      Shapes( string, vector<Event>&, double, double, double, double, double );
       ~Shapes();
 
       double Ftot(double*, double*);

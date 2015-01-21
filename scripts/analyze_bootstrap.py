@@ -5,6 +5,7 @@ import sys
 
 file = TFile( sys.argv[1] )
 tree = file.Get('FitResults')
+title = sys.argv[2]
 
 countmt = [0]*8
 meanmt = [0]*8
@@ -93,7 +94,7 @@ for i in range(8):
 cTop.Print('results/bootstrap_mt.pdf')
 
 # temp pull plot
-hpull = TH1D('hpull', 'Pull for M_{t}(MC) = 172.5;(M_{ti}-#mu)/#sigma_{MIGRAD};Pseudoexperiments', 25, -5, 5)
+hpull = TH1D('hpull', 'Pull for M_{t}(MC) = 172.5, '+title+';(M_{ti}-#mu)/#sigma_{MIGRAD};Pseudoexperiments', 25, -5, 5)
 for i in range( tree.GetEntries() ):
    tree.GetEntry(i)
    if tree.mcmass == 172.5:
@@ -101,6 +102,26 @@ for i in range( tree.GetEntries() ):
 
 cpull = TCanvas('cpull','cpull',800,800)
 hpull.Draw()
+
+#spread plot
+mmin = 100
+mmax = -100
+for j in range( tree.GetEntries() ):
+   tree.GetEntry(j)
+   if tree.mcmass == 172.5:
+      if (tree.mt - 172.5) < mmin:
+         mmin = tree.mt - 172.5
+      if (tree.mt - 172.5) > mmax:
+         mmax = tree.mt - 172.5
+
+hspread = TH1D('hspread', 'Spread for M_{t}(MC) = 172.5, '+title+';(M_{ti}-172.5);Pseudoexperiments', 25, mmin - 0.5, mmax + 0.5)
+for i in range( tree.GetEntries() ):
+   tree.GetEntry(i)
+   if tree.mcmass == 172.5:
+      hspread.Fill( tree.mt - 172.5 )
+
+cspread = TCanvas('cspread','cspread',800,800)
+hspread.Draw()
 
 gresults = TGraphErrors()
 chi2=0
@@ -115,6 +136,10 @@ for i in range(8):
 
 print 'chi2 = '+str(chi2)
 gresults.SetMarkerStyle(20)
+gresults.SetTitle(title)
+gresults.GetXaxis().SetTitle('GEN Top Mass (GeV)')
+gresults.GetYaxis().SetTitle('MEAS-GEN Top Mass (GeV)')
+
 
 fline = TF1('fline','[0]*x',150,200)
 fline.SetParameter(0,0.0)

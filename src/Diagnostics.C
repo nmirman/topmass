@@ -51,8 +51,8 @@ void Fitter::DeclareHists( map< string, map<string, TH1D*> >& hists_, map< strin
 
       hists_["mt2_220"][name] = new TH1D( ("hmt2_220_"+namel).c_str(),
             "M_{T2} 220;M_{T2} 220 (GeV);Events/3 GeV", 100, 0, dists["mt2_220_nomatchmbl"].range );
-      hists_["mt2_221"][name] = new TH1D( ("hmt2_221_"+namel).c_str(),
-            "M_{T2} 221;M_{T2} 221 (GeV);Events/2 GeV", 100, 50, 250 );
+      //hists_["mt2_221"][name] = new TH1D( ("hmt2_221_"+namel).c_str(),
+      //      "M_{T2} 221;M_{T2} 221 (GeV);Events/2 GeV", 100, 50, 250 );
       hists_["mbl"][name] = new TH1D( ("hmbl_"+namel).c_str(),
             "M_{bl};M_{bl} (GeV);Events/3 GeV", 100, 0, dists["mbl"].range );
       hists_["mt2_210"][name] = new TH1D( ("hmt2_210_"+namel).c_str(),
@@ -65,6 +65,10 @@ void Fitter::DeclareHists( map< string, map<string, TH1D*> >& hists_, map< strin
             "MAOS from M_{T2} 220;blv mass(GeV);Events/5GeV", 100, 0, dists["maos220blv"].range );
       hists_["maos210blv"][name] = new TH1D( ("hmaos210blv_"+namel).c_str(),
             "MAOS from M_{T2} 210;blv mass(GeV);Events/5GeV", 100, 0, dists["maos210blv"].range );
+      hists_["mt2_221"][name] = new TH1D( ("hmt2_221_"+namel).c_str(),
+            "M_{T2} 221;M_{T2} 221 (GeV);Events/3 GeV", 100, 0, dists["mt2_221"].range );
+      hists_["rbl221"][name] = new TH1D( ("rbl221_"+namel).c_str(),
+            "M_{bl}^{2} / M_{T2} 221;Ratio;Events/3 GeV", 100, 0, dists["rbl221"].range );
 
 
       //
@@ -206,6 +210,12 @@ void Fitter::FillHists( map< string, map<string, TH1D*> >& hists_, map< string, 
 
       if (sin((jet1).DeltaPhi(up221))*sin((jet2).DeltaPhi(up221)) > 0){
          hists_["mt2_221"][type]->Fill( ev->mt2_221, ev->weight );
+         if( ev->mt2_221 > 0 ){
+            for( unsigned int m=0; m < ev->mbls.size(); m++ ){
+               double ratio = (pow(ev->mbls[m],2)/ev->mt2_221);
+               hists_["rbl221"][type]->Fill( ratio, ev->weight );
+            }
+         }
       }
 
       //MAOS
@@ -935,7 +945,7 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
    fileout->cd();
 
    // plot template as a function of top mass
-
+/*
    for( map<string, Distribution>::iterator it = dists.begin(); it != dists.end(); it++ ){
 
       string name = it->first;
@@ -1023,6 +1033,7 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
          }
       }
    }
+   */
 
 
    // TODO

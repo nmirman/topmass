@@ -64,6 +64,8 @@ void Fitter::InitializeDists(){
    dists[ "mt2_220_nomatchmbl" ] = Distribution( "mt2_220_nomatchmbl", "M_{T2} 220", 3.9, 8.4, 8.5, 12.5, 300 );
    dists[ "maos220blv" ] = Distribution( "maos220blv","blv mass from Maos neutrinos from M_{T2} 220", 1.6, 6.4, 19.2, 19.2, 500 );
    dists[ "maos210blv" ] = Distribution( "maos210blv","blv mass from Maos neutrinos from M_{T2} 210", 0.60, 8.5, 19.1, 18.9, 500 );
+   dists[ "mt2_221" ] = Distribution( "mt2_221", "M_{T2} 221", 3.9, 8.4, 8.5, 12.5, 300 );
+   dists[ "rbl221" ] = Distribution( "rbl221", "M_{bl}^{2} / M_{T2} 221", 20, 25, 8.5, 12.5, 200 );
 
 }
 
@@ -82,7 +84,7 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
    // file path
    string path;
    if( pch != NULL ) path = "root://cmseos:1094//eos/uscms/store/user/nmirman/Ntuples/TopMass/20141030/";
-   if( pch == NULL ) path = "/afs/cern.ch/work/n/nmirman/public/Ntuples/TopMass/20141125/";
+   if( pch == NULL ) path = "/afs/cern.ch/work/n/nmirman/public/Ntuples/TopMass/20141215/";
 
    // filenames
    datasets[ "data" ]      = Dataset( path, "ntuple_data.root" );
@@ -420,9 +422,10 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
    gMinuit->SetPrintLevel(3);
 
    // Dimension of fFunc needs to be changed if adding more variables
-   fFunc = new ROOT::Math::Functor ( this, &Fitter::Min2LL, 5 );
+   fFunc = new ROOT::Math::Functor ( this, &Fitter::Min2LL, 7 );
    gMinuit->SetFunction( *fFunc );
-   gMinuit->SetVariable(0, "topMass", 175.0, 0.1);
+   gMinuit->SetVariable(0, "topMass", 165.0, 0.1);
+   //gMinuit->SetFixedVariable(0, "topMass", 172.5);
 
    // If we're fitting mbl, set mbl background as a limited variable, otherwise set it as a fixed variable
    if (dists["mbl"].activate){
@@ -452,8 +455,31 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
       gMinuit->SetFixedVariable(4, "norm_maos210", 0.70712);
    }
 
+   //MT2 221
+   if (dists["maos210blv"].activate){
+      gMinuit->SetLimitedVariable(5, "norm221", 0.7, 0.1, 0, 1.0);
+   } else {
+      gMinuit->SetFixedVariable(5, "norm221", 0.70712);
+   }
+
+   //Ratio bl/221
+   if (dists["rbl221"].activate){
+      //gMinuit->SetLimitedVariable(6, "norm_rbl221", 0.7, 0.1, 0, 1.0);
+      gMinuit->SetFixedVariable(6, "norm_rbl221", 1.0);
+   } else {
+      gMinuit->SetFixedVariable(6, "norm_rbl221", 0.70712);
+   }
+
    // set event vector and minimize
    eventvec_fit = &eventvec;
+
+   /*
+   cout << "Likelihood test ######## " << endl;
+   for(int i=0; i < 50; i++){
+      double params [] = {172.5,1,1,1,1,1,double(i)/50};
+      cout << "k = " << double(i)/50 << ": " << Min2LL(params) << endl;
+   }
+   */
 
    cout << "\nFitting " << eventvec_fit->size() << " events." << endl;
    gMinuit->Minimize();
@@ -479,6 +505,8 @@ double Fitter::Min2LL(const double *x){
       if( name.compare("mt2_220_nomatchmbl") == 0 ) iparam = 2;
       if( name.compare("maos220blv") == 0 ) iparam = 3;
       if( name.compare("maos210blv") == 0 ) iparam = 4;
+      if( name.compare("mt2_221") == 0 ) iparam = 5;
+      if( name.compare("rbl221") == 0 ) iparam = 6;
 
       if( dist->activate ){// only do this if we're fitting the variable in question
 
@@ -559,8 +587,27 @@ double Fitter::Min2LL(const double *x){
 
                }
             }
-
+            else if ( name.compare("mt2_221") == 0 ){ // for 221
+               if( ev->mt2_221 > dist->range ) continue;
+               TLorentzVector up221 = -((ev->jet1)+(ev->jet2)+(ev->lep1)+(ev->lep2)+(ev->met));
+               if (sin((ev->jet1).DeltaPhi(up221))*sin((ev->jet2).DeltaPhi(up221)) > 0){
+                  double val = shape.Ftot( &(ev->mt2_221), pfit );
+                  m2ll -= 2.0*ev->weight*log( val );
+               }
+            }
+            else if ( name.compare("rbl221") == 0 ){ // for mbl/221 ratio
+               if( ev->mt2_221 > dist->range or ev->mt2_221 <= 0 ) continue;
+               TLorentzVector up221 = -((ev->jet1)+(ev->jet2)+(ev->lep1)+(ev->lep2)+(ev->met));
+               if (sin((ev->jet1).DeltaPhi(up221))*sin((ev->jet2).DeltaPhi(up221)) > 0){
+                  for( unsigned int j=0; j < ev->mbls.size(); j++ ){
+                     double ratio = (pow(ev->mbls[j],2)/ev->mt2_221);
+                     double val = shape.Ftot( &ratio, pfit );
+                     m2ll -= 2.0*ev->weight*log( val );
+                  }
+               }
+            }
          }
+         cout << iparam << ") " << m2ll << ": " << x[0] << ", " << x[iparam] << endl;
       }
    }
 
@@ -586,8 +633,8 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_ ){
    TFile *fileout = new TFile( (pathstr+"/plotsFitResults.root").c_str() , "RECREATE" );
    fileout->cd();
 
-   double xmin1s [] = {xmin[1], xmin[1], xmin[2], xmin[3], xmin[4]}; // the background for each variable, as it is positioned in minuit's parameter vector
-   double xerr1s [] = {xerr[1], xerr[1], xerr[2], xerr[3], xerr[4]}; // the background for each variable, as it is positioned in minuit's parameter vector
+   double xmin1s [] = {xmin[1], xmin[1], xmin[2], xmin[3], xmin[4], xmin[5], xmin[6]}; // the background for each variable, as it is positioned in minuit's parameter vector
+   double xerr1s [] = {xerr[1], xerr[1], xerr[2], xerr[3], xerr[4], xerr[5], xerr[6]}; // the background for each variable, as it is positioned in minuit's parameter vector
 
    // loop over distributions
    double chi2 = 0;
@@ -600,6 +647,8 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_ ){
       if( name.compare("mt2_220_nomatchmbl") == 0 ) iparam = 2;
       if( name.compare("maos220blv") == 0 ) iparam = 3;
       if( name.compare("maos210blv") == 0 ) iparam = 4;
+      if( name.compare("mt2_221") == 0 ) iparam = 5;
+      if( name.compare("rbl221") == 0 ) iparam = 6;
 
       if( dist->activate ){// only do this if we're fitting the variable in question
 

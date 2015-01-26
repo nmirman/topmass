@@ -34,6 +34,7 @@ void print_usage(){
    cout << setw(25) << "\t-t --mt2_220" << "Activate MT2 220 distribution.\n";
    cout << setw(25) << "\t-2 --maos220" << "Activate MAOS 220 distribution.\n";
    cout << setw(25) << "\t-1 --maos210" << "Activate MAOS 210 distribution.\n";
+   cout << setw(25) << "\t-3 --mt2_221" << "Activate MT2 221 distribution.\n";
    cout << setw(25) << "\t-9 --syst <string>" << "Run with a systematic variation.\n";
    cout << setw(25) << "\t-h --help" << "Display this menu.\n";
    cout << endl;
@@ -62,6 +63,7 @@ int main(int argc, char* argv[]){
    double mt=0, mt_err=0;
    double kmbl=0, kmbl_err=0;
    double k220=0, k220_err=0;
+   double k221=0, k221_err=0;
    double kmaos220=0, kmaos220_err=0;
    double kmaos210=0, kmaos210_err=0;
    bool distcut220 = 0;
@@ -85,6 +87,8 @@ int main(int argc, char* argv[]){
    tree->Branch("kbml_err", &kmbl_err);
    tree->Branch("k220", &k220);
    tree->Branch("k220_err", &k220_err);
+   tree->Branch("k221", &k221);
+   tree->Branch("k221_err", &k221_err);
    tree->Branch("kmaos220", &kmaos220);
    tree->Branch("kmaos220_err", &kmaos220_err);
    tree->Branch("kmaos210", &kmaos210);
@@ -115,6 +119,8 @@ int main(int argc, char* argv[]){
    int do_mt2_220 = 0;
    int do_maos220 = 0;
    int do_maos210 = 0;
+   int do_mt2_221 = 0;
+   int do_rbl221 = 0;
    int maoscuts220 = 0;
    int maoscuts210 = 0;
    double fracevts = -1;
@@ -138,6 +144,8 @@ int main(int argc, char* argv[]){
       { "mt2_220",      no_argument,         &do_mt2_220,      't' },
       { "maos220",      no_argument,         &do_maos220,      '2' },
       { "maos210",      no_argument,         &do_maos210,      '1' },
+      { "mt2_221",      no_argument,         &do_mt2_221,      '3' },
+      { "rbl221",       no_argument,         &do_rbl221,       '4' },
       { "maoscuts220",  required_argument,   0,                'y' },
       { "maoscuts210",  required_argument,   0,                'z' },
       // maoscuts220 and maoscuts210 set which cuts to use for maos220 and maos 210 respectively.
@@ -147,7 +155,7 @@ int main(int argc, char* argv[]){
       { 0, 0, 0, 0 }
    };
 
-   while( (c = getopt_long(argc, argv, "fdexahponbt21yzm:c:s:i:9:", longopts, NULL)) != -1 ) {
+   while( (c = getopt_long(argc, argv, "fdexahponbt1234yzm:c:s:i:9:", longopts, NULL)) != -1 ) {
       switch(c)
       {
          case 'n' :
@@ -214,6 +222,14 @@ int main(int argc, char* argv[]){
             do_maos210 = true;
             break;
 
+         case '3' :
+            do_mt2_221 = true;
+            break;
+
+         case '4' :
+            do_rbl221 = true;
+            break;
+
          case 'y' :
             maoscuts220 = atoi(optarg);
             break;
@@ -255,6 +271,8 @@ int main(int argc, char* argv[]){
    fitter.dists["mt2_220_nomatchmbl"].activate = do_mt2_220;
    fitter.dists["maos220blv"].activate = do_maos220;
    fitter.dists["maos210blv"].activate = do_maos210;
+   fitter.dists["mt2_221"].activate = do_mt2_221;
+   fitter.dists["rbl221"].activate = do_rbl221;
 
    if (maoscuts220 == 1){ distcut220 = 1; }
    else if (maoscuts220 == 2){ etadisamb220 = 1; }
@@ -277,7 +295,14 @@ int main(int argc, char* argv[]){
 
    // Check that at least one kinematic variable's lengthscale has been entered.
    // Any additional distributions need to be added here
-   if (!(fitter.dists["mbl"].activate) and !(fitter.dists["mt2_220_nomatchmbl"].activate) and !(fitter.dists["maos220blv"].activate) and !(fitter.dists["maos210blv"].activate) and (do_fit == 1 or do_templates == 1) ){
+   bool check_activate = false;
+   for( map<string, Distribution>::iterator it = fitter.dists.begin(); it != fitter.dists.end(); it++ ){
+      string name = it->first;
+      Distribution *dist = &(it->second);
+      if( dist->activate ) check_activate = true;
+   }
+
+   if ( !check_activate and (do_fit == 1 or do_templates == 1) ){
       std::cout << "At least one variable needed to do fit.  Input at least one lengthscale." << std::endl;
       print_usage();
       return -1;
@@ -507,7 +532,8 @@ int main(int argc, char* argv[]){
             // load events to be fitted
             for(vector<Event>::iterator ev = eventvec_test.begin(); ev < eventvec_test.end(); ev++){
                if( ev->type.find(dname) != string::npos or ev->type.find("other") != string::npos ){
-                  eventvec_fit.push_back(*ev);
+                  if( ev->type.find("signal") != string::npos )
+                     eventvec_fit.push_back(*ev);
                }
             }
 
@@ -590,6 +616,8 @@ int main(int argc, char* argv[]){
             kmaos220_err = par_err[3];
             kmaos210 = par[4];
             kmaos210_err = par_err[4]; 
+            k221 = par[5];
+            k221_err = par_err[5];
             fitchi2 = fitter.fitchi2;
 
             eventvec_fit.clear();

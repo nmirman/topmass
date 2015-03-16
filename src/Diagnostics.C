@@ -202,7 +202,7 @@ void Fitter::FillHists( map< string, map<string, TH1D*> >& hists_, map< string, 
       TLorentzVector bbl2 = jet1 + jet2 + lep2;
 
       // B MASS CUT
-      if ( !(jet1.M() < 40 and jet2.M() < 40) ) continue;
+      if ( !(jet1.M() < 40 and jet2.M() < 40) /*or !ev->isemu*/) continue;
 
       if (sin((jet1).DeltaPhi(up221))*sin((jet2).DeltaPhi(up221)) > 0){
          hists_["mt2_221"][type]->Fill( ev->mt2_221, ev->weight );

@@ -35,25 +35,50 @@ syst[9]=CorrelationGroupUncorrelatedUP
 syst[10]=CorrelationGroupUncorrelatedDN
 syst[11]=CorrelationGroupbJESUP
 syst[12]=CorrelationGroupbJESDN
-syst[13]=MCscaleup
-syst[14]=MCscaledown
-syst[15]=MCmatchingup
-syst[16]=MCmatchingdown
-syst[17]=JetEnergyResolutionUP
-syst[18]=JetEnergyResolutionDN
-syst[19]=METUnclusteredUP
-syst[20]=METUnclusteredDN
-syst[21]=PileUpUP
-syst[22]=PileUpDN
-syst[23]=ElectronEnergyScaleUP
-syst[24]=ElectronEnergyScaleDN
-syst[25]=MuonMomentumScaleUP
-syst[26]=MuonMomentumScaleDN
-syst[27]=PtTopReweightingUP
+syst[13]=FlavorPureGluonUP
+syst[14]=FlavorPureGluonDN
+syst[15]=FlavorPureQuarkUP
+syst[16]=FlavorPureQuarkDN
+syst[17]=FlavorPureCharmUP
+syst[18]=FlavorPureCharmDN
+syst[19]=FlavorPureBottomUP
+syst[20]=FlavorPureBottomDN
+syst[21]=MCscaleup
+syst[22]=MCscaledown
+syst[23]=MCmatchingup
+syst[24]=MCmatchingdown
+syst[25]=JetEnergyResolutionUP
+syst[26]=JetEnergyResolutionDN
+syst[27]=METUnclusteredUP
+syst[28]=METUnclusteredDN
+syst[29]=PileUpUP
+syst[30]=PileUpDN
+syst[31]=ElectronEnergyScaleUP
+syst[32]=ElectronEnergyScaleDN
+syst[33]=MuonMomentumScaleUP
+syst[34]=MuonMomentumScaleDN
+syst[35]=PtTopReweightingUP
+syst[36]=RelativeFSRUP
+syst[37]=RelativeFSRDN
+syst[38]=ElectronIdUP
+syst[39]=ElectronIdDN
+syst[40]=MuonIdUP
+syst[41]=MuonIdDN
+syst[42]=BTaggingUP
+syst[43]=BTaggingDN
+syst[44]=MCTuneP11
+syst[45]=MCTuneP11TeV
+syst[46]=MCTuneP11mpiHi
+syst[47]=MCTuneP11noCR
+ipdf=48
+for i in {0..49}
+do
+   syst[ipdf+i]=PDFvar$i
+done
 
 job=$(($1-1))
 
-./DoFit --syst ${syst[$job]} --fit --masspnt 172.5 --mt2_220
+./DoFit --syst ${syst[$job]} --fit --masspnt 172.5 --mbl
 
 cd ..
 mv topmass/fitresults.root .

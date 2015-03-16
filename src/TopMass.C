@@ -82,7 +82,7 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
    // file path
    string path;
    if( pch != NULL ) path = "root://cmseos:1094//eos/uscms/store/user/nmirman/Ntuples/TopMass/20141030/";
-   if( pch == NULL ) path = "/afs/cern.ch/work/n/nmirman/public/Ntuples/TopMass/20141125/";
+   if( pch == NULL ) path = "/afs/cern.ch/work/n/nmirman/public/Ntuples/TopMass/20150226/";
 
    // filenames
    datasets[ "data" ]      = Dataset( path, "ntuple_data.root" );
@@ -165,11 +165,14 @@ void Fitter::ReadNtuple( string path, string process, double mcweight,
    double jet1PtRes, jet1PhiRes, jet1EtaRes, jet2PtRes, jet2PhiRes, jet2EtaRes;
    int lpPdgIdGEN, lmPdgIdGEN, nPdgIdGEN, nbPdgIdGEN;
    int jet1GenId, jet2GenId;
-   float puMyWeight = 1.0;
+   float weight_pu=1, weight_toppt=1, weight_btag=1, weight_mu=1, weight_elec=1;
+   int nmuons, nelectrons;
+   vector<float> *pdf_weights = 0;
 
    // open ntuple
    TFile file( path.c_str() );
    TTree *tree = (TTree*)file.Get(selection.c_str());
+   TBranch *branch = 0;
 
    tree->SetBranchAddress("jet1FourVector", &jet1);
    tree->SetBranchAddress("jet2FourVector", &jet2);
@@ -194,8 +197,16 @@ void Fitter::ReadNtuple( string path, string process, double mcweight,
    }
 
    if( !(process.find("data") != string::npos) ){
-      tree->SetBranchAddress("puMyWeight", &puMyWeight);
+      tree->SetBranchAddress("weight_pu", &weight_pu);
+      tree->SetBranchAddress("weight_toppt", &weight_toppt);
+      tree->SetBranchAddress("weight_btag", &weight_btag);
+      tree->SetBranchAddress("weight_mu", &weight_mu);
+      tree->SetBranchAddress("weight_elec", &weight_elec);
    }
+
+   tree->SetBranchAddress("nmuons", &nmuons);
+   tree->SetBranchAddress("nelectrons", &nelectrons);
+   tree->SetBranchAddress("pdf_weights", &pdf_weights);
 
    // subset of events to use (for training, testing)
    int start = 0;
@@ -229,7 +240,7 @@ void Fitter::ReadNtuple( string path, string process, double mcweight,
 
       // global quantities
       evtemp.process = process;
-      evtemp.weight = mcweight * puMyWeight;
+      evtemp.weight = mcweight * weight_pu * weight_toppt * weight_btag * weight_mu * weight_elec;
       evtemp.nvertices = nvert;
 
       // jets, leptons, met
@@ -240,6 +251,10 @@ void Fitter::ReadNtuple( string path, string process, double mcweight,
       evtemp.lep2 = *lep2;
 
       evtemp.met = *met;
+
+      evtemp.isemu = nmuons==1 and nelectrons==1;
+
+      evtemp.pdf_weights = *pdf_weights;
 
       //
       // classify events
@@ -280,7 +295,7 @@ void Fitter::ReadNtuple( string path, string process, double mcweight,
       }
 
       // push back event
-      if ( (jet1->M() < 40 and jet2->M() < 40) )
+      if ( (jet1->M() < 40 and jet2->M() < 40)/* and evtemp.isemu*/ )
          eventvec.push_back( evtemp );
 
    }
@@ -824,3 +839,24 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_ ){
 
 }
 
+void Fitter::PDFReweight( vector<Event>& eventvec, int evalue ){
+   cout << "Applying PDF Reweight, Eigenvalue " << evalue << endl;
+
+   int esize = eventvec[0].pdf_weights.size();
+   int nevents = eventvec.size();
+   vector<float> pdfweight_sum;
+   pdfweight_sum.resize( esize );
+
+   // weight sums
+   for( vector<Event>::iterator ev = eventvec.begin(); ev < eventvec.end(); ev++){
+      for( int i=0; i < esize; i++ ){
+         pdfweight_sum[i] += ev->pdf_weights[i];
+      }
+   }
+
+   // apply weights
+   for( vector<Event>::iterator ev = eventvec.begin(); ev < eventvec.end(); ev++){
+      ev->weight *= ev->pdf_weights[evalue] / pdfweight_sum[evalue] * nevents;
+   }
+
+}

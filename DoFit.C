@@ -305,7 +305,8 @@ int main(int argc, char* argv[]){
 
       string tsyst = "Central";
       // if a jes systematic is specified, change to the appropriate ttree
-      if( !nsyst.empty() and nsyst.find("MC") == string::npos ) tsyst = nsyst;
+      if( !nsyst.empty() and nsyst.find("MC") == string::npos
+            and nsyst.find("PDFvar") == string::npos ) tsyst = nsyst;
 
       datacount[name] = 0;
 
@@ -349,11 +350,24 @@ int main(int argc, char* argv[]){
 
    }
 
+   // pdf systematics
+   int pdfvar = -1;
+   if( nsyst.find("PDFvar") != string::npos ){
+         string nametemp = nsyst;
+         nametemp.erase(0,6);
+         pdfvar = atoi( nametemp.c_str() );
+         fitter.PDFReweight( eventvec_train, pdfvar );
+   }
+
    // data/mc plots, kinematic distributions
    fitter.GetVariables( eventvec_datamc );
    
    fitter.GetVariables( eventvec_train );
    fitter.GetVariables( eventvec_test );
+
+   if( pdfvar != -1 ){
+      fitter.PDFReweight( eventvec_train, pdfvar );
+   }
 
    fitter.DeclareHists( hists_train_, hists2d_train_, "train" );
    fitter.FillHists( hists_train_, hists2d_train_, eventvec_train );

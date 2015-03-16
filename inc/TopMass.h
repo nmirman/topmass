@@ -91,8 +91,12 @@ struct Event {
    // reconstructed objects
    TLorentzVector jet1, jet2, lep1, lep2, met;
 
+   bool isemu;
+
    // for fit
    bool fit_event;
+
+   vector<float> pdf_weights;
 
    Event(){
       process = "";
@@ -195,6 +199,7 @@ class Fitter{
       void GetVariables(vector<Event>&);
       void ReweightMC(vector<Event>&, string);
       void Resample(vector<Event>&, int);
+      void PDFReweight(vector<Event>&, int);
 
       void RunMinimizer(vector<Event>&);
       void PlotResults(map< string, map<string, TH1D*> >&);

@@ -524,9 +524,6 @@ double Fitter::Min2LL(const double *x){
          for( vector<Event>::iterator ev = eventvec_fit->begin(); ev < eventvec_fit->end(); ev++ ){
             if( !(ev->fit_event) ) continue;
 
-            // B MASS CUT
-            if ( !(ev->jet1.M() < 40 and ev->jet2.M() < 40) ) continue;
-
             if ( name.compare("mbl") == 0 ){ // for mbl
                for( unsigned int j=0; j < ev->mbls.size(); j++ ){
                   if( ev->mbls[j] > dist->range ) continue;

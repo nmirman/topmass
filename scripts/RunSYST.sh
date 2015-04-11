@@ -78,7 +78,7 @@ done
 
 job=$(($1-1))
 
-./DoFit --syst ${syst[$job]} --fit --masspnt 172.5 --mbl
+./DoFit --syst ${syst[$job]} --fit --masspnt 172.5 --mt2_220 --maos210
 
 cd ..
 mv topmass/fitresults.root .

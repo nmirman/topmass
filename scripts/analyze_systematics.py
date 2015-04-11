@@ -65,6 +65,10 @@ up = systs['MCscaleup'][0]
 dn = systs['MCscaledown'][0]
 systs.update( {'MCscale': [ 0.0, up, dn, max(up-cent,dn-cent), min(up-cent,dn-cent) ]} )
 
+up = systs['MCmatchingup'][0]
+dn = systs['MCmatchingdown'][0]
+systs.update( {'MCmatching': [ 0.0, up, dn, max(up-cent,dn-cent), min(up-cent,dn-cent) ]} )
+
 # pt top reweighting
 up = systs['PtTopReweighting'][1]
 systs['PtTopReweighting'] = [0.0, up, 0.0, abs(up-cent), -1.0*abs(up-cent)]
@@ -102,7 +106,7 @@ for n in systs:
 slist_all = []
 temp = [0.0, 0.0]
 slist_all = [ 'JESTotal', 'JetEnergyResolution', 'METUnclustered', 'PileUp', 'ElectronEnergyScale', 'MuonMomentumScale',
-      'RelativeFSR', 'ElectronId', 'MuonId', 'BTagging', 'PtTopReweighting', 'MCscale', 'MCEventTunes', 'PDF',
+      'RelativeFSR', 'ElectronId', 'MuonId', 'BTagging', 'PtTopReweighting', 'MCscale', 'MCmatching', 'MCEventTunes', 'PDF',
       'MCColorReconnection' ]
 for n in slist_all:
    for i in range(2):
@@ -133,8 +137,13 @@ print( outformat % ('TotalSum', systs['TotalSum'][3], systs['TotalSum'][4]) )
 #
 texformat = '   %-35r: $^{%+3.2f}_{%+3.2f}$'
 print( "\n TeX Format:\n" )
+for n in slist_jes:
+   print( texformat % (n, systs[n][3], systs[n][4]) )
+print '   --------------------------------------------------'
 for n in slist_all:
    print( texformat % (n, systs[n][3], systs[n][4]) )
+print '   --------------------------------------------------'
+print( texformat % ('TotalSum', systs['TotalSum'][3], systs['TotalSum'][4]) )
 
 # dump
 outformat = '   %-35r: %+3.2f: %+3.2f: %+3.2f: %+3.2f: %+3.2f'

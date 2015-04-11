@@ -198,7 +198,7 @@ class Fitter{
       void LoadDatasets(map<string, Dataset>&);
       void GetVariables(vector<Event>&);
       void ReweightMC(vector<Event>&, string);
-      void Resample(vector<Event>&, int);
+      void Resample(vector<Event>&, int, bool);
       void PDFReweight(vector<Event>&, int);
 
       void RunMinimizer(vector<Event>&);

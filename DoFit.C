@@ -75,6 +75,8 @@ int main(int argc, char* argv[]){
    double tsig_mbl_chi2 [8] = {0};
    double tbkg_mbl_chi2 [8] = {0};
    string nsyst = "";
+   int statval_numPE = -1;
+   int statval_PE = -1;
    
    TTree *tree = new TTree("FitResults", "FitResults");
    tree->Branch("runNumber", &run_number);
@@ -100,7 +102,8 @@ int main(int argc, char* argv[]){
    tree->Branch("tsig_mbl_chi2", tsig_mbl_chi2, "tsig_mbl_chi2[8]/D");
    tree->Branch("tbkg_mbl_chi2", tbkg_mbl_chi2, "tbkg_mbl_chi2[8]/D");
    tree->Branch("syst", &nsyst);
-
+   tree->Branch("statval_numPE", &statval_numPE);
+   tree->Branch("statval_PE", &statval_PE);
 
    // option flags
    int c;
@@ -118,8 +121,6 @@ int main(int argc, char* argv[]){
    int maoscuts220 = 0;
    int maoscuts210 = 0;
    double fracevts = -1;
-   int statval_numPE = -1;
-   int statval_PE = -1;
 
    struct option longopts[] = {
       { "run_number",   required_argument,   0,                'n' },
@@ -320,6 +321,11 @@ int main(int argc, char* argv[]){
          file_test = "ntuple_TTJets_"+nametemp+".root";
          cout << "---> swapping sytematics file " << file_test << " for 172.5 masspoint." << endl;
       }
+      // if a TuneP11 systematic is specified, change training set to TuneP11 (instead of TuneZ2star)
+      //if( nsyst.find("MCTuneP11") != string::npos and name.find("ttbar172") != string::npos ){
+      //   file_train = "ntuple_TTJets_TuneP11.root";
+      //   cout << "---> swapping sytematics file " << file_train << " for 172.5 masspoint." << endl;
+      //}
 
       TFile file( (dat->path+dat->file).c_str() );
       TTree *trees = (TTree*)file.Get(tsyst.c_str());
@@ -526,8 +532,9 @@ int main(int argc, char* argv[]){
             }
 
             fitter.ReweightMC( eventvec_fit, dname );
+            bool statval = statval_numPE != -1;
             if( do_bootstrap ){
-               fitter.Resample( eventvec_fit, randseed );
+               fitter.Resample( eventvec_fit, randseed, statval );
             }
 
             // flag events to be fitted

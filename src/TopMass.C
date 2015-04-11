@@ -391,7 +391,7 @@ void Fitter::ReweightMC( vector<Event>& eventvec, string name ){
 
 }
 
-void Fitter::Resample( vector<Event>& eventvec, int randseed ){
+void Fitter::Resample( vector<Event>& eventvec, int randseed, bool statval ){
    cout << "Resampling events." << endl;
 
    // put resampled events into a new vector
@@ -406,6 +406,7 @@ void Fitter::Resample( vector<Event>& eventvec, int randseed ){
    }
 
    int numevts_data = 49243;
+   if( statval ) numevts_data = eventvec.size();
    // resample with replacement, taking into account event weights
    int count = 0;
    while( count < numevts_data ){

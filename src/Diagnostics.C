@@ -727,7 +727,7 @@ vector<bool> Fitter::MaosCut210( vector<Event>::iterator ev){
    TLorentzVector neuarray [] = { ev->maos210_neutrino1p, ev->maos210_neutrino1m, ev->maos210_neutrino2p, ev->maos210_neutrino2m };
 
    //Nans
-   for (int i=0; i<8; i++){
+   for (int i=0; i<4; i++){
 
       if ( isnan( (neuarray[i]).Pz() ) ){ toreturn[i] = 0; toreturn[i+4] = 0; }
    }

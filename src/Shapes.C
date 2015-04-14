@@ -1,3 +1,4 @@
+#include "TopMass.h"
 #include "Shapes.h"
 
 #include "TH1.h"
@@ -35,6 +36,8 @@ Shapes::Shapes( string var, double gplength_x, double gplength_mt, double norm1,
 
    // flag for cross validation two-stage fit
    do_gpvar = false;
+
+   for(int i=0; i < NMP; i++) masspnts[i] = Fitter::masspoints[i];
 
 }
 
@@ -82,12 +85,9 @@ double Shapes::Fsig_param(double x, double mt){
 
 double Shapes::Fmbl_gp(double x, double mt, string sb){
 
-   double masspnts [] = {161.5, 163.5, 166.5, 169.5, 172.5, 175.5, 178.5, 181.5};
-   int nmasses = 8;
-
    double fgp = 0;
    for(unsigned int i=0; i < ptrain.size(); i++){
-      for(int j=0; j < nmasses; j++){
+      for(int j=0; j < NMP; j++){
          double agp = 0;
          if( sb.compare("sig") == 0 ) agp = aGPsig[i+j*ptrain.size()];
          else if( sb.compare("bkg") == 0 ) agp = aGPbkg[i+j*ptrain.size()];
@@ -104,13 +104,11 @@ double Shapes::Fmbl_gp(double x, double mt, string sb){
 
 double Shapes::Fmbl_gp_var(double x, double mt, string sb){
 
-   double masspnts [] = {161.5, 163.5, 166.5, 169.5, 172.5, 175.5, 178.5, 181.5};
-   int nmasses = 8;
    int ntrain = ptrain.size();
 
    // vector of covariances
-   TVectorD k(ntrain*nmasses);
-   for(int i=0; i < ntrain*nmasses; i++){
+   TVectorD k(ntrain*NMP);
+   for(int i=0; i < ntrain*NMP; i++){
       int im = i % ntrain;
       int imass = i / ntrain;
       k[i] = GPkern( x, ptrain[im], lx, mt, masspnts[imass], lmass );
@@ -139,14 +137,12 @@ double Shapes::GPkern(double x1, double x2, double lsx, double m1, double m2, do
 void Shapes::TrainGP( map< string, map<string, TH1D*> > & hists_,
      double &m2llsig, double &m2llbkg ){
 
-   double masspnts [] = {161.5, 163.5, 166.5, 169.5, 172.5, 175.5, 178.5, 181.5};
-   int nmasses = 8;
    int ntrain = ptrain.size();
 
    // histograms
    vector<TH1D*> hgp_sig;
    vector<TH1D*> hgp_bkg;
-   for(int i=0; i < nmasses; i++){
+   for(int i=0; i < NMP; i++){
 
       stringstream ssmass;
       ssmass << floor(masspnts[i]);
@@ -174,9 +170,9 @@ void Shapes::TrainGP( map< string, map<string, TH1D*> > & hists_,
    }
 
    // compute covariance matrix
-   TMatrixD K(ntrain*nmasses,ntrain*nmasses);
-   for(int i=0; i < ntrain*nmasses; i++){
-      for(int j=0; j < ntrain*nmasses; j++){
+   TMatrixD K(ntrain*NMP,ntrain*NMP);
+   for(int i=0; i < ntrain*NMP; i++){
+      for(int j=0; j < ntrain*NMP; j++){
          int im = i % ntrain;
          int jm = j % ntrain;
          int imass = i / ntrain;
@@ -185,16 +181,16 @@ void Shapes::TrainGP( map< string, map<string, TH1D*> > & hists_,
      }
    }
    // compute noise matrix
-   TMatrixD Nsig(ntrain*nmasses,ntrain*nmasses);
-   TMatrixD Nbkg(ntrain*nmasses,ntrain*nmasses);
-   for(int i=0; i < ntrain*nmasses; i++){
+   TMatrixD Nsig(ntrain*NMP,ntrain*NMP);
+   TMatrixD Nbkg(ntrain*NMP,ntrain*NMP);
+   for(int i=0; i < ntrain*NMP; i++){
       int im = i % ntrain;
       int imass = i / ntrain;
       double binerr_sig = hgp_sig[imass]->GetBinError( hgp_sig[imass]->FindBin(ptrain[im]) );
       double binerr_bkg = hgp_bkg[imass]->GetBinError( hgp_bkg[imass]->FindBin(ptrain[im]) );
       binerr_sig *= sqrt(gnorm2);
       binerr_bkg *= sqrt(gnorm2);
-      for(int j=0; j < ntrain*nmasses; j++){
+      for(int j=0; j < ntrain*NMP; j++){
          if( i==j ){
             Nsig[i][j] = binerr_sig*binerr_sig;//pow( max(binerr_sig,0.001), 2 );
             Nbkg[i][j] = binerr_bkg*binerr_bkg;//pow( max(binerr_bkg,0.001), 2 );
@@ -217,27 +213,27 @@ void Shapes::TrainGP( map< string, map<string, TH1D*> > & hists_,
    TMatrixDSym Asinv_bkg = Cholbkg.Invert(status);
    Ainv_sig.Clear();
    Ainv_bkg.Clear();
-   Ainv_sig.ResizeTo( ntrain*nmasses, ntrain*nmasses );
-   Ainv_bkg.ResizeTo( ntrain*nmasses, ntrain*nmasses );
+   Ainv_sig.ResizeTo( ntrain*NMP, ntrain*NMP );
+   Ainv_bkg.ResizeTo( ntrain*NMP, ntrain*NMP );
    Ainv_sig = (TMatrixD)Asinv_sig;
    Ainv_bkg = (TMatrixD)Asinv_bkg;
 
    TMatrixD Ktmp = K;
-   for(int i=0; i < ntrain*nmasses; i++) Ktmp[i][i] += 10E-9;
+   for(int i=0; i < ntrain*NMP; i++) Ktmp[i][i] += 10E-9;
    TDecompChol CholK(Ktmp);
    status = 0;
    TMatrixDSym Ksinv = CholK.Invert(status);
    Kinv.Clear();
-   Kinv.ResizeTo( ntrain*nmasses, ntrain*nmasses );
+   Kinv.ResizeTo( ntrain*NMP, ntrain*NMP );
    Kinv = (TMatrixD)Ksinv;
 
    TMatrixD Ainv_sigtemp = Ainv_sig;
    TMatrixD Ainv_bkgtemp = Ainv_bkg;
 
    // vector of training points
-   TVectorD ysig(ntrain*nmasses);
-   TVectorD ybkg(ntrain*nmasses);
-   for(int i=0; i < ntrain*nmasses; i++){
+   TVectorD ysig(ntrain*NMP);
+   TVectorD ybkg(ntrain*NMP);
+   for(int i=0; i < ntrain*NMP; i++){
       int im = i % ntrain;
       int imass = i / ntrain;
       ysig[i] = hgp_sig[imass]->GetBinContent( hgp_sig[imass]->FindBin(ptrain[im]) );
@@ -248,10 +244,10 @@ void Shapes::TrainGP( map< string, map<string, TH1D*> > & hists_,
    aGPsig.Clear();
    aGPbkg.Clear();
 
-   aGPsig.ResizeTo( ntrain*nmasses );
+   aGPsig.ResizeTo( ntrain*NMP );
    aGPsig = Ainv_sigtemp*ysig;
 
-   aGPbkg.ResizeTo( ntrain*nmasses );
+   aGPbkg.ResizeTo( ntrain*NMP );
    aGPbkg = Ainv_bkgtemp*ybkg;
 
    // compute marginal likelihood
@@ -333,12 +329,9 @@ double Shapes::GPm2llX( const double *x ){
    lx = x[2];
    lmass = x[3];
 
-   int nmasses = 8;
-   double masspnts [] = {161.5, 163.5, 166.5, 169.5, 172.5, 175.5, 178.5, 181.5};
-
    // histograms
    vector<TH1D*> hgp_sig;
-   for(int j=0; j < nmasses; j++){
+   for(int j=0; j < NMP; j++){
 
       stringstream ssmass;
       ssmass << floor(masspnts[j]);
@@ -362,7 +355,7 @@ double Shapes::GPm2llX( const double *x ){
       for(int i=0; i < ntrain; i++){ // exclude every nth point
          // check for zero bins
          bool zerobin = false;
-         for(int j=0; j < nmasses; j++){
+         for(int j=0; j < NMP; j++){
             double val = hgp_sig[j]->GetBinContent( hgp_sig[j]->FindBin( (i+0.5)*rtrain/ntrain ) );
             if( val == 0 ) zerobin = true;
          }
@@ -378,7 +371,7 @@ double Shapes::GPm2llX( const double *x ){
       // evaluate shape at excluded points
       double m2ll = 0;
       for(unsigned int i=0; i < ptrainX.size(); i++){
-         for(int j=0; j < nmasses; j++){
+         for(int j=0; j < NMP; j++){
 
             double mean = Fmbl_gp(ptrainX[i],masspnts[j],"sig");
             double yi = hgp_sig[j]->GetBinContent( hgp_sig[j]->FindBin(ptrainX[i]) );
@@ -413,12 +406,10 @@ double Shapes::GPm2llLOOCV( const double *x ){
    lmass = x[3];
 
    int ntrain = 100;
-   int nmasses = 8;
-   double masspnts [] = {161.5, 163.5, 166.5, 169.5, 172.5, 175.5, 178.5, 181.5};
 
    // histograms
    vector<TH1D*> hgp_sig;
-   for(int j=0; j < nmasses; j++){
+   for(int j=0; j < NMP; j++){
 
       stringstream ssmass;
       ssmass << floor(masspnts[j]);
@@ -436,8 +427,8 @@ double Shapes::GPm2llLOOCV( const double *x ){
    TrainGP( *hists_train_, m2llsig, m2llbkg );
 
    // vector of training points
-   TVectorD ysig(ntrain*nmasses);
-   for(int i=0; i < ntrain*nmasses; i++){
+   TVectorD ysig(ntrain*NMP);
+   for(int i=0; i < ntrain*NMP; i++){
       int im = i % ntrain;
       int imass = i / ntrain;
       ysig[i] = hgp_sig[imass]->GetBinContent( hgp_sig[imass]->FindBin(ptrain[im]) );
@@ -446,7 +437,7 @@ double Shapes::GPm2llLOOCV( const double *x ){
    TVectorD Ky = Kinv*ysig;
 
    double m2ll = 0;
-   for(int i=0; i < ntrain*nmasses; i++){
+   for(int i=0; i < ntrain*NMP; i++){
       if( ysig[i] == 0 ) continue;
 
       double ui = ysig[i] - Ky[i]/Kinv[i][i];

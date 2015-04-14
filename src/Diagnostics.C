@@ -31,12 +31,14 @@ void Fitter::DeclareHists( map< string, map<string, TH1D*> >& hists_, map< strin
    vector<string> type;
    type.push_back("data");
    type.push_back("other");
-   string masspnts [] = {"161","163","166","169","172","175","178","181"};
-   for(int i=0; i < 8; i++){
-      type.push_back("ttbar"+masspnts[i]+"_signal");
-      type.push_back("ttbar"+masspnts[i]+"_mistag");
-      type.push_back("ttbar"+masspnts[i]+"_taus");
-      type.push_back("ttbar"+masspnts[i]+"_hadronic");
+   for(int i=0; i < NMP; i++){
+      stringstream dstr;
+      dstr << floor(masspoints[i]);
+      string dname = "ttbar"+dstr.str();
+      type.push_back(dname+"_signal");
+      type.push_back(dname+"_mistag");
+      type.push_back(dname+"_taus");
+      type.push_back(dname+"_hadronic");
    }
    type.push_back("fitevts"); // for displaying fit results (could be mc or data)
 
@@ -545,11 +547,10 @@ void Fitter::PrintHists( map< string, map<string, TH1D*> >& hists_, map< string,
       TGraph *gchi2 = new TGraph();
 
       // do this for all top masses
-      double masspnts [] = {161.5,163.5,166.5,169.5,172.5,175.5,178.5,181.5};
-      for(int i=0; i < 8; i++){
+      for(int i=0; i < NMP; i++){
 
          stringstream dstr;
-         dstr << floor(masspnts[i]);
+         dstr << floor(masspoints[i]);
          string dname = "ttbar"+dstr.str();
 
          TH1D *hallmc = (TH1D*)hist[dname+"_signal"]->Clone("hallmc");
@@ -560,7 +561,7 @@ void Fitter::PrintHists( map< string, map<string, TH1D*> >& hists_, map< string,
 
          double chi2 = 0.0;//hdata->Chi2Test(hallmc,"UW CHI2");
 
-         gchi2->SetPoint(i, masspnts[i], chi2);
+         gchi2->SetPoint(i, masspoints[i], chi2);
 
          // write out mass hists
          if( hname.find("mbl") != string::npos or hname.find("mt2") != string::npos ){
@@ -728,7 +729,6 @@ vector<bool> Fitter::MaosCut210( vector<Event>::iterator ev){
 
    //Nans
    for (int i=0; i<4; i++){
-
       if ( isnan( (neuarray[i]).Pz() ) ){ toreturn[i] = 0; toreturn[i+4] = 0; }
    }
 
@@ -785,7 +785,6 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
 
    // templates for all masses
    string sb[] = {"sig","bkg"};
-   double masspnts [] = {161.5,163.5,166.5,169.5,172.5,175.5,178.5,181.5};
 
    for( map<string, Distribution>::iterator it = dists.begin(); it != dists.end(); it++ ){
 
@@ -801,7 +800,7 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
             for(int j=0; j < 8; j++){ // masses
 
                stringstream ssmass;
-               ssmass << floor(masspnts[j]);
+               ssmass << floor(masspoints[j]);
                string smass = ssmass.str();
 
                TCanvas *canvas = new TCanvas( ("c"+sb[k]+"_"+name+smass).c_str(),
@@ -872,10 +871,10 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
                ftemplate->SetNpx(500);
 
                // normalization inside likelihood function (temp)
-               ftemplate->SetParameters( masspnts[j], 1-k, 1.0, 1.0, 1.0 );
+               ftemplate->SetParameters( masspoints[j], 1-k, 1.0, 1.0, 1.0 );
                double integralsig = (sb[k] == "sig") ? ftemplate->Integral(0,dist->range) : 1.0;
                double integralbkg = (sb[k] == "bkg") ? ftemplate->Integral(0,dist->range) : 1.0;
-               ftemplate->SetParameters( masspnts[j], 1-k,
+               ftemplate->SetParameters( masspoints[j], 1-k,
                      1.0, integralsig, integralbkg );
 
                ftemplate->SetLineWidth(2);
@@ -884,7 +883,7 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
                TGraphErrors *gpvar = new TGraphErrors();
                for(int x=0; x < dist->range; x++){
                   gpvar->SetPoint(x, x, ftemplate->Eval(x));
-                  gpvar->SetPointError(x, 0, sqrt(fptr->Fmbl_gp_var(x,masspnts[j],sb[k])));
+                  gpvar->SetPointError(x, 0, sqrt(fptr->Fmbl_gp_var(x,masspoints[j],sb[k])));
                }
                gpvar->SetLineColor(2);
                gpvar->SetFillColor(5);
@@ -982,9 +981,9 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
                // now do the same at mc masspoints
                TGraphErrors *gmc = new TGraphErrors();
                count=0;
-               for(int j=0; j < 8; j++){
+               for(int j=0; j < NMP; j++){
                   stringstream ssmass;
-                  ssmass << floor(masspnts[j]);
+                  ssmass << floor(masspoints[j]);
                   string smass = ssmass.str();
 
                   TH1D *hmc;
@@ -998,7 +997,7 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
                   }
                   hmc->Scale( 1.0/hmc->Integral("width") );
 
-                  gmc->SetPoint(count, masspnts[j], hmc->GetBinContent(hmc->FindBin(x)) );
+                  gmc->SetPoint(count, masspoints[j], hmc->GetBinContent(hmc->FindBin(x)) );
                   gmc->SetPointError(count, 0.0, hmc->GetBinError(hmc->FindBin(x)) );
                   count++;
                }
@@ -1075,9 +1074,9 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
    // now do the same at mc masspoints
    TGraphErrors *gmc = new TGraphErrors();
    count=0;
-   for(int j=0; j < 8; j++){
+   for(int j=0; j < NMP; j++){
    stringstream ssmass;
-   ssmass << floor(masspnts[j]);
+   ssmass << floor(masspoints[j]);
    string smass = ssmass.str();
 
    TH1D *hmc;
@@ -1107,24 +1106,24 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
          cmbl_signal->cd();
 
          // mass points
-         TH1D* mbl161 = (TH1D*)hists_[name]["ttbar161_signal"]->Clone("mbl161");
+         TH1D* mbl166 = (TH1D*)hists_[name]["ttbar166_signal"]->Clone("mbl166");
          TH1D* mbl172 = (TH1D*)hists_[name]["ttbar172_signal"]->Clone("mbl172");
-         TH1D* mbl181 = (TH1D*)hists_[name]["ttbar181_signal"]->Clone("mbl181");
+         TH1D* mbl178 = (TH1D*)hists_[name]["ttbar178_signal"]->Clone("mbl178");
 
-         mbl161->Scale( 1.0/mbl161->Integral("width") );
+         mbl166->Scale( 1.0/mbl166->Integral("width") );
          mbl172->Scale( 1.0/mbl172->Integral("width") );
-         mbl181->Scale( 1.0/mbl181->Integral("width") );
+         mbl178->Scale( 1.0/mbl178->Integral("width") );
 
-         mbl161->SetLineColor(2);
+         mbl166->SetLineColor(2);
          mbl172->SetLineColor(1);
-         mbl181->SetLineColor(3);
-         mbl161->SetMarkerColor(2);
+         mbl178->SetLineColor(3);
+         mbl166->SetMarkerColor(2);
          mbl172->SetMarkerColor(1);
-         mbl181->SetMarkerColor(3);
+         mbl178->SetMarkerColor(3);
 
-         mbl161->DrawCopy();
+         mbl166->DrawCopy();
          mbl172->DrawCopy("same");
-         mbl181->DrawCopy("same");
+         mbl178->DrawCopy("same");
 
          // mbl likelihood
 
@@ -1135,8 +1134,8 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
          fptr->aGPbkg = dist->aGPbkg;
          TF1 *fmbl_tot = new TF1( ("f"+name+"_tot").c_str(), fptr, &Shapes::Ftot, 0, dist->range, 5);
 
-         fmbl_tot->SetParameters( 161.5, 1.0, 1.0, 1.0, 1.0 );
-         fmbl_tot->SetParameters( 161.5, 1.0, 1.0, fmbl_tot->Integral(0,dist->range), 1.0 );
+         fmbl_tot->SetParameters( 166.5, 1.0, 1.0, 1.0, 1.0 );
+         fmbl_tot->SetParameters( 166.5, 1.0, 1.0, fmbl_tot->Integral(0,dist->range), 1.0 );
          fmbl_tot->SetLineColor(2);
          fmbl_tot->DrawCopy("same");
 
@@ -1145,17 +1144,17 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
          fmbl_tot->SetLineColor(1);
          fmbl_tot->DrawCopy("same");
 
-         fmbl_tot->SetParameters( 181.5, 1.0, 1.0, 1.0, 1.0 );
-         fmbl_tot->SetParameters( 181.5, 1.0, 1.0, fmbl_tot->Integral(0,dist->range), 1.0 );
+         fmbl_tot->SetParameters( 178.5, 1.0, 1.0, 1.0, 1.0 );
+         fmbl_tot->SetParameters( 178.5, 1.0, 1.0, fmbl_tot->Integral(0,dist->range), 1.0 );
          fmbl_tot->SetLineColor(3);
          fmbl_tot->DrawCopy("same");
 
          TLegend *lm = new TLegend(0.76,0.59,0.98,0.77);
          lm->SetFillStyle(0);
          lm->SetBorderSize(0);
-         lm->AddEntry( mbl161, "161.5" );
+         lm->AddEntry( mbl166, "166.5" );
          lm->AddEntry( mbl172, "172.5" );
-         lm->AddEntry( mbl181, "181.5" );
+         lm->AddEntry( mbl178, "178.5" );
          lm->Draw("same");
 
          cmbl_signal->Write();

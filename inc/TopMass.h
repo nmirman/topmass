@@ -16,6 +16,8 @@
 
 using namespace std;
 
+#define NMP 7
+
 struct Dataset {
 
    // dataset info
@@ -225,6 +227,8 @@ class Fitter{
       
       int maoscuts220;
       int maoscuts210;
+
+      static const double masspoints [7];
 
    private:
 

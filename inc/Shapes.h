@@ -8,6 +8,8 @@
 #ifndef SHAPES_H
 #define SHAPES_H
 
+#define NMP 7
+
 using namespace std;
 
 class Shapes{
@@ -40,6 +42,8 @@ class Shapes{
       void LearnGPparams( map< string, map<string, TH1D*> >& );
 
       ROOT::Minuit2::Minuit2Minimizer* gMinuit;
+
+      double masspnts [NMP];
 
    private:
       double GPm2ll(const double*);

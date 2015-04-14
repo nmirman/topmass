@@ -30,7 +30,6 @@
 
 using namespace std;
 
-
 //
 // constructor and destructor
 //
@@ -56,6 +55,8 @@ Fitter::~Fitter(){
       if (gMinuit) delete gMinuit;
       if (fFunc) delete fFunc;
 }
+
+const double Fitter::masspoints[NMP] = {166.5, 169.5, 171.5, 172.5, 173.5, 175.5, 178.5};
 
 void Fitter::InitializeDists(){
 
@@ -93,18 +94,17 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
    datasets[ "ww" ]        = Dataset( path, "ntuple_WW.root" );
    datasets[ "wz" ]        = Dataset( path, "ntuple_WZ.root" );
    datasets[ "zz" ]        = Dataset( path, "ntuple_ZZ.root" );
-   datasets[ "ttbar161" ]  = Dataset( path, "ntuple_TTJets_mass161_5.root" ); 
-   datasets[ "ttbar163" ]  = Dataset( path, "ntuple_TTJets_mass163_5.root" ); 
-   datasets[ "ttbar166" ]  = Dataset( path, "ntuple_TTJets_mass166_5.root" ); 
-   datasets[ "ttbar169" ]  = Dataset( path, "ntuple_TTJets_mass169_5.root" ); 
-   datasets[ "ttbar172" ]  = Dataset( path, "ntuple_TTJets.root" );
-   datasets[ "ttbar175" ]  = Dataset( path, "ntuple_TTJets_mass175_5.root" ); 
-   datasets[ "ttbar178" ]  = Dataset( path, "ntuple_TTJets_mass178_5.root" ); 
-   datasets[ "ttbar181" ]  = Dataset( path, "ntuple_TTJets_mass181_5.root" ); 
-   datasets[ "ttbarsyst_scaleup" ]        = Dataset( path, "ntuple_TTJets_scaleup.root" );
-   datasets[ "ttbarsyst_scaledown" ]      = Dataset( path, "ntuple_TTJets_scaledown.root" );
-   datasets[ "ttbarsyst_matchingup" ]     = Dataset( path, "ntuple_TTJets_matchingup.root" );
-   datasets[ "ttbarsyst_matchingdown" ]   = Dataset( path, "ntuple_TTJets_matchingdown.root" );
+   datasets[ "ttbar166" ]  = Dataset( path, "ntuple_TTJets_msdecay_mass166_5.root" ); 
+   datasets[ "ttbar169" ]  = Dataset( path, "ntuple_TTJets_msdecay_mass169_5.root" ); 
+   datasets[ "ttbar171" ]  = Dataset( path, "ntuple_TTJets_msdecay_mass171_5.root" );
+   datasets[ "ttbar172" ]  = Dataset( path, "ntuple_TTJets_msdecay.root" );
+   datasets[ "ttbar173" ]  = Dataset( path, "ntuple_TTJets_msdecay_mass173_5.root" ); 
+   datasets[ "ttbar175" ]  = Dataset( path, "ntuple_TTJets_msdecay_mass175_5.root" ); 
+   datasets[ "ttbar178" ]  = Dataset( path, "ntuple_TTJets_msdecay_mass178_5.root" ); 
+   datasets[ "ttbarsyst_scaleup" ]        = Dataset( path, "ntuple_TTJets_msdecay_scaleup.root" );
+   datasets[ "ttbarsyst_scaledown" ]      = Dataset( path, "ntuple_TTJets_msdecay_scaledown.root" );
+   datasets[ "ttbarsyst_matchingup" ]     = Dataset( path, "ntuple_TTJets_msdecay_matchingup.root" );
+   datasets[ "ttbarsyst_matchingdown" ]   = Dataset( path, "ntuple_TTJets_msdecay_matchingdown.root" );
 
    // for mc weights
    datasets[ "dy" ].mc_nevts         = 30459503;
@@ -114,18 +114,17 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
    datasets[ "tbar_tw" ].mc_nevts    = 493460;
    datasets[ "t_tw" ].mc_nevts       = 497658;
    datasets[ "wjets" ].mc_nevts      = 57709905;
-   datasets[ "ttbar161" ].mc_nevts   = 5369214;
-   datasets[ "ttbar163" ].mc_nevts   = 5365348;
-   datasets[ "ttbar166" ].mc_nevts   = 4469095;
-   datasets[ "ttbar169" ].mc_nevts   = 5202817;
-   datasets[ "ttbar172" ].mc_nevts   = 6923750;
-   datasets[ "ttbar175" ].mc_nevts   = 5186494;
-   datasets[ "ttbar178" ].mc_nevts   = 4733483;
-   datasets[ "ttbar181" ].mc_nevts   = 5145140;
-   datasets[ "ttbarsyst_scaleup" ].mc_nevts        = 5009488;
-   datasets[ "ttbarsyst_scaledown" ].mc_nevts      = 5387181;
-   datasets[ "ttbarsyst_matchingup" ].mc_nevts     = 5415010;
-   datasets[ "ttbarsyst_matchingdown" ].mc_nevts   = 5476728;
+   datasets[ "ttbar166" ].mc_nevts   = 27078777;
+   datasets[ "ttbar169" ].mc_nevts   = 39518234;
+   datasets[ "ttbar171" ].mc_nevts   = 24439341;
+   datasets[ "ttbar172" ].mc_nevts   = 62131965;
+   datasets[ "ttbar173" ].mc_nevts   = 26489020;
+   datasets[ "ttbar175" ].mc_nevts   = 40244328;
+   datasets[ "ttbar178" ].mc_nevts   = 24359161;
+   datasets[ "ttbarsyst_scaleup" ].mc_nevts        = 41908271;
+   datasets[ "ttbarsyst_scaledown" ].mc_nevts      = 39286663;
+   datasets[ "ttbarsyst_matchingup" ].mc_nevts     = 37083003;
+   datasets[ "ttbarsyst_matchingdown" ].mc_nevts   = 13406551;
 
    datasets[ "dy" ].mc_xsec          = 3351.97;
    datasets[ "ww" ].mc_xsec          = 54.838;
@@ -134,14 +133,13 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
    datasets[ "tbar_tw" ].mc_xsec     = 11.1;
    datasets[ "t_tw" ].mc_xsec        = 11.1;
    datasets[ "wjets" ].mc_xsec       = 37509.0;
-   datasets[ "ttbar161" ].mc_xsec    = 234;
-   datasets[ "ttbar163" ].mc_xsec    = 234;
    datasets[ "ttbar166" ].mc_xsec    = 234;
    datasets[ "ttbar169" ].mc_xsec    = 234;
+   datasets[ "ttbar171" ].mc_xsec    = 234;
    datasets[ "ttbar172" ].mc_xsec    = 234;
+   datasets[ "ttbar173" ].mc_xsec    = 234;
    datasets[ "ttbar175" ].mc_xsec    = 234;
    datasets[ "ttbar178" ].mc_xsec    = 234;
-   datasets[ "ttbar181" ].mc_xsec    = 234;
    datasets[ "ttbarsyst_scaleup" ].mc_xsec         = 234;
    datasets[ "ttbarsyst_scaledown" ].mc_xsec       = 234;
    datasets[ "ttbarsyst_matchingup" ].mc_xsec      = 234;

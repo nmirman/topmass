@@ -46,32 +46,17 @@ struct Event {
    int nvertices;
    double weight;
 
-   // kinematic variables
-   double mt2_220;
-   double mt2_210;
-   double mt2_221;
-   vector<double> mbls;
-
    // kinematic variables for Maos
    double mt2_210grid;
    double mt2_220grida;
    double mt2_220gridb;
 
+   // kinematic variables
+   double mt2_220;
+   double mt2_210;
+   double mt2_221;
+
    // Maos neutrinos
-   TLorentzVector maos210_neutrino1p;
-   TLorentzVector maos210_neutrino1m;
-   TLorentzVector maos210_neutrino2p;
-   TLorentzVector maos210_neutrino2m;
-
-   TLorentzVector maos220_neutrino1ap;
-   TLorentzVector maos220_neutrino1am;
-   TLorentzVector maos220_neutrino2ap;
-   TLorentzVector maos220_neutrino2am;
-   TLorentzVector maos220_neutrino1bp;
-   TLorentzVector maos220_neutrino1bm;
-   TLorentzVector maos220_neutrino2bp;
-   TLorentzVector maos220_neutrino2bm;
-
    double maos210_blvmass1ap;
    double maos210_blvmass1am;
    double maos210_blvmass2ap;
@@ -90,6 +75,8 @@ struct Event {
    double maos220_blvmass2bp;
    double maos220_blvmass2bm;
 
+   vector<double> mbls;
+
    // reconstructed objects
    TLorentzVector jet1, jet2, lep1, lep2, met;
 
@@ -99,6 +86,10 @@ struct Event {
    bool fit_event;
 
    vector<float> pdf_weights;
+
+   // pass various maos cuts
+   vector<bool> maoscut210;
+   vector<bool> maoscut220;
 
    Event(){
       process = "";
@@ -120,20 +111,6 @@ struct Event {
       mt2_210grid = 0;
       mt2_220grida = 0;
       mt2_220gridb = 0;
-
-      maos210_neutrino1p = TLorentzVector();
-      maos210_neutrino1m = TLorentzVector();
-      maos210_neutrino2p = TLorentzVector();
-      maos210_neutrino2m = TLorentzVector();
-
-      maos220_neutrino1ap = TLorentzVector();
-      maos220_neutrino1am = TLorentzVector();
-      maos220_neutrino2ap = TLorentzVector();
-      maos220_neutrino2am = TLorentzVector();
-      maos220_neutrino1bp = TLorentzVector();
-      maos220_neutrino1bm = TLorentzVector();
-      maos220_neutrino2bp = TLorentzVector();
-      maos220_neutrino2bm = TLorentzVector();
 
       maos210_blvmass1ap = 0;
       maos210_blvmass1am = 0;
@@ -198,6 +175,7 @@ class Fitter{
       void InitializeDists();
       void ReadNtuple(string, string, double, string, vector<Event>&, int, double, int, int);
       void LoadDatasets(map<string, Dataset>&);
+      void ReadDatasets(map<string, Dataset>&, vector<Event>&, string, string, double, double, double);
       void GetVariables(vector<Event>&);
       void ReweightMC(vector<Event>&, string);
       void Resample(vector<Event>&, int, bool);
@@ -213,8 +191,8 @@ class Fitter{
       void DeleteHists( map< string, map<string, TH1D*> >&, map< string, map<string, TH2D*> >& );
       void FillHists( map< string, map<string, TH1D*> >&, map< string, map<string, TH2D*> >&, vector<Event>&, bool=false );
       void PrintHists( map< string, map<string, TH1D*> >&, map< string, map<string, TH2D*> >& );
-      vector<bool> MaosCut220( vector<Event>::iterator ev );
-      vector<bool> MaosCut210( vector<Event>::iterator ev );
+      vector<bool> MaosCut210( vector<Event>::iterator ev, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector& );
+      vector<bool> MaosCut220( vector<Event>::iterator ev, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector& );
       void PlotTemplates( map< string, map<string, TH1D*> >& );
 
       map<string, Distribution> dists;

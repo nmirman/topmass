@@ -211,14 +211,14 @@ void Fitter::FillHists( map< string, map<string, TH1D*> >& hists_, map< string, 
       double blv210array [] = { ev->maos210_blvmass1ap, ev->maos210_blvmass1am, ev->maos210_blvmass2ap, ev->maos210_blvmass2am, ev->maos210_blvmass1bp, ev->maos210_blvmass1bm, ev->maos210_blvmass2bp, ev->maos210_blvmass2bm };
       double blv220array [] = { ev->maos220_blvmass1ap, ev->maos220_blvmass1am, ev->maos220_blvmass2ap, ev->maos220_blvmass2am, ev->maos220_blvmass1bp, ev->maos220_blvmass1bm, ev->maos220_blvmass2bp, ev->maos220_blvmass2bm };
 
-      vector<bool> useMaos220 = MaosCut220( ev );
+      vector<bool> useMaos220 = ev->maoscut220;
       for (int i=0; i<8; i++){
          if (useMaos220[i]){
             hists_["maos220blv"][type]->Fill( blv220array[i], ev->weight );
          }
       }
       
-      vector<bool> useMaos210 = MaosCut210( ev );
+      vector<bool> useMaos210 = ev->maoscut210;
       for (int i=0; i<8; i++){
          if (useMaos210[i]){
             hists_["maos210blv"][type]->Fill( blv210array[i], ev->weight );
@@ -637,7 +637,7 @@ void Fitter::PrintHists( map< string, map<string, TH1D*> >& hists_, map< string,
    return;
 }
 
-vector<bool> Fitter::MaosCut220( vector<Event>::iterator ev){
+vector<bool> Fitter::MaosCut220( vector<Event>::iterator ev, TLorentzVector &nu1ap, TLorentzVector &nu1am, TLorentzVector &nu2ap, TLorentzVector &nu2am, TLorentzVector &nu1bp, TLorentzVector &nu1bm, TLorentzVector &nu2bp, TLorentzVector &nu2bm ){
  
    bool distcut = 0;
    bool etadisamb = 0;
@@ -658,7 +658,7 @@ vector<bool> Fitter::MaosCut220( vector<Event>::iterator ev){
       toreturn.push_back(true);
    }
 
-   TLorentzVector neuarray [] = { ev->maos220_neutrino1ap, ev->maos220_neutrino1am, ev->maos220_neutrino2ap, ev->maos220_neutrino2am, ev->maos220_neutrino1bp, ev->maos220_neutrino1bm, ev->maos220_neutrino2bp, ev->maos220_neutrino2bm };
+   TLorentzVector neuarray [] = { nu1ap, nu1am, nu2ap, nu2am, nu1bp, nu1bm, nu2bp, nu2bm };
 
    //Nans
    for (int i=0; i<8; i++){
@@ -701,10 +701,9 @@ vector<bool> Fitter::MaosCut220( vector<Event>::iterator ev){
    } 
 
    return toreturn;
-
 }
 
-vector<bool> Fitter::MaosCut210( vector<Event>::iterator ev){
+vector<bool> Fitter::MaosCut210( vector<Event>::iterator ev, TLorentzVector &nu1p, TLorentzVector &nu1m, TLorentzVector &nu2p, TLorentzVector &nu2m ){
   
    bool distcut = 0;
    bool etadisamb = 0;
@@ -725,7 +724,7 @@ vector<bool> Fitter::MaosCut210( vector<Event>::iterator ev){
       toreturn.push_back(true);
    }
 
-   TLorentzVector neuarray [] = { ev->maos210_neutrino1p, ev->maos210_neutrino1m, ev->maos210_neutrino2p, ev->maos210_neutrino2m };
+   TLorentzVector neuarray [] = { nu1p, nu1m, nu2p, nu2m };
 
    //Nans
    for (int i=0; i<4; i++){
@@ -766,7 +765,6 @@ vector<bool> Fitter::MaosCut210( vector<Event>::iterator ev){
    } 
 
    return toreturn;
-
 }
 
 void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
@@ -797,7 +795,7 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
          dir->cd();
 
          for(unsigned int k=0; k < sizeof(sb)/sizeof(sb[0]); k++){ // sig,bkg
-            for(int j=0; j < 8; j++){ // masses
+            for(int j=0; j < NMP; j++){ // masses
 
                stringstream ssmass;
                ssmass << floor(masspoints[j]);

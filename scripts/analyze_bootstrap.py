@@ -6,16 +6,16 @@ import sys
 file = TFile( sys.argv[1] )
 tree = file.Get('FitResults')
 
-countmt = [0]*8
-meanmt = [0]*8
-varmt = [0]*8
-meanmt_gaus = [0]*8
-varmt_gaus = [0]*8
+countmt = [0]*7
+meanmt = [0]*7
+varmt = [0]*7
+meanmt_gaus = [0]*7
+varmt_gaus = [0]*7
 
-mcmasses = [161.5,163.5,166.5,169.5,172.5,175.5,178.5,181.5]
+mcmasses = [166.5,169.5,171.5,172.5,173.5,175.5,178.5]
 
 #hmt = []
-#for i in range(8):
+#for i in range(7):
 #   hmt.append( TH1D('hmt'+str(mcmasses[i]),'hmt'+str(mcmasses[i]),50,mcmasses[i]-5,mcmasses[i]+5) )
 
 # set up gaussian fits in ROOFit
@@ -23,7 +23,7 @@ topMass = []
 topMassMean = []
 topMassSigma = []
 ds = []
-for i in range(8):
+for i in range(7):
    topMass.append( RooRealVar("topMass", "Bootstrap M_{t} @ "+str(mcmasses[i]), mcmasses[i]-2, mcmasses[i]+2, "GeV") )
    topMassMean.append( RooRealVar("M_{t}", "M_{t}", mcmasses[i], mcmasses[i]-2, mcmasses[i]+2, "GeV") )
    topMassSigma.append( RooRealVar("#sigma_{M_{t}}", "#sigma_{M_{t}}", 0.2, 0.0, 5.0, "GeV") )
@@ -32,22 +32,20 @@ for i in range(8):
 for i in range( tree.GetEntries() ):
    tree.GetEntry(i)
    iter=-1
-   if tree.mcmass == 161.5:
+   if tree.mcmass == 166.5:
       iter=0
-   elif tree.mcmass == 163.5:
-      iter=1
-   elif tree.mcmass == 166.5:
-      iter=2
    elif tree.mcmass == 169.5:
-      iter=3
+      iter=1
+   elif tree.mcmass == 171.5:
+      iter=2
    elif tree.mcmass == 172.5:
+      iter=3
+   elif tree.mcmass == 173.5:
       iter=4
    elif tree.mcmass == 175.5:
       iter=5
    elif tree.mcmass == 178.5:
       iter=6
-   elif tree.mcmass == 181.5:
-      iter=7
 
 #   hmt[iter].Fill( tree.mt )
    countmt[iter] += 1
@@ -57,7 +55,7 @@ for i in range( tree.GetEntries() ):
    topMass[iter].setVal(tree.mt)
    ds[iter].add( RooArgSet(topMass[iter]) )
 
-for iter in range(8):
+for iter in range(7):
    if countmt[iter] != 0:
       meanmt[iter] = meanmt[iter]/countmt[iter]
       varmt[iter] = varmt[iter]/countmt[iter] - meanmt[iter]**2
@@ -67,7 +65,7 @@ topgaus = []
 fTop = []
 cTop = TCanvas('cbootstrap','cbootstrap',1400,800)
 cTop.Divide(4,2)
-for i in range(8):
+for i in range(7):
    topgaus.append( RooGaussian("topgaus"+str(mcmasses[i]), "topgaus"+str(mcmasses[i]), topMass[i], topMassMean[i], topMassSigma[i]) )
    topMassMean[i].setVal(mcmasses[i])
    topMassSigma[i].setVal(0.2)
@@ -104,7 +102,7 @@ hpull.Draw()
 
 gresults = TGraphErrors()
 chi2=0
-for i in range(8):
+for i in range(7):
    gresults.SetPoint(i, mcmasses[i], meanmt[i]-mcmasses[i])
    gresults.SetPointError(i, 0.0, sqrt(varmt[i]))
    chi = 0

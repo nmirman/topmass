@@ -83,10 +83,11 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
    // file path
    string path;
    if( pch != NULL ) path = "root://cmseos:1094//eos/uscms/store/user/nmirman/Ntuples/TopMass/20141030/";
-   if( pch == NULL ) path = "/afs/cern.ch/work/n/nmirman/public/Ntuples/TopMass/20150226/";
+   //if( pch == NULL ) path = "/afs/cern.ch/work/n/nmirman/public/Ntuples/TopMass/20150226/";
+   if( pch == NULL ) path = "root://osg-se.cac.cornell.edu//xrootd/path/cms/store/user/nmirman/Ntuples/TopMassNtuples/20150330/";
 
    // filenames
-   datasets[ "data" ]      = Dataset( path, "ntuple_data.root" );
+   //datasets[ "data" ]      = Dataset( path, "ntuple_data.root" );
    datasets[ "t_tw" ]      = Dataset( path, "ntuple_T_tW.root" );
    datasets[ "tbar_tw" ]   = Dataset( path, "ntuple_Tbar_tW.root" );
    datasets[ "dy" ]        = Dataset( path, "ntuple_DYJetsToLL.root" );
@@ -148,6 +149,62 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
    return;
 }
 
+void Fitter::ReadDatasets(map<string, Dataset>& datasets, vector<Event>& events, string type, string nsyst,
+      double fracevts, double statval_numPE, double statval_PE){
+
+   for(map<string, Dataset>::iterator it = datasets.begin(); it != datasets.end(); it++){
+      string name = it->first;
+      Dataset *dat = &(it->second);
+
+      // don't load systematics files yet
+      if( name.find("syst") != string::npos ) continue;
+
+      string tsyst = "Central";
+      // if a jes systematic is specified, change to the appropriate ttree
+      if( !nsyst.empty() and nsyst.find("MC") == string::npos
+            and nsyst.find("PDFvar") == string::npos ) tsyst = nsyst;
+
+      string nfile = dat->file;
+
+      // if a HAD systematic is specified, swap the appropriate ntuple into the test set
+      if( type == "test" ){
+         if( nsyst.find("MC") != string::npos and name.find("ttbar172") != string::npos ){
+            string nametemp = nsyst;
+            nametemp.erase(0,2);
+            nfile = "ntuple_TTJets_"+nametemp+".root";
+            cout << "---> swapping sytematics file " << nfile << " for 172.5 masspoint." << endl;
+         }
+      }
+
+      TFile *file = TFile::Open( (dat->path+dat->file).c_str() );
+      TTree *trees = (TTree*)file->Get(tsyst.c_str());
+
+      cout << setiosflags(ios::left);
+      cout << "... " << setw(25) << name
+         << ": " << trees->GetEntries() << " events" << endl;
+
+      if( type == "diagnostics" ){
+         ReadNtuple( dat->path+dat->file, name, dat->mc_xsec/dat->mc_nevts,
+               tsyst.c_str(), events, 0, -1, -1, -1 );
+      }
+
+      // events for training and testing
+      if( name.compare("data") != 0 ){
+         if( type == "train" ){
+            ReadNtuple( dat->path+nfile, name, dat->mc_xsec/dat->mc_nevts,
+                  tsyst.c_str(), events, 0, -1, -1, -1 );
+         }
+         if( type == "test" ){
+            ReadNtuple( dat->path+nfile, name, dat->mc_xsec/dat->mc_nevts,
+                  "Central", events, 0, fracevts, statval_numPE, statval_PE );
+         }
+      }
+
+   }
+
+   return;
+}
+
 void Fitter::ReadNtuple( string path, string process, double mcweight, 
       string selection, vector<Event>& eventvec, int opt, double fracevts,
       int statval_numPE, int statval_PE ){
@@ -168,9 +225,9 @@ void Fitter::ReadNtuple( string path, string process, double mcweight,
    vector<float> *pdf_weights = 0;
 
    // open ntuple
-   TFile file( path.c_str() );
-   TTree *tree = (TTree*)file.Get(selection.c_str());
-   TBranch *branch = 0;
+   TFile *file = TFile::Open( path.c_str() );
+   TTree *tree = (TTree*)file->Get(selection.c_str());
+   //TBranch *branch = 0;
 
    tree->SetBranchAddress("jet1FourVector", &jet1);
    tree->SetBranchAddress("jet2FourVector", &jet2);
@@ -292,12 +349,15 @@ void Fitter::ReadNtuple( string path, string process, double mcweight,
          break;
       }
 
+      //cout << "STRUCT SIZE CHECK: " << sizeof(evtemp) << endl;
+
       // push back event
       if ( (jet1->M() < 40 and jet2->M() < 40)/* and evtemp.isemu*/ )
          eventvec.push_back( evtemp );
 
    }
 
+   file->Close();
    return;
 }
 
@@ -306,6 +366,8 @@ void Fitter::GetVariables( vector<Event>& eventvec ){
 
    Mt2Calculator::Calculator Calc;
    for( vector<Event>::iterator ev = eventvec.begin(); ev < eventvec.end(); ev++){
+      if( (ev - eventvec.begin()) % 10000 == 0 )
+         cout << "---++++ " << ev - eventvec.begin() << endl;
 
       Calc.SetParticles( ev->jet1, ev->jet2, ev->lep1, ev->lep2, ev->met );
 
@@ -321,6 +383,7 @@ void Fitter::GetVariables( vector<Event>& eventvec ){
       TLorentzVector maos220_neu1ap, maos220_neu1am, maos220_neu2ap, maos220_neu2am, maos220_neu1bp, maos220_neu1bm, maos220_neu2bp, maos220_neu2bm;
 
       //blv masses
+      
       double maos210_blv1ap, maos210_blv1am, maos210_blv2ap, maos210_blv2am, maos210_blv1bp, maos210_blv1bm, maos210_blv2bp, maos210_blv2bm;
       double maos220_blv1ap, maos220_blv1am, maos220_blv2ap, maos220_blv2am, maos220_blv1bp, maos220_blv1bm, maos220_blv2bp, maos220_blv2bm;
 
@@ -329,20 +392,6 @@ void Fitter::GetVariables( vector<Event>& eventvec ){
       std::vector<double> Mt2_220grid = Calc.MaosReturn220( maos220_neu1ap, maos220_neu1am, maos220_neu2ap, maos220_neu2am, maos220_neu1bp, maos220_neu1bm, maos220_neu2bp, maos220_neu2bm, maos220_blv1ap, maos220_blv1am, maos220_blv2ap, maos220_blv2am, maos220_blv1bp, maos220_blv1bm, maos220_blv2bp, maos220_blv2bm);
       ev->mt2_220grida = Mt2_220grid.at(0);
       ev->mt2_220gridb = Mt2_220grid.at(1);
-
-      ev->maos210_neutrino1p = maos210_neu1p;
-      ev->maos210_neutrino1m = maos210_neu1m;
-      ev->maos210_neutrino2p = maos210_neu2p;
-      ev->maos210_neutrino2m = maos210_neu2m;
-
-      ev->maos220_neutrino1ap = maos220_neu1ap;
-      ev->maos220_neutrino1am = maos220_neu1am;
-      ev->maos220_neutrino2ap = maos220_neu2ap;
-      ev->maos220_neutrino2am = maos220_neu2am;
-      ev->maos220_neutrino1bp = maos220_neu1bp;
-      ev->maos220_neutrino1bm = maos220_neu1bm;
-      ev->maos220_neutrino2bp = maos220_neu2bp;
-      ev->maos220_neutrino2bm = maos220_neu2bm;
 
       ev->maos210_blvmass1ap = maos210_blv1ap;
       ev->maos210_blvmass1am = maos210_blv1am;
@@ -361,6 +410,10 @@ void Fitter::GetVariables( vector<Event>& eventvec ){
       ev->maos220_blvmass1bm = maos220_blv1bm;
       ev->maos220_blvmass2bp = maos220_blv2bp;
       ev->maos220_blvmass2bm = maos220_blv2bm;
+
+      ev->maoscut220 = MaosCut220(ev, maos220_neu1ap, maos220_neu1am, maos220_neu2ap, maos220_neu2am, maos220_neu1bp, maos220_neu1bm, maos220_neu2bp, maos220_neu2bm);
+      ev->maoscut210 = MaosCut210(ev, maos210_neu1p, maos210_neu1m, maos210_neu2p, maos210_neu2m);
+      
 
    }
 
@@ -545,7 +598,8 @@ double Fitter::Min2LL(const double *x){
             else if ( name.compare("maos220blv") == 0 ){ // for Maos 220
                double blv220array [] = { ev->maos220_blvmass1ap, ev->maos220_blvmass1am, ev->maos220_blvmass2ap, ev->maos220_blvmass2am, ev->maos220_blvmass1bp, ev->maos220_blvmass1bm, ev->maos220_blvmass2bp, ev->maos220_blvmass2bm };
 
-               vector<bool> useMaos220 = MaosCut220( ev );
+               //vector<bool> useMaos220 = MaosCut220( ev );
+               vector<bool> useMaos220 = ev->maoscut220;
                for ( unsigned int j=0; j < sizeof(blv220array)/sizeof(blv220array[0]); j++){           
                   if( blv220array[j] > dist->range ) continue;
                   //if( blv_array[j] > lbnd and blv_array[j] < rbnd ) continue;
@@ -559,7 +613,8 @@ double Fitter::Min2LL(const double *x){
             else if ( name.compare("maos210blv") == 0 ){ // for Maos 210
                double blv210array [] = { ev->maos210_blvmass1ap, ev->maos210_blvmass1am, ev->maos210_blvmass2ap, ev->maos210_blvmass2am, ev->maos210_blvmass1bp, ev->maos210_blvmass1bm, ev->maos210_blvmass2bp, ev->maos210_blvmass2bm };
 
-               vector<bool> useMaos210 = MaosCut210( ev );
+               //vector<bool> useMaos210 = MaosCut210( ev );
+               vector<bool> useMaos210 = ev->maoscut210;
                for ( unsigned int j=0; j < sizeof(blv210array)/sizeof(blv210array[0]); j++){           
                   if( blv210array[j] > dist->range ) continue;
                   //if( blv_array[j] > lbnd and blv_array[j] < rbnd ) continue;

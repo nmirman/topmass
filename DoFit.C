@@ -35,6 +35,7 @@ void print_usage(){
    cout << setw(25) << "\t-2 --maos220" << "Activate MAOS 220 distribution.\n";
    cout << setw(25) << "\t-1 --maos210" << "Activate MAOS 210 distribution.\n";
    cout << setw(25) << "\t-9 --syst <string>" << "Run with a systematic variation.\n";
+   cout << setw(25) << "\t-g --outfile <string>" << "Output fit results.\n";
    cout << setw(25) << "\t-h --help" << "Display this menu.\n";
    cout << endl;
    return;
@@ -121,6 +122,7 @@ int main(int argc, char* argv[]){
    int maoscuts220 = 0;
    int maoscuts210 = 0;
    double fracevts = -1;
+   string outfile = "fitresults.root";
 
    struct option longopts[] = {
       { "run_number",   required_argument,   0,                'n' },
@@ -144,11 +146,12 @@ int main(int argc, char* argv[]){
       // maoscuts220 and maoscuts210 set which cuts to use for maos220 and maos 210 respectively.
       // see lines 237-251 for what number to input.
       { "syst",         required_argument,   0,                '9' },
+      { "outfile",      required_argument,   0,                'g' },
       { "help",         no_argument,         NULL,             'h' },
       { 0, 0, 0, 0 }
    };
 
-   while( (c = getopt_long(argc, argv, "fdexahponbt21yzm:c:s:i:9:", longopts, NULL)) != -1 ) {
+   while( (c = getopt_long(argc, argv, "fdexahponbt21yzm:c:s:i:9:g:", longopts, NULL)) != -1 ) {
       switch(c)
       {
          case 'n' :
@@ -227,6 +230,10 @@ int main(int argc, char* argv[]){
             nsyst = optarg;
             break;
 
+         case 'g' :
+            outfile = optarg;
+            break;
+
          case 'h' :
             print_usage();
             return -1;
@@ -293,68 +300,12 @@ int main(int argc, char* argv[]){
    int randseed = 0;
    if( do_bootstrap ) randseed = run_number+1+10E6;
 
-   cout << "\nLoading datasets" << endl;
-   for(map<string, Dataset>::iterator it = datasets.begin(); it != datasets.end(); it++){
-
-      string name = it->first;
-      Dataset *dat = &(it->second);
-
-      // turn off data
-      if( !use_data and name.compare("data") == 0 ) continue;
-      // don't load systematics files yet
-      if( name.find("syst") != string::npos ) continue;
-
-      string tsyst = "Central";
-      // if a jes systematic is specified, change to the appropriate ttree
-      if( !nsyst.empty() and nsyst.find("MC") == string::npos
-            and nsyst.find("PDFvar") == string::npos ) tsyst = nsyst;
-
-      datacount[name] = 0;
-
-      string file_train = dat->file;
-      string file_test = dat->file;
-
-      // if a HAD systematic is specified, swap the appropriate ntuple into the test set
-      if( nsyst.find("MC") != string::npos and name.find("ttbar172") != string::npos ){
-         string nametemp = nsyst;
-         nametemp.erase(0,2);
-         file_test = "ntuple_TTJets_"+nametemp+".root";
-         cout << "---> swapping sytematics file " << file_test << " for 172.5 masspoint." << endl;
-      }
-      // if a TuneP11 systematic is specified, change training set to TuneP11 (instead of TuneZ2star)
-      //if( nsyst.find("MCTuneP11") != string::npos and name.find("ttbar172") != string::npos ){
-      //   file_train = "ntuple_TTJets_TuneP11.root";
-      //   cout << "---> swapping sytematics file " << file_train << " for 172.5 masspoint." << endl;
-      //}
-
-      TFile file( (dat->path+dat->file).c_str() );
-      TTree *trees = (TTree*)file.Get(tsyst.c_str());
-
-      cout << setiosflags(ios::left);
-      cout << "... " << setw(25) << name
-         << ": " << trees->GetEntries() << " events" << endl;
-
-      if( do_diagnostics ){
-         fitter.ReadNtuple( dat->path+dat->file, name, dat->mc_xsec/dat->mc_nevts,
-               tsyst.c_str(), eventvec_datamc, 0, -1, -1, -1 );
-      }
-
-      // events for training and testing
-      if( name.compare("data") != 0 ){
-
-         if( use_data ){ // train on full mc set
-            fitter.ReadNtuple( dat->path+dat->file, name, dat->mc_xsec/dat->mc_nevts,
-                  "Central", eventvec_train, 0, -1, -1, -1 );
-         }else{
-            fitter.ReadNtuple( dat->path+file_train, name, dat->mc_xsec/dat->mc_nevts,
-                  tsyst.c_str(), eventvec_train, 0, -1, -1, -1 );
-            fitter.ReadNtuple( dat->path+file_test, name, dat->mc_xsec/dat->mc_nevts,
-                  "Central", eventvec_test, 0, fracevts, statval_numPE, statval_PE );
-         }
-
-      }
-
-   }
+   // ********************************************************
+   // events for GP training
+   // ********************************************************
+   
+   cout << "\nLoading datasets: training" << endl;
+   fitter.ReadDatasets( datasets, eventvec_train, "train", nsyst, fracevts, statval_numPE, statval_PE );
 
    // pdf systematics
    int pdfvar = -1;
@@ -365,28 +316,38 @@ int main(int argc, char* argv[]){
          fitter.PDFReweight( eventvec_train, pdfvar );
    }
 
-   // data/mc plots, kinematic distributions
-   fitter.GetVariables( eventvec_datamc );
-   
    fitter.GetVariables( eventvec_train );
-   fitter.GetVariables( eventvec_test );
-
-   if( pdfvar != -1 ){
-      fitter.PDFReweight( eventvec_train, pdfvar );
-   }
-
    fitter.DeclareHists( hists_train_, hists2d_train_, "train" );
    fitter.FillHists( hists_train_, hists2d_train_, eventvec_train );
 
+   // release memory in eventvec_train
+   vector<Event>().swap( eventvec_train );
+
+
+   // ********************************************************
+   // events for fit
+   // ********************************************************
+   
+   fitter.ReadDatasets( datasets, eventvec_test, "test", nsyst, fracevts, statval_numPE, statval_PE );
+   fitter.GetVariables( eventvec_test );
    fitter.DeclareHists( hists_test_, hists2d_test_, "test" );
    fitter.FillHists( hists_test_, hists2d_test_, eventvec_test );
 
-   if( do_diagnostics ){ 
+   // ********************************************************
+   // events for diagnostics
+   // ********************************************************
+   if( do_diagnostics ){
+      fitter.ReadDatasets( datasets, eventvec_datamc, "diagnostics", nsyst, fracevts, statval_numPE, statval_PE );
+      fitter.GetVariables( eventvec_datamc );
       fitter.DeclareHists( hists_all_, hists2d_all_, "all" );
       fitter.FillHists( hists_all_, hists2d_all_, eventvec_datamc );
       fitter.PrintHists( hists_all_, hists2d_all_ );
    }
 
+
+   // ********************************************************
+   // begin fit
+   // ********************************************************
    if( do_fit ){
 
       vector<Event> eventvec_fit;
@@ -499,19 +460,19 @@ int main(int argc, char* argv[]){
 
       }else{ // loop over mc masses
 
-         double masspnts [] = {161.5,163.5,166.5,169.5,172.5,175.5,178.5,181.5};
-         for(int i=0; i < 8; i++){
+         double masspnts [] = {166.5,169.5,171.5,172.5,173.5,175.5,178.5};
+         for(int i=0; i < 7; i++){
 
             double mass = masspnts[i];
             // masspoint from command line
             if( masspnt != 0 ){
                bool check = false;
-               for(int j=0; j < 8; j++){
+               for(int j=0; j < 7; j++){
                   if( masspnts[j] == masspnt ) check = true;
                }
                if(check){
                   mass = masspnt;
-                  i = 7;
+                  i = 6;
                }else{
                   cout << "masspoint " << masspnt << " not found!" << endl;
                   return -1;
@@ -716,7 +677,7 @@ int main(int argc, char* argv[]){
          pathstr = path;
       }
 
-      TFile *file = new TFile((pathstr+"/fitresults.root").c_str(), "RECREATE");
+      TFile *file = new TFile((pathstr+"/"+outfile).c_str(), "RECREATE");
       file->cd();
       tree->Write();
       file->Write();

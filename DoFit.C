@@ -5,7 +5,6 @@
 
 #include <vector>
 #include <iostream>
-#include <fstream>
 #include <iomanip>
 #include <sstream>
 #include <map>
@@ -13,8 +12,6 @@
 #include <getopt.h>
 
 using namespace std;
-
-#define NMP 7
 
 void print_usage(){
 
@@ -505,19 +502,6 @@ int main(int argc, char* argv[]){
 
             // release memory in eventvec_test
             vector<Event>().swap( eventvec_test );
-
-            //TODO
-            /*
-            ofstream myfile;
-            myfile.open( "list.txt" );
-            for( vector<Event>::iterator ev = eventvec_fit.begin(); ev < eventvec_fit.end(); ev++){
-               myfile << ev - eventvec_fit.begin() << ": ";
-               for(int e=0; e < ev->mbls.size(); e++) myfile << ev->mbls[e] << " ";
-               myfile << endl;
-            }
-            myfile.close();
-            return 0;
-            */
 
             fitter.ReweightMC( eventvec_fit, dname );
             bool statval = statval_numPE != -1;

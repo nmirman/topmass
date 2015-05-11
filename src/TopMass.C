@@ -64,15 +64,7 @@ void Fitter::InitializeDists(){
 
    // gaussian process length scales
    // name(n), title(t), gnorm1(n1), gnorm2(n2), glx(lx), glmt(lmt), range(r) {
-   //dists[ "mbl" ] = Distribution( "mbl", "M_{bl}", 5.8, 10.7, 11.8, 26.1, 300 );
-   //dists[ "mbl" ] = Distribution( "mbl", "M_{bl}", 0.57, 51.7, 20.4, 38.1, 300 );
-   //dists[ "mbl" ] = Distribution( "mbl", "M_{bl}", 0.5, 25, 10, 20, 300 );
-   //dists[ "mt2_220_nomatchmbl" ] = Distribution( "mt2_220_nomatchmbl", "M_{T2} 220", 3.9, 8.4, 8.5, 12.5, 300 );
-   //dists[ "mt2_220_nomatchmbl" ] = Distribution( "mt2_220_nomatchmbl", "M_{T2} 220", 0.4, 30, 25, 15, 300 );
    dists[ "maos220blv" ] = Distribution( "maos220blv","blv mass from Maos neutrinos from M_{T2} 220", 1.6, 6.4, 19.2, 19.2, 500 );
-   //dists[ "maos210blv" ] = Distribution( "maos210blv","blv mass from Maos neutrinos from M_{T2} 210", 0.60, 8.5, 19.1, 18.9, 500 );
-   //dists[ "maos210blv" ] = Distribution( "maos210blv","blv mass from Maos neutrinos from M_{T2} 210", 2.3, 5.6, 18, 40, 500 );
-
    dists[ "mbl" ] = Distribution( "mbl", "M_{bl}", 0.54, 2.1, 7.2, 8.1, 300 );
    dists[ "mt2_220_nomatchmbl" ] = Distribution( "mt2_220_nomatchmbl", "M_{T2} 220", 0.94, 1.74, 7.1, 1.9, 300 );
    dists[ "maos210blv" ] = Distribution( "maos210blv","blv mass from Maos neutrinos from M_{T2} 210", 0.42, 1.82, 9.92, 24.2, 500 );
@@ -589,8 +581,6 @@ double Fitter::Min2LL(const double *x){
          double integralbkg = fshape_tot->Integral(0,dist->range);
          delete fshape_tot;
          delete fptr;
-         //double integralsig = 1.0;
-         //double integralbkg = 1.0;
 
          Shapes shape( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
          shape.aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
@@ -742,8 +732,6 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_, string outf
          double integralsig = ftemplate->Integral(0,dist->range);
          ftemplate->SetParameters( xmin[0], 0.0, 1.0, 1.0, 1.0 );
          double integralbkg = ftemplate->Integral(0,dist->range);
-         //double integralsig = 1.0;
-         //double integralbkg = 1.0;
          ftemplate->SetParameters( xmin[0], xmin1s[iparam],
                hdata->Integral("width"), integralsig, integralbkg );
 

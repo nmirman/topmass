@@ -70,7 +70,10 @@ syst[44]=MCTuneP11
 syst[45]=MCTuneP11TeV
 syst[46]=MCTuneP11mpiHi
 syst[47]=MCTuneP11noCR
-ipdf=48
+syst[48]=BFRAGnuUP
+syst[49]=BFRAGnuDN
+syst[50]=BFRAGrbLEP
+ipdf=51
 for i in {0..49}
 do
    syst[ipdf+i]=PDFvar$i
@@ -78,7 +81,7 @@ done
 
 job=$(($1-1))
 
-./DoFit --syst ${syst[$job]} --fit --masspnt 172.5 --mt2_220 --maos210
+./DoFit --syst ${syst[$job]} --fit --masspnt 172.5 --mbl
 
 cd ..
 mv topmass/fitresults.root .

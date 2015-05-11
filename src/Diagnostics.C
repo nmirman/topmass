@@ -437,7 +437,7 @@ void Fitter::PrintHists( map< string, map<string, TH1D*> >& hists_, map< string,
       hstack->Draw("HIST");
 
       hstack->GetYaxis()->SetTitle( hdata->GetYaxis()->GetTitle() );
-      hstack->SetMinimum( 0.5 );
+      //hstack->SetMinimum( 0.5 );
       hstack->GetXaxis()->SetTitleSize(0.00);
       hstack->GetYaxis()->SetLabelSize(0.07);
       hstack->GetYaxis()->SetTitleSize(0.08);
@@ -493,7 +493,7 @@ void Fitter::PrintHists( map< string, map<string, TH1D*> >& hists_, map< string,
 
       fileout->cd();
       if( name.find("220")==string::npos and name.find("221")==string::npos
-            and name.find("mbl")==string::npos ){
+            and name.find("mbl")==string::npos and name.find("210")==string::npos  ){
          dkin->cd();
       }
       canvas->Write();
@@ -874,7 +874,6 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
                double integralbkg = (sb[k] == "bkg") ? ftemplate->Integral(0,dist->range) : 1.0;
                ftemplate->SetParameters( masspoints[j], 1-k,
                      1.0, integralsig, integralbkg );
-
                ftemplate->SetLineWidth(2);
 
                // TGraph with GP covariance
@@ -928,8 +927,8 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
    }
    fileout->cd();
 
+   /*
    // plot template as a function of top mass
-
    for( map<string, Distribution>::iterator it = dists.begin(); it != dists.end(); it++ ){
 
       string name = it->first;
@@ -1017,7 +1016,7 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
          }
       }
    }
-
+   */
 
    // TODO
    // need to figure out variance band for this plot

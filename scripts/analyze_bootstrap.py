@@ -48,6 +48,10 @@ for i in range( tree.GetEntries() ):
       iter=6
 
 #   hmt[iter].Fill( tree.mt )
+   if tree.fitStatus != 0:
+      print 'Fit Status ', tree.fitStatus, ' in PE ', i, ', masspoint ', tree.mcmass
+      continue
+
    countmt[iter] += 1
    meanmt[iter] += tree.mt
    varmt[iter] += (tree.mt)**2

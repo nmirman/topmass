@@ -5,6 +5,7 @@
 
 #include <vector>
 #include <iostream>
+#include <fstream>
 #include <iomanip>
 #include <sstream>
 #include <map>
@@ -12,6 +13,8 @@
 #include <getopt.h>
 
 using namespace std;
+
+#define NMP 7
 
 void print_usage(){
 
@@ -35,7 +38,7 @@ void print_usage(){
    cout << setw(25) << "\t-2 --maos220" << "Activate MAOS 220 distribution.\n";
    cout << setw(25) << "\t-1 --maos210" << "Activate MAOS 210 distribution.\n";
    cout << setw(25) << "\t-9 --syst <string>" << "Run with a systematic variation.\n";
-   cout << setw(25) << "\t-g --outfile <string>" << "Output fit results.\n";
+   cout << setw(25) << "\t-g --outdir <string>" << "Output fit results.\n";
    cout << setw(25) << "\t-h --help" << "Display this menu.\n";
    cout << endl;
    return;
@@ -73,11 +76,12 @@ int main(int argc, char* argv[]){
    bool blmatch210 = 0;
    double mcmass=0;
    double fitchi2=0;
-   double tsig_mbl_chi2 [8] = {0};
-   double tbkg_mbl_chi2 [8] = {0};
+   double tsig_mbl_chi2 [NMP] = {0};
+   double tbkg_mbl_chi2 [NMP] = {0};
    string nsyst = "";
    int statval_numPE = -1;
    int statval_PE = -1;
+   vector<int> evlist;
    
    TTree *tree = new TTree("FitResults", "FitResults");
    tree->Branch("runNumber", &run_number);
@@ -100,11 +104,12 @@ int main(int argc, char* argv[]){
    tree->Branch("blmatch210", &blmatch210);
    tree->Branch("mcmass", &mcmass);
    tree->Branch("fitchi2", &fitchi2);
-   tree->Branch("tsig_mbl_chi2", tsig_mbl_chi2, "tsig_mbl_chi2[8]/D");
-   tree->Branch("tbkg_mbl_chi2", tbkg_mbl_chi2, "tbkg_mbl_chi2[8]/D");
+   tree->Branch("tsig_mbl_chi2", tsig_mbl_chi2, "tsig_mbl_chi2[7]/D");
+   tree->Branch("tbkg_mbl_chi2", tbkg_mbl_chi2, "tbkg_mbl_chi2[7]/D");
    tree->Branch("syst", &nsyst);
    tree->Branch("statval_numPE", &statval_numPE);
    tree->Branch("statval_PE", &statval_PE);
+   tree->Branch("evlist", &evlist);
 
    // option flags
    int c;
@@ -122,7 +127,8 @@ int main(int argc, char* argv[]){
    int maoscuts220 = 0;
    int maoscuts210 = 0;
    double fracevts = -1;
-   string outfile = "fitresults.root";
+   string run_number_str = "";
+   string outdir = "results";
 
    struct option longopts[] = {
       { "run_number",   required_argument,   0,                'n' },
@@ -146,7 +152,7 @@ int main(int argc, char* argv[]){
       // maoscuts220 and maoscuts210 set which cuts to use for maos220 and maos 210 respectively.
       // see lines 237-251 for what number to input.
       { "syst",         required_argument,   0,                '9' },
-      { "outfile",      required_argument,   0,                'g' },
+      { "outdir",      required_argument,   0,                'g' },
       { "help",         no_argument,         NULL,             'h' },
       { 0, 0, 0, 0 }
    };
@@ -156,6 +162,7 @@ int main(int argc, char* argv[]){
       {
          case 'n' :
             run_number = atoi(optarg);
+            run_number_str = "_"+string(optarg);
             break;
 
          case 'f' :
@@ -231,7 +238,7 @@ int main(int argc, char* argv[]){
             break;
 
          case 'g' :
-            outfile = optarg;
+            outdir = optarg;
             break;
 
          case 'h' :
@@ -263,6 +270,8 @@ int main(int argc, char* argv[]){
    fitter.dists["mt2_220_nomatchmbl"].activate = do_mt2_220;
    fitter.dists["maos220blv"].activate = do_maos220;
    fitter.dists["maos210blv"].activate = do_maos210;
+   if( do_maos220 ) fitter.compute_maos220 = true;
+   if( do_maos210 ) fitter.compute_maos210 = true;
 
    if (maoscuts220 == 1){ distcut220 = 1; }
    else if (maoscuts220 == 2){ etadisamb220 = 1; }
@@ -301,6 +310,18 @@ int main(int argc, char* argv[]){
    if( do_bootstrap ) randseed = run_number+1+10E6;
 
    // ********************************************************
+   // events for diagnostics
+   // ********************************************************
+   if( do_diagnostics ){
+      fitter.ReadDatasets( datasets, eventvec_datamc, "diagnostics", nsyst, fracevts, statval_numPE, statval_PE );
+      fitter.GetVariables( eventvec_datamc );
+      fitter.DeclareHists( hists_all_, hists2d_all_, "all" );
+      fitter.FillHists( hists_all_, hists2d_all_, eventvec_datamc );
+      fitter.PrintHists( hists_all_, hists2d_all_ );
+      return 0;
+   }
+
+   // ********************************************************
    // events for GP training
    // ********************************************************
    
@@ -323,25 +344,15 @@ int main(int argc, char* argv[]){
    // release memory in eventvec_train
    vector<Event>().swap( eventvec_train );
 
-
    // ********************************************************
    // events for fit
    // ********************************************************
    
-   fitter.ReadDatasets( datasets, eventvec_test, "test", nsyst, fracevts, statval_numPE, statval_PE );
-   fitter.GetVariables( eventvec_test );
-   fitter.DeclareHists( hists_test_, hists2d_test_, "test" );
-   fitter.FillHists( hists_test_, hists2d_test_, eventvec_test );
-
-   // ********************************************************
-   // events for diagnostics
-   // ********************************************************
-   if( do_diagnostics ){
-      fitter.ReadDatasets( datasets, eventvec_datamc, "diagnostics", nsyst, fracevts, statval_numPE, statval_PE );
-      fitter.GetVariables( eventvec_datamc );
-      fitter.DeclareHists( hists_all_, hists2d_all_, "all" );
-      fitter.FillHists( hists_all_, hists2d_all_, eventvec_datamc );
-      fitter.PrintHists( hists_all_, hists2d_all_ );
+   if( do_fit ){
+      fitter.ReadDatasets( datasets, eventvec_test, "test", nsyst, fracevts, statval_numPE, statval_PE );
+      fitter.GetVariables( eventvec_test );
+      fitter.DeclareHists( hists_test_, hists2d_test_, "test" );
+      fitter.FillHists( hists_test_, hists2d_test_, eventvec_test );
    }
 
 
@@ -492,10 +503,26 @@ int main(int argc, char* argv[]){
                }
             }
 
+            // release memory in eventvec_test
+            vector<Event>().swap( eventvec_test );
+
+            //TODO
+            /*
+            ofstream myfile;
+            myfile.open( "list.txt" );
+            for( vector<Event>::iterator ev = eventvec_fit.begin(); ev < eventvec_fit.end(); ev++){
+               myfile << ev - eventvec_fit.begin() << ": ";
+               for(int e=0; e < ev->mbls.size(); e++) myfile << ev->mbls[e] << " ";
+               myfile << endl;
+            }
+            myfile.close();
+            return 0;
+            */
+
             fitter.ReweightMC( eventvec_fit, dname );
             bool statval = statval_numPE != -1;
             if( do_bootstrap ){
-               fitter.Resample( eventvec_fit, randseed, statval );
+               evlist = fitter.Resample( eventvec_fit, randseed, statval );
             }
 
             // flag events to be fitted
@@ -551,7 +578,7 @@ int main(int argc, char* argv[]){
 
             // events for fitting, hists for training
             fitter.RunMinimizer( eventvec_fit );
-            fitter.PlotResults( hists_fit_ ); // plot fitted events
+            fitter.PlotResults( hists_fit_, outdir+"/plotsFitResults"+run_number_str+".root" ); // plot fitted events
 
             cout << "Fit Chi2 = " << fitter.fitchi2 << endl;
 
@@ -613,7 +640,7 @@ int main(int argc, char* argv[]){
 
             fitter.PlotTemplates( hists_train_ );
 
-            for(int j=0; j < 8; j++){
+            for(int j=0; j < NMP; j++){
                tsig_mbl_chi2[j] = fitter.tsig_mbl_chi2[j];
                tbkg_mbl_chi2[j] = fitter.tbkg_mbl_chi2[j];
             }
@@ -668,16 +695,8 @@ int main(int argc, char* argv[]){
    // write fit results
    //
    if( do_fit or do_templates ){
-      // set up output file path
-      std::string pathstr;
-      char* path = std::getenv("WORKING_DIR");
-      if (path==NULL) {
-         pathstr = "./results";
-      }else {
-         pathstr = path;
-      }
 
-      TFile *file = new TFile((pathstr+"/"+outfile).c_str(), "RECREATE");
+      TFile *file = new TFile((outdir+"/fitresults"+run_number_str+".root").c_str(), "RECREATE");
       file->cd();
       tree->Write();
       file->Write();

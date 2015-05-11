@@ -178,11 +178,11 @@ class Fitter{
       void ReadDatasets(map<string, Dataset>&, vector<Event>&, string, string, double, double, double);
       void GetVariables(vector<Event>&);
       void ReweightMC(vector<Event>&, string);
-      void Resample(vector<Event>&, int, bool);
+      vector<int> Resample(vector<Event>&, int, bool);
       void PDFReweight(vector<Event>&, int);
 
       void RunMinimizer(vector<Event>&);
-      void PlotResults(map< string, map<string, TH1D*> >&);
+      void PlotResults(map< string, map<string, TH1D*> >&, string);
 
       ROOT::Minuit2::Minuit2Minimizer* gMinuit;
 
@@ -200,13 +200,16 @@ class Fitter{
       bool compute_profile;
       double fitchi2;
 
-      double tsig_mbl_chi2 [8];
-      double tbkg_mbl_chi2 [8];
+      double tsig_mbl_chi2 [NMP];
+      double tbkg_mbl_chi2 [NMP];
       
       int maoscuts220;
       int maoscuts210;
 
-      static const double masspoints [7];
+      static const double masspoints [NMP];
+
+      bool compute_maos220;
+      bool compute_maos210;
 
    private:
 

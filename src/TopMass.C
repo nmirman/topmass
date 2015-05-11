@@ -48,6 +48,8 @@ Fitter::Fitter(){
    gROOT->ProcessLineSync("setTDRStyle()");
 
    compute_profile = false;
+   compute_maos220 = false;
+   compute_maos210 = false;
 
 }
 
@@ -61,11 +63,19 @@ const double Fitter::masspoints[NMP] = {166.5, 169.5, 171.5, 172.5, 173.5, 175.5
 void Fitter::InitializeDists(){
 
    // gaussian process length scales
-   dists[ "mbl" ] = Distribution( "mbl", "M_{bl}", 5.8, 10.7, 11.8, 26.1, 300 );
-   dists[ "mt2_220_nomatchmbl" ] = Distribution( "mt2_220_nomatchmbl", "M_{T2} 220", 3.9, 8.4, 8.5, 12.5, 300 );
+   // name(n), title(t), gnorm1(n1), gnorm2(n2), glx(lx), glmt(lmt), range(r) {
+   //dists[ "mbl" ] = Distribution( "mbl", "M_{bl}", 5.8, 10.7, 11.8, 26.1, 300 );
+   //dists[ "mbl" ] = Distribution( "mbl", "M_{bl}", 0.57, 51.7, 20.4, 38.1, 300 );
+   //dists[ "mbl" ] = Distribution( "mbl", "M_{bl}", 0.5, 25, 10, 20, 300 );
+   //dists[ "mt2_220_nomatchmbl" ] = Distribution( "mt2_220_nomatchmbl", "M_{T2} 220", 3.9, 8.4, 8.5, 12.5, 300 );
+   //dists[ "mt2_220_nomatchmbl" ] = Distribution( "mt2_220_nomatchmbl", "M_{T2} 220", 0.4, 30, 25, 15, 300 );
    dists[ "maos220blv" ] = Distribution( "maos220blv","blv mass from Maos neutrinos from M_{T2} 220", 1.6, 6.4, 19.2, 19.2, 500 );
-   dists[ "maos210blv" ] = Distribution( "maos210blv","blv mass from Maos neutrinos from M_{T2} 210", 0.60, 8.5, 19.1, 18.9, 500 );
+   //dists[ "maos210blv" ] = Distribution( "maos210blv","blv mass from Maos neutrinos from M_{T2} 210", 0.60, 8.5, 19.1, 18.9, 500 );
+   //dists[ "maos210blv" ] = Distribution( "maos210blv","blv mass from Maos neutrinos from M_{T2} 210", 2.3, 5.6, 18, 40, 500 );
 
+   dists[ "mbl" ] = Distribution( "mbl", "M_{bl}", 0.54, 2.1, 7.2, 8.1, 300 );
+   dists[ "mt2_220_nomatchmbl" ] = Distribution( "mt2_220_nomatchmbl", "M_{T2} 220", 0.94, 1.74, 7.1, 1.9, 300 );
+   dists[ "maos210blv" ] = Distribution( "maos210blv","blv mass from Maos neutrinos from M_{T2} 210", 0.42, 1.82, 9.92, 24.2, 500 );
 }
 
 //
@@ -84,7 +94,7 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
    string path;
    if( pch != NULL ) path = "root://cmseos:1094//eos/uscms/store/user/nmirman/Ntuples/TopMass/20141030/";
    //if( pch == NULL ) path = "/afs/cern.ch/work/n/nmirman/public/Ntuples/TopMass/20150226/";
-   if( pch == NULL ) path = "root://osg-se.cac.cornell.edu//xrootd/path/cms/store/user/nmirman/Ntuples/TopMassNtuples/20150330/";
+   if( pch == NULL ) path = "root://osg-se.cac.cornell.edu//xrootd/path/cms/store/user/nmirman/Ntuples/TopMassNtuples/20150330_v2/";
 
    // filenames
    //datasets[ "data" ]      = Dataset( path, "ntuple_data.root" );
@@ -179,9 +189,11 @@ void Fitter::ReadDatasets(map<string, Dataset>& datasets, vector<Event>& events,
       TFile *file = TFile::Open( (dat->path+dat->file).c_str() );
       TTree *trees = (TTree*)file->Get(tsyst.c_str());
 
+      int numevents = trees->GetEntries();
       cout << setiosflags(ios::left);
       cout << "... " << setw(25) << name
-         << ": " << trees->GetEntries() << " events" << endl;
+         << ": " << numevents << " events, " << numevents*(dat->mc_xsec/dat->mc_nevts)
+         << " (reweighted)" << endl;
 
       if( type == "diagnostics" ){
          ReadNtuple( dat->path+dat->file, name, dat->mc_xsec/dat->mc_nevts,
@@ -220,7 +232,7 @@ void Fitter::ReadNtuple( string path, string process, double mcweight,
    double jet1PtRes, jet1PhiRes, jet1EtaRes, jet2PtRes, jet2PhiRes, jet2EtaRes;
    int lpPdgIdGEN, lmPdgIdGEN, nPdgIdGEN, nbPdgIdGEN;
    int jet1GenId, jet2GenId;
-   float weight_pu=1, weight_toppt=1, weight_btag=1, weight_mu=1, weight_elec=1;
+   float weight_pu=1, weight_toppt=1, weight_btag=1, weight_mu=1, weight_elec=1, weight_bfrag=1;
    int nmuons, nelectrons;
    vector<float> *pdf_weights = 0;
 
@@ -257,6 +269,7 @@ void Fitter::ReadNtuple( string path, string process, double mcweight,
       tree->SetBranchAddress("weight_btag", &weight_btag);
       tree->SetBranchAddress("weight_mu", &weight_mu);
       tree->SetBranchAddress("weight_elec", &weight_elec);
+      tree->SetBranchAddress("weight_bfrag", &weight_bfrag);
    }
 
    tree->SetBranchAddress("nmuons", &nmuons);
@@ -295,7 +308,7 @@ void Fitter::ReadNtuple( string path, string process, double mcweight,
 
       // global quantities
       evtemp.process = process;
-      evtemp.weight = mcweight * weight_pu * weight_toppt * weight_btag * weight_mu * weight_elec;
+      evtemp.weight = mcweight * weight_pu * weight_toppt * weight_btag * weight_mu * weight_elec * weight_bfrag;
       evtemp.nvertices = nvert;
 
       // jets, leptons, met
@@ -388,32 +401,40 @@ void Fitter::GetVariables( vector<Event>& eventvec ){
       double maos220_blv1ap, maos220_blv1am, maos220_blv2ap, maos220_blv2am, maos220_blv1bp, maos220_blv1bm, maos220_blv2bp, maos220_blv2bm;
 
       //calculate values and set above variables to them; then set event variables to these
-      ev->mt2_210grid = Calc.MaosReturn210( maos210_neu1p, maos210_neu1m, maos210_neu2p, maos210_neu2m, maos210_blv1ap, maos210_blv1am, maos210_blv2ap, maos210_blv2am, maos210_blv1bp, maos210_blv1bm, maos210_blv2bp, maos210_blv2bm );
-      std::vector<double> Mt2_220grid = Calc.MaosReturn220( maos220_neu1ap, maos220_neu1am, maos220_neu2ap, maos220_neu2am, maos220_neu1bp, maos220_neu1bm, maos220_neu2bp, maos220_neu2bm, maos220_blv1ap, maos220_blv1am, maos220_blv2ap, maos220_blv2am, maos220_blv1bp, maos220_blv1bm, maos220_blv2bp, maos220_blv2bm);
-      ev->mt2_220grida = Mt2_220grid.at(0);
-      ev->mt2_220gridb = Mt2_220grid.at(1);
+      if( compute_maos210 ){
 
-      ev->maos210_blvmass1ap = maos210_blv1ap;
-      ev->maos210_blvmass1am = maos210_blv1am;
-      ev->maos210_blvmass2ap = maos210_blv2ap;
-      ev->maos210_blvmass2am = maos210_blv2am;
-      ev->maos210_blvmass1bp = maos210_blv1bp;
-      ev->maos210_blvmass1bm = maos210_blv1bm;
-      ev->maos210_blvmass2bp = maos210_blv2bp;
-      ev->maos210_blvmass2bm = maos210_blv2bm;
+         ev->mt2_210grid = Calc.MaosReturn210( maos210_neu1p, maos210_neu1m, maos210_neu2p, maos210_neu2m, maos210_blv1ap, maos210_blv1am, maos210_blv2ap, maos210_blv2am, maos210_blv1bp, maos210_blv1bm, maos210_blv2bp, maos210_blv2bm );
 
-      ev->maos220_blvmass1ap = maos220_blv1ap;
-      ev->maos220_blvmass1am = maos220_blv1am;
-      ev->maos220_blvmass2ap = maos220_blv2ap;
-      ev->maos220_blvmass2am = maos220_blv2am;
-      ev->maos220_blvmass1bp = maos220_blv1bp;
-      ev->maos220_blvmass1bm = maos220_blv1bm;
-      ev->maos220_blvmass2bp = maos220_blv2bp;
-      ev->maos220_blvmass2bm = maos220_blv2bm;
+         ev->maos210_blvmass1ap = maos210_blv1ap;
+         ev->maos210_blvmass1am = maos210_blv1am;
+         ev->maos210_blvmass2ap = maos210_blv2ap;
+         ev->maos210_blvmass2am = maos210_blv2am;
+         ev->maos210_blvmass1bp = maos210_blv1bp;
+         ev->maos210_blvmass1bm = maos210_blv1bm;
+         ev->maos210_blvmass2bp = maos210_blv2bp;
+         ev->maos210_blvmass2bm = maos210_blv2bm;
 
-      ev->maoscut220 = MaosCut220(ev, maos220_neu1ap, maos220_neu1am, maos220_neu2ap, maos220_neu2am, maos220_neu1bp, maos220_neu1bm, maos220_neu2bp, maos220_neu2bm);
-      ev->maoscut210 = MaosCut210(ev, maos210_neu1p, maos210_neu1m, maos210_neu2p, maos210_neu2m);
-      
+         ev->maoscut210 = MaosCut210(ev, maos210_neu1p, maos210_neu1m, maos210_neu2p, maos210_neu2m);
+
+      }
+      if( compute_maos220 ){
+
+         std::vector<double> Mt2_220grid = Calc.MaosReturn220( maos220_neu1ap, maos220_neu1am, maos220_neu2ap, maos220_neu2am, maos220_neu1bp, maos220_neu1bm, maos220_neu2bp, maos220_neu2bm, maos220_blv1ap, maos220_blv1am, maos220_blv2ap, maos220_blv2am, maos220_blv1bp, maos220_blv1bm, maos220_blv2bp, maos220_blv2bm);
+         ev->mt2_220grida = Mt2_220grid.at(0);
+         ev->mt2_220gridb = Mt2_220grid.at(1);
+
+         ev->maos220_blvmass1ap = maos220_blv1ap;
+         ev->maos220_blvmass1am = maos220_blv1am;
+         ev->maos220_blvmass2ap = maos220_blv2ap;
+         ev->maos220_blvmass2am = maos220_blv2am;
+         ev->maos220_blvmass1bp = maos220_blv1bp;
+         ev->maos220_blvmass1bm = maos220_blv1bm;
+         ev->maos220_blvmass2bp = maos220_blv2bp;
+         ev->maos220_blvmass2bm = maos220_blv2bm;
+
+         ev->maoscut220 = MaosCut220(ev, maos220_neu1ap, maos220_neu1am, maos220_neu2ap, maos220_neu2am, maos220_neu1bp, maos220_neu1bm, maos220_neu2bp, maos220_neu2bm);
+
+      }
 
    }
 
@@ -442,7 +463,7 @@ void Fitter::ReweightMC( vector<Event>& eventvec, string name ){
 
 }
 
-void Fitter::Resample( vector<Event>& eventvec, int randseed, bool statval ){
+vector<int> Fitter::Resample( vector<Event>& eventvec, int randseed, bool statval ){
    cout << "Resampling events." << endl;
 
    // put resampled events into a new vector
@@ -457,6 +478,7 @@ void Fitter::Resample( vector<Event>& eventvec, int randseed, bool statval ){
    }
 
    int numevts_data = 49243;
+   vector<int> evlist;
    if( statval ) numevts_data = eventvec.size();
    // resample with replacement, taking into account event weights
    int count = 0;
@@ -467,17 +489,21 @@ void Fitter::Resample( vector<Event>& eventvec, int randseed, bool statval ){
       if( rand->Rndm() < eventvec[ev].weight/maxweight ){
          Event temp = eventvec[ev];
          eventvec_resampled.push_back( temp );
+         evlist.push_back( ev );
          count++;
       }
    }
 
-   // set all event weights to unity
+   // release memory in eventvec
+   vector<Event>().swap( eventvec );
+
+   // set all event weights to unity, replace eventvec with resampled events
    for(vector<Event>::iterator ev = eventvec_resampled.begin(); ev < eventvec_resampled.end(); ev++){
       ev->weight = 1.0;
+      eventvec.push_back( *ev );
    }
 
-   // replace eventvec with new vector
-   eventvec = eventvec_resampled;
+   return evlist;
 }
 
 void Fitter::RunMinimizer( vector<Event>& eventvec ){
@@ -563,6 +589,8 @@ double Fitter::Min2LL(const double *x){
          double integralbkg = fshape_tot->Integral(0,dist->range);
          delete fshape_tot;
          delete fptr;
+         //double integralsig = 1.0;
+         //double integralbkg = 1.0;
 
          Shapes shape( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
          shape.aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
@@ -633,23 +661,14 @@ double Fitter::Min2LL(const double *x){
    return m2ll;
 }
 
-void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_ ){
+void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_, string outfile ){
    cout << "Plotting fit results." << endl;
 
    const double *xmin = gMinuit->X();
    const double *xerr = gMinuit->Errors();
    double minvalue = gMinuit->MinValue();
 
-   // plot fit results
-   std::string pathstr;
-   char* path = std::getenv("WORKING_DIR");
-   if (path==NULL) {
-      pathstr = "./results";
-   }else {
-      pathstr = path;
-   }
-
-   TFile *fileout = new TFile( (pathstr+"/plotsFitResults.root").c_str() , "RECREATE" );
+   TFile *fileout = new TFile( outfile.c_str() , "RECREATE" );
    fileout->cd();
 
    double xmin1s [] = {xmin[1], xmin[1], xmin[2], xmin[3], xmin[4]}; // the background for each variable, as it is positioned in minuit's parameter vector
@@ -723,6 +742,8 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_ ){
          double integralsig = ftemplate->Integral(0,dist->range);
          ftemplate->SetParameters( xmin[0], 0.0, 1.0, 1.0, 1.0 );
          double integralbkg = ftemplate->Integral(0,dist->range);
+         //double integralsig = 1.0;
+         //double integralbkg = 1.0;
          ftemplate->SetParameters( xmin[0], xmin1s[iparam],
                hdata->Integral("width"), integralsig, integralbkg );
 

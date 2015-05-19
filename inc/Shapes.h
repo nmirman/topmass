@@ -16,7 +16,7 @@ class Shapes{
 
    public:
 
-      Shapes( string, double, double, double, double, double );
+      Shapes( string, vector<double>&, double, double, double, double, double, double );
       ~Shapes();
 
       double Ftot(double*, double*);
@@ -27,6 +27,7 @@ class Shapes{
       string name;
       double lx, lmass, gnorm1, gnorm2;
       double lbx, rbx;
+      double ltrain;
       double rtrain;
 
       vector<double> ptrain;

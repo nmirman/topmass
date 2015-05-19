@@ -50,43 +50,51 @@ void Fitter::DeclareHists( map< string, map<string, TH1D*> >& hists_, map< strin
       //
       // variables
       //
+      hists_["mbl_gp"][name] = new TH1D( ("hmbl_gp_"+namel).c_str(),
+            "M_{bl};M_{bl} (GeV);Events", 100, dists["mbl_gp"].lbnd, dists["mbl_gp"].rbnd );
+      hists_["mt2_220_gp"][name] = new TH1D( ("hmt2_220_gp_"+namel).c_str(),
+            "M_{T2} 220;M_{T2} 220 (GeV);Events", 100, dists["mt2_220_gp"].lbnd, dists["mt2_220_gp"].rbnd );
+      hists_["maos220_gp"][name] = new TH1D( ("hmaos220_gp_"+namel).c_str(),
+            "MAOS from M_{T2} 220;blv mass(GeV);Events", 100, dists["maos220_gp"].lbnd, dists["maos220_gp"].rbnd );
+      hists_["maos210_gp"][name] = new TH1D( ("hmaos210_gp_"+namel).c_str(),
+            "MAOS from M_{T2} 210;blv mass(GeV);Events", 100, dists["maos210_gp"].lbnd, dists["maos210_gp"].rbnd );
 
       hists_["mt2_220"][name] = new TH1D( ("hmt2_220_"+namel).c_str(),
-            "M_{T2} 220;M_{T2} 220 (GeV);Events/3 GeV", 100, 0, dists["mt2_220_nomatchmbl"].range );
+            "M_{T2} 220;M_{T2} 220 (GeV);Events/3 GeV", 100, 0, dists["mt2_220_nomatchmbl"].rbnd );
       hists_["mt2_221"][name] = new TH1D( ("hmt2_221_"+namel).c_str(),
             "M_{T2} 221;M_{T2} 221 (GeV);Events/2 GeV", 100, 50, 250 );
       hists_["mbl"][name] = new TH1D( ("hmbl_"+namel).c_str(),
-            "M_{bl};M_{bl} (GeV);Events/3 GeV", 100, 0, dists["mbl"].range );
+            "M_{bl};M_{bl} (GeV);Events/3 GeV", 100, 0, dists["mbl"].rbnd );
       hists_["mt2_210"][name] = new TH1D( ("hmt2_210_"+namel).c_str(),
             "M_{T2} 210;M_{T2} 210 (GeV);Events/1.5 GeV", 100, 0, 150 );
       hists_["mt2_220_matchmbl"][name] = new TH1D( ("hmt2_220_matchmbl_"+namel).c_str(),
-            "M_{T2} 220;M_{T2} 220 (GeV);Events/2.5 GeV", 100, 0, dists["mt2_220_nomatchmbl"].range );
+            "M_{T2} 220;M_{T2} 220 (GeV);Events/2.5 GeV", 100, 0, dists["mt2_220_nomatchmbl"].rbnd );
       hists_["mt2_220_nomatchmbl"][name] = new TH1D( ("hmt2_220_nomatchmbl_"+namel).c_str(),
-            "M_{T2} 220;M_{T2} 220 (GeV);Events/3 GeV", 100, 0, dists["mt2_220_nomatchmbl"].range );
+            "M_{T2} 220;M_{T2} 220 (GeV);Events/3 GeV", 100, 0, dists["mt2_220_nomatchmbl"].rbnd );
       hists_["maos220blv"][name] = new TH1D( ("hmaos220blv_"+namel).c_str(),
-            "MAOS from M_{T2} 220;blv mass(GeV);Events/5GeV", 100, 0, dists["maos220blv"].range );
+            "MAOS from M_{T2} 220;blv mass(GeV);Events/5GeV", 100, 0, dists["maos220blv"].rbnd );
       hists_["maos210blv"][name] = new TH1D( ("hmaos210blv_"+namel).c_str(),
-            "MAOS from M_{T2} 210;blv mass(GeV);Events/5GeV", 100, 0, dists["maos210blv"].range );
+            "MAOS from M_{T2} 210;blv mass(GeV);Events/5GeV", 100, 0, dists["maos210blv"].rbnd );
 
 
       //
       // kinematic distributions
       //
       hists2d_["220Vmbl"][name] = new TH2D( ("h220Vmbl_"+namel).c_str(),
-            "MT2 220 vs. mbl;M_{bl} (GeV);M_{T2} (GeV) ", 50, 0, dists["mbl"].range, 50, 0, dists["mt2_220_nomatchmbl"].range );
+            "MT2 220 vs. mbl;M_{bl} (GeV);M_{T2} (GeV) ", 50, 0, dists["mbl"].rbnd, 50, 0, dists["mt2_220_nomatchmbl"].rbnd );
       hists2d_["maos220blvVmbl"][name] = new TH2D( ("hmaos220blvVmbl_"+namel).c_str(),
-            "MAOS 220 bl#nu vs. mbl;M_{bl} (GeV);MAOS bl#nu (GeV)", 50, 0, dists["mbl"].range, 50, 0, dists["maos220blv"].range );
+            "MAOS 220 bl#nu vs. mbl;M_{bl} (GeV);MAOS bl#nu (GeV)", 50, 0, dists["mbl"].rbnd, 50, 0, dists["maos220blv"].rbnd );
       hists2d_["maos210blvVmbl"][name] = new TH2D( ("hmaos210blvVmbl_"+namel).c_str(),
-            "MAOS 210 bl#nu vs. mbl;M_{bl} (GeV);MAOS bl#nu (GeV)", 50, 0, dists["mbl"].range, 50, 0, dists["maos210blv"].range );
+            "MAOS 210 bl#nu vs. mbl;M_{bl} (GeV);MAOS bl#nu (GeV)", 50, 0, dists["mbl"].rbnd, 50, 0, dists["maos210blv"].rbnd );
       hists2d_["maos220blvV220"][name] = new TH2D( ("hmaos220blvV220_"+namel).c_str(),
-            "MAOS 220 bl#nu vs. M_{T2} 220;M_{T2} (GeV);MAOS bl#nu (GeV)", 50, 0, dists["mt2_220_nomatchmbl"].range,
-            50, 0, dists["maos220blv"].range );
+            "MAOS 220 bl#nu vs. M_{T2} 220;M_{T2} (GeV);MAOS bl#nu (GeV)", 50, 0, dists["mt2_220_nomatchmbl"].rbnd,
+            50, 0, dists["maos220blv"].rbnd );
       hists2d_["maos210blvV220"][name] = new TH2D( ("hmaos210blvV220_"+namel).c_str(),
-            "MAOS 210 bl#nu vs. M_{T2} 220;M_{T2} (GeV);MAOS bl#nu (GeV)", 50, 0, dists["mt2_220_nomatchmbl"].range,
-            50, 0, dists["maos210blv"].range );
+            "MAOS 210 bl#nu vs. M_{T2} 220;M_{T2} (GeV);MAOS bl#nu (GeV)", 50, 0, dists["mt2_220_nomatchmbl"].rbnd,
+            50, 0, dists["maos210blv"].rbnd );
       hists2d_["maos220blvVmaos210blv"][name] = new TH2D( ("hmaos220blvVmaos210blv_"+namel).c_str(),
-            "MAOS 220 bl#nu vs. MAOS 210 bl#nu;MAOS bl#nu (GeV);MAOS bl#nu (GeV)", 50, 0, dists["maos210blv"].range,
-            50, 0, dists["maos220blv"].range );
+            "MAOS 220 bl#nu vs. MAOS 210 bl#nu;MAOS bl#nu (GeV);MAOS bl#nu (GeV)", 50, 0, dists["maos210blv"].rbnd,
+            50, 0, dists["maos220blv"].rbnd );
 
       // pt, eta, phi
       hists_["b_pt"][name] = new TH1D( ("hb_pt_"+namel).c_str(),
@@ -215,6 +223,7 @@ void Fitter::FillHists( map< string, map<string, TH1D*> >& hists_, map< string, 
       for (int i=0; i<8; i++){
          if (useMaos220[i]){
             hists_["maos220blv"][type]->Fill( blv220array[i], ev->weight );
+            hists_["maos220_gp"][type]->Fill( blv220array[i], ev->weight );
          }
       }
       
@@ -222,6 +231,7 @@ void Fitter::FillHists( map< string, map<string, TH1D*> >& hists_, map< string, 
       for (int i=0; i<8; i++){
          if (useMaos210[i]){
             hists_["maos210blv"][type]->Fill( blv210array[i], ev->weight );
+            hists_["maos210_gp"][type]->Fill( blv210array[i], ev->weight );
          }
       }
 
@@ -233,6 +243,7 @@ void Fitter::FillHists( map< string, map<string, TH1D*> >& hists_, map< string, 
          else hists2d_["220Vmbl"][type]->Fill( ev->mbls[m], ev->mt2_220, ev->weight );
 
          hists_["mbl"][type]->Fill( ev->mbls[m], ev->weight );
+         hists_["mbl_gp"][type]->Fill( ev->mbls[m], ev->weight );
          for(int i=0; i<8; i++){
             if (useMaos220[i]){
                hists2d_["maos220blvVmbl"][type]->Fill( ev->mbls[m], blv220array[i], ev->weight );
@@ -252,6 +263,7 @@ void Fitter::FillHists( map< string, map<string, TH1D*> >& hists_, map< string, 
       }
       else{
          hists_["mt2_220_nomatchmbl"][type]->Fill( ev->mt2_220, ev->weight );
+         hists_["mt2_220_gp"][type]->Fill( ev->mt2_220, ev->weight );
          for(int i=0; i<8; i++){
             if (useMaos220[i]){
                hists2d_["maos220blvV220"][type]->Fill( ev->mt2_220, blv220array[i], ev->weight );
@@ -854,7 +866,8 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
                hmc->SetMarkerStyle(20);
                hmc->DrawCopy();
 
-               Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
+               Shapes * fptr = new Shapes( name, dist->ptrain,
+                     dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
                fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
                fptr->aGPsig = dist->aGPsig;
                fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
@@ -865,20 +878,20 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
                fptr->Ainv_bkg.ResizeTo( dist->aGPbkg.GetNoElements(), dist->aGPbkg.GetNoElements() );
                fptr->Ainv_bkg = dist->Ainv_bkg;
 
-               TF1 *ftemplate = new TF1("ftemplate", fptr, &Shapes::Ftot, 0, dist->range, 5);
+               TF1 *ftemplate = new TF1("ftemplate", fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 5);
                ftemplate->SetNpx(500);
 
                // normalization inside likelihood function (temp)
                ftemplate->SetParameters( masspoints[j], 1-k, 1.0, 1.0, 1.0 );
-               double integralsig = (sb[k] == "sig") ? ftemplate->Integral(0,dist->range) : 1.0;
-               double integralbkg = (sb[k] == "bkg") ? ftemplate->Integral(0,dist->range) : 1.0;
+               double integralsig = (sb[k] == "sig") ? ftemplate->Integral(dist->lbnd, dist->rbnd) : 1.0;
+               double integralbkg = (sb[k] == "bkg") ? ftemplate->Integral(dist->lbnd, dist->rbnd) : 1.0;
                ftemplate->SetParameters( masspoints[j], 1-k,
                      1.0, integralsig, integralbkg );
                ftemplate->SetLineWidth(2);
 
                // TGraph with GP covariance
                TGraphErrors *gpvar = new TGraphErrors();
-               for(int x=0; x < dist->range; x++){
+               for(int x=dist->lbnd; x < dist->rbnd; x++){
                   gpvar->SetPoint(x, x, ftemplate->Eval(x));
                   gpvar->SetPointError(x, 0, sqrt(fptr->Fmbl_gp_var(x,masspoints[j],sb[k])));
                }
@@ -1124,25 +1137,26 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
 
          // mbl likelihood
 
-         Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
+         Shapes * fptr = new Shapes( name, dist->ptrain,
+               dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
          fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr->aGPsig = dist->aGPsig;
          fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
          fptr->aGPbkg = dist->aGPbkg;
-         TF1 *fmbl_tot = new TF1( ("f"+name+"_tot").c_str(), fptr, &Shapes::Ftot, 0, dist->range, 5);
+         TF1 *fmbl_tot = new TF1( ("f"+name+"_tot").c_str(), fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 5);
 
          fmbl_tot->SetParameters( 166.5, 1.0, 1.0, 1.0, 1.0 );
-         fmbl_tot->SetParameters( 166.5, 1.0, 1.0, fmbl_tot->Integral(0,dist->range), 1.0 );
+         fmbl_tot->SetParameters( 166.5, 1.0, 1.0, fmbl_tot->Integral(dist->lbnd, dist->rbnd), 1.0 );
          fmbl_tot->SetLineColor(2);
          fmbl_tot->DrawCopy("same");
 
          fmbl_tot->SetParameters( 172.5, 1.0, 1.0, 1.0, 1.0 );
-         fmbl_tot->SetParameters( 172.5, 1.0, 1.0, fmbl_tot->Integral(0,dist->range), 1.0 );
+         fmbl_tot->SetParameters( 172.5, 1.0, 1.0, fmbl_tot->Integral(dist->lbnd, dist->rbnd), 1.0 );
          fmbl_tot->SetLineColor(1);
          fmbl_tot->DrawCopy("same");
 
          fmbl_tot->SetParameters( 178.5, 1.0, 1.0, 1.0, 1.0 );
-         fmbl_tot->SetParameters( 178.5, 1.0, 1.0, fmbl_tot->Integral(0,dist->range), 1.0 );
+         fmbl_tot->SetParameters( 178.5, 1.0, 1.0, fmbl_tot->Integral(dist->lbnd, dist->rbnd), 1.0 );
          fmbl_tot->SetLineColor(3);
          fmbl_tot->DrawCopy("same");
 

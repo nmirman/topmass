@@ -154,12 +154,11 @@ struct Distribution {
 
    double lbnd;
    double rbnd;
-   double range;
 
-   Distribution( string n="", string t="", double n1=1.0, double n2=1.0, double lx=1.0, double lmt=1.0, double r=300 )
-      : name(n), title(t), gnorm1(n1), gnorm2(n2), glx(lx), glmt(lmt), range(r) {
-         lbnd = 0;
-         rbnd = 0;
+   vector<double> ptrain;
+
+   Distribution( string n="", string t="", double n1=1.0, double n2=1.0, double lx=1.0, double lmt=1.0, double lb=0, double rb=300 )
+      : name(n), title(t), gnorm1(n1), gnorm2(n2), glx(lx), glmt(lmt), lbnd(lb), rbnd(rb) {
          activate = false;
    }
 
@@ -194,6 +193,8 @@ class Fitter{
       vector<bool> MaosCut210( vector<Event>::iterator ev, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector& );
       vector<bool> MaosCut220( vector<Event>::iterator ev, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector& );
       void PlotTemplates( map< string, map<string, TH1D*> >& );
+
+      void FindPTrain( map< string, map<string, TH1D*> >& );
 
       map<string, Distribution> dists;
 

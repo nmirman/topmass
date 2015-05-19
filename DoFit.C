@@ -263,10 +263,10 @@ int main(int argc, char* argv[]){
 
    fitter.InitializeDists();
 
-   fitter.dists["mbl"].activate = do_mbl;
-   fitter.dists["mt2_220_nomatchmbl"].activate = do_mt2_220;
-   fitter.dists["maos220blv"].activate = do_maos220;
-   fitter.dists["maos210blv"].activate = do_maos210;
+   fitter.dists["mbl_gp"].activate = do_mbl;
+   fitter.dists["mt2_220_gp"].activate = do_mt2_220;
+   fitter.dists["maos220_gp"].activate = do_maos220;
+   fitter.dists["maos210_gp"].activate = do_maos210;
    if( do_maos220 ) fitter.compute_maos220 = true;
    if( do_maos210 ) fitter.compute_maos210 = true;
 
@@ -291,7 +291,7 @@ int main(int argc, char* argv[]){
 
    // Check that at least one kinematic variable's lengthscale has been entered.
    // Any additional distributions need to be added here
-   if (!(fitter.dists["mbl"].activate) and !(fitter.dists["mt2_220_nomatchmbl"].activate) and !(fitter.dists["maos220blv"].activate) and !(fitter.dists["maos210blv"].activate) and (do_fit == 1 or do_templates == 1) ){
+   if (!(fitter.dists["mbl_gp"].activate) and !(fitter.dists["mt2_220_gp"].activate) and !(fitter.dists["maos220_gp"].activate) and !(fitter.dists["maos210_gp"].activate) and (do_fit == 1 or do_templates == 1) ){
       std::cout << "At least one variable needed to do fit.  Input at least one lengthscale." << std::endl;
       print_usage();
       return -1;
@@ -337,6 +337,7 @@ int main(int argc, char* argv[]){
    fitter.GetVariables( eventvec_train );
    fitter.DeclareHists( hists_train_, hists2d_train_, "train" );
    fitter.FillHists( hists_train_, hists2d_train_, eventvec_train );
+   fitter.FindPTrain( hists_train_ );
 
    // release memory in eventvec_train
    vector<Event>().swap( eventvec_train );
@@ -535,7 +536,8 @@ int main(int argc, char* argv[]){
                double m2llsig, m2llbkg;
 
                if( dist->activate ){
-                  Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
+                  Shapes * fptr = new Shapes( name, dist->ptrain,
+                        dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
                   fptr->TrainGP( hists_train_, m2llsig, m2llbkg );
 
                   dist->aGPsig.ResizeTo( fptr->aGPsig.GetNoElements() );
@@ -604,7 +606,8 @@ int main(int argc, char* argv[]){
                double m2llsig, m2llbkg;
 
                if( dist->activate ){
-                  Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
+                  Shapes * fptr = new Shapes( name, dist->ptrain,
+                        dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
                   fptr->TrainGP( hists_train_, m2llsig, m2llbkg );
 
                   dist->aGPsig.ResizeTo( fptr->aGPsig.GetNoElements() );
@@ -639,7 +642,8 @@ int main(int argc, char* argv[]){
 
          if( dist->activate ){
             cout << "Learning hyperparameters for distribution " << name << "..." << endl;
-            Shapes * fptrtmp = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
+            Shapes * fptrtmp = new Shapes( name, dist->ptrain,
+                  dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
             fptrtmp->LearnGPparams( hists_train_ );
 
             dist->glx = fptrtmp->lx;
@@ -648,7 +652,8 @@ int main(int argc, char* argv[]){
             dist->gnorm2 = fptrtmp->gnorm2;
 
             double m2llsig, m2llbkg;
-            Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
+            Shapes * fptr = new Shapes( name, dist->ptrain,
+                  dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
             fptr->TrainGP( hists_train_, m2llsig, m2llbkg );
 
             dist->aGPsig.ResizeTo( fptr->aGPsig.GetNoElements() );

@@ -63,11 +63,16 @@ const double Fitter::masspoints[NMP] = {166.5, 169.5, 171.5, 172.5, 173.5, 175.5
 void Fitter::InitializeDists(){
 
    // gaussian process length scales
-   // name(n), title(t), gnorm1(n1), gnorm2(n2), glx(lx), glmt(lmt), range(r) {
-   dists[ "maos220blv" ] = Distribution( "maos220blv","blv mass from Maos neutrinos from M_{T2} 220", 1.6, 6.4, 19.2, 19.2, 500 );
-   dists[ "mbl" ] = Distribution( "mbl", "M_{bl}", 0.54, 2.1, 7.2, 8.1, 300 );
-   dists[ "mt2_220_nomatchmbl" ] = Distribution( "mt2_220_nomatchmbl", "M_{T2} 220", 0.94, 1.74, 7.1, 1.9, 300 );
-   dists[ "maos210blv" ] = Distribution( "maos210blv","blv mass from Maos neutrinos from M_{T2} 210", 0.42, 1.82, 9.92, 24.2, 500 );
+   // name(n), title(t), gnorm1(n1), gnorm2(n2), glx(lx), glmt(lmt), lbnd(lb), rbnd(rb) {
+   dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}", 0.54, 2.1, 7.2, 8.1, 20, 300 );
+   dists[ "mt2_220_gp" ] = Distribution( "mt2_220_gp", "M_{T2} 220", 0.94, 1.74, 7.1, 1.9, 50, 300 );
+   dists[ "maos210_gp" ] = Distribution( "maos210_gp","blv mass from Maos neutrinos from M_{T2} 210", 0.42, 1.82, 9.92, 24.2, 100, 500 );
+   dists[ "maos220_gp" ] = Distribution( "maos220_gp","blv mass from Maos neutrinos from M_{T2} 220", 1.6, 6.4, 19.2, 19.2, 100, 500 );
+
+   dists[ "maos220blv" ] = Distribution( "maos220blv","blv mass from Maos neutrinos from M_{T2} 220", 1.6, 6.4, 19.2, 19.2, 0, 500 );
+   dists[ "mbl" ] = Distribution( "mbl", "M_{bl}", 0.54, 2.1, 7.2, 8.1, 0, 300 );
+   dists[ "mt2_220_nomatchmbl" ] = Distribution( "mt2_220_nomatchmbl", "M_{T2} 220", 0.94, 1.74, 7.1, 1.9, 0, 300 );
+   dists[ "maos210blv" ] = Distribution( "maos210blv","blv mass from Maos neutrinos from M_{T2} 210", 0.42, 1.82, 9.92, 24.2, 0, 500 );
 }
 
 //
@@ -510,28 +515,28 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
    gMinuit->SetVariable(0, "topMass", 175.0, 0.1);
 
    // If we're fitting mbl, set mbl background as a limited variable, otherwise set it as a fixed variable
-   if (dists["mbl"].activate){
+   if (dists["mbl_gp"].activate){
       gMinuit->SetLimitedVariable(1, "norm", 0.7, 0.1, 0, 1.0);
    } else {
       gMinuit->SetFixedVariable(1, "norm", 0.70712);
    }
 
    // If we're fitting 220, set 220 background as a limited variable, otherwise set it as a fixed variable
-   if (dists["mt2_220_nomatchmbl"].activate){
+   if (dists["mt2_220_gp"].activate){
       gMinuit->SetLimitedVariable(2, "norm220", 0.7, 0.1, 0, 1.0);
    } else {
       gMinuit->SetFixedVariable(2, "norm220", 0.70712);
    }
 
    //MAOS 220
-   if (dists["maos220blv"].activate){
+   if (dists["maos220_gp"].activate){
       gMinuit->SetLimitedVariable(3, "norm_maos220", 0.7, 0.1, 0, 1.0);
    } else {
       gMinuit->SetFixedVariable(3, "norm_maos220", 0.70712);
    }
 
    //MAOS 210
-   if (dists["maos210blv"].activate){
+   if (dists["maos210_gp"].activate){
       gMinuit->SetLimitedVariable(4, "norm_maos210", 0.7, 0.1, 0, 1.0);
    } else {
       gMinuit->SetFixedVariable(4, "norm_maos210", 0.70712);
@@ -544,9 +549,9 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
    gMinuit->Minimize();
    //cout << "\nComputing Hessian." << endl;
    //gMinuit->Hesse();
-   double emtLow=0, emtUp=0;
-   gMinuit->GetMinosError(0,emtLow,emtUp);
-   cout << "MINOS ERROR: -" << emtLow << " +" << emtUp << endl;
+   //double emtLow=0, emtUp=0;
+   //gMinuit->GetMinosError(0,emtLow,emtUp);
+   //cout << "MINOS ERROR: -" << emtLow << " +" << emtUp << endl;
 
    return;
 }
@@ -560,29 +565,31 @@ double Fitter::Min2LL(const double *x){
       string name = it->first;
       Distribution *dist = &(it->second);
       int iparam = -1;
-      if( name.compare("mbl") == 0 ) iparam = 1;
-      if( name.compare("mt2_220_nomatchmbl") == 0 ) iparam = 2;
-      if( name.compare("maos220blv") == 0 ) iparam = 3;
-      if( name.compare("maos210blv") == 0 ) iparam = 4;
+      if( name.compare("mbl_gp") == 0 ) iparam = 1;
+      if( name.compare("mt2_220_gp") == 0 ) iparam = 2;
+      if( name.compare("maos220_gp") == 0 ) iparam = 3;
+      if( name.compare("maos210_gp") == 0 ) iparam = 4;
 
       if( dist->activate ){// only do this if we're fitting the variable in question
 
          // normalization inside likelihood function (temp)
-         Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
+         Shapes * fptr = new Shapes( name, dist->ptrain, 
+               dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
          fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr->aGPsig = dist->aGPsig;
          fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
          fptr->aGPbkg = dist->aGPbkg;
 
-         TF1 *fshape_tot = new TF1( ("f"+name+"_tot").c_str(), fptr, &Shapes::Ftot, 0, dist->range, 5);
+         TF1 *fshape_tot = new TF1( ("f"+name+"_tot").c_str(), fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 5);
          fshape_tot->SetParameters( x[0], 1.0, 1.0, 1.0, 1.0 );
-         double integralsig = fshape_tot->Integral(0,dist->range);
+         double integralsig = fshape_tot->Integral(dist->lbnd, dist->rbnd);
          fshape_tot->SetParameters( x[0], 0.0, 1.0, 1.0, 1.0 );
-         double integralbkg = fshape_tot->Integral(0,dist->range);
+         double integralbkg = fshape_tot->Integral(dist->lbnd, dist->rbnd);
          delete fshape_tot;
          delete fptr;
 
-         Shapes shape( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
+         Shapes shape( name, dist->ptrain, 
+               dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
          shape.aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          shape.aGPsig = dist->aGPsig;
          shape.aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
@@ -594,33 +601,29 @@ double Fitter::Min2LL(const double *x){
          for( vector<Event>::iterator ev = eventvec_fit->begin(); ev < eventvec_fit->end(); ev++ ){
             if( !(ev->fit_event) ) continue;
 
-            if ( name.compare("mbl") == 0 ){ // for mbl
+            if ( name.compare("mbl_gp") == 0 ){ // for mbl
                for( unsigned int j=0; j < ev->mbls.size(); j++ ){
-                  if( ev->mbls[j] > dist->range ) continue;
-                  //if( ev->mbls[j] > lbnd and ev->mbls[j] < rbnd ) continue;
+                  if( ev->mbls[j] < dist->lbnd or ev->mbls[j] > dist->rbnd ) continue;
                   double val = shape.Ftot( &(ev->mbls[j]), pfit );
                   m2ll -= 2.0*ev->weight*log( val );
                }
             }
-            else if ( name.compare("mt2_220_nomatchmbl") == 0 ){ // for 220
+            else if ( name.compare("mt2_220_gp") == 0 ){ // for 220
                bool matchmbl = false;
                for ( unsigned int j=0; j < ev->mbls.size(); j++){
                   if ( ev->mbls[j] == ev->mt2_220 ) matchmbl = true;
                }
                if( matchmbl ) continue;
-               if( ev->mt2_220 > dist->range ) continue;
-               //if( ev->mt2_220 > lbnd and ev->mt2_220 < rbnd ) continue;
+               if( ev->mt2_220 < dist->lbnd or ev->mt2_220 > dist->rbnd ) continue;
                double val = shape.Ftot( &(ev->mt2_220), pfit );
                m2ll -= 2.0*ev->weight*log( val );
             }
-            else if ( name.compare("maos220blv") == 0 ){ // for Maos 220
+            else if ( name.compare("maos220_gp") == 0 ){ // for Maos 220
                double blv220array [] = { ev->maos220_blvmass1ap, ev->maos220_blvmass1am, ev->maos220_blvmass2ap, ev->maos220_blvmass2am, ev->maos220_blvmass1bp, ev->maos220_blvmass1bm, ev->maos220_blvmass2bp, ev->maos220_blvmass2bm };
 
-               //vector<bool> useMaos220 = MaosCut220( ev );
                vector<bool> useMaos220 = ev->maoscut220;
                for ( unsigned int j=0; j < sizeof(blv220array)/sizeof(blv220array[0]); j++){           
-                  if( blv220array[j] > dist->range ) continue;
-                  //if( blv_array[j] > lbnd and blv_array[j] < rbnd ) continue;
+                  if( blv220array[j] < dist->lbnd or blv220array[j] > dist->rbnd ) continue;
                   if (useMaos220[j]){
                      double val = shape.Ftot( &(blv220array[j]), pfit );
                      m2ll -= 2.0*ev->weight*log( val );
@@ -628,14 +631,12 @@ double Fitter::Min2LL(const double *x){
 
                }
             }
-            else if ( name.compare("maos210blv") == 0 ){ // for Maos 210
+            else if ( name.compare("maos210_gp") == 0 ){ // for Maos 210
                double blv210array [] = { ev->maos210_blvmass1ap, ev->maos210_blvmass1am, ev->maos210_blvmass2ap, ev->maos210_blvmass2am, ev->maos210_blvmass1bp, ev->maos210_blvmass1bm, ev->maos210_blvmass2bp, ev->maos210_blvmass2bm };
 
-               //vector<bool> useMaos210 = MaosCut210( ev );
                vector<bool> useMaos210 = ev->maoscut210;
                for ( unsigned int j=0; j < sizeof(blv210array)/sizeof(blv210array[0]); j++){           
-                  if( blv210array[j] > dist->range ) continue;
-                  //if( blv_array[j] > lbnd and blv_array[j] < rbnd ) continue;
+                  if( blv210array[j] < dist->lbnd or blv210array[j] > dist->rbnd ) continue;
                   if (useMaos210[j]){
                      double val = shape.Ftot( &(blv210array[j]), pfit );
                      m2ll -= 2.0*ev->weight*log( val );
@@ -671,21 +672,22 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_, string outf
       string name = it->first;
       Distribution *dist = &(it->second);
       int iparam = -1;
-      if( name.compare("mbl") == 0 ) iparam = 1;
-      if( name.compare("mt2_220_nomatchmbl") == 0 ) iparam = 2;
-      if( name.compare("maos220blv") == 0 ) iparam = 3;
-      if( name.compare("maos210blv") == 0 ) iparam = 4;
+      if( name.compare("mbl_gp") == 0 ) iparam = 1;
+      if( name.compare("mt2_220_gp") == 0 ) iparam = 2;
+      if( name.compare("maos220_gp") == 0 ) iparam = 3;
+      if( name.compare("maos210_gp") == 0 ) iparam = 4;
 
       if( dist->activate ){// only do this if we're fitting the variable in question
 
          // normalization inside likelihood function (temp)
-         Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
+         Shapes * fptr = new Shapes( name, dist->ptrain,
+               dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
          fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr->aGPsig = dist->aGPsig;
          fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
          fptr->aGPbkg = dist->aGPbkg;
 
-         TF1 *ftemplate = new TF1( "ftemplate", fptr, &Shapes::Ftot, 0, dist->range, 5);
+         TF1 *ftemplate = new TF1( "ftemplate", fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 5);
 
          TCanvas *canvas = new TCanvas( ("c_"+name).c_str(), ("c_"+name).c_str(), 800, 800);
          canvas->SetFillColor(0);
@@ -729,9 +731,9 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_, string outf
 
          // normalization inside likelihood function (temp)
          ftemplate->SetParameters( xmin[0], 1.0, 1.0, 1.0, 1.0 );
-         double integralsig = ftemplate->Integral(0,dist->range);
+         double integralsig = ftemplate->Integral(dist->lbnd, dist->rbnd);
          ftemplate->SetParameters( xmin[0], 0.0, 1.0, 1.0, 1.0 );
-         double integralbkg = ftemplate->Integral(0,dist->range);
+         double integralbkg = ftemplate->Integral(dist->lbnd, dist->rbnd);
          ftemplate->SetParameters( xmin[0], xmin1s[iparam],
                hdata->Integral("width"), integralsig, integralbkg );
 
@@ -799,9 +801,9 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_, string outf
 
                // normalization inside likelihood function (temp)
                ftemplate->SetParameters( mt, 1.0, 1.0, 1.0, 1.0 );
-               double integralsigk = ftemplate->Integral(0,dist->range);
+               double integralsigk = ftemplate->Integral(dist->lbnd, dist->rbnd);
                ftemplate->SetParameters( mt, 0.0, 1.0, 1.0, 1.0 );
-               double integralbkgk = ftemplate->Integral(0,dist->range);
+               double integralbkgk = ftemplate->Integral(dist->lbnd, dist->rbnd);
                ftemplate->SetParameters( mt, xmin1s[iparam], 1.0, integralsigk, integralbkgk );
 
                const double par [] = {mt, xmin1s[iparam], 1.0, integralsigk, integralbkgk};
@@ -817,9 +819,9 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_, string outf
 
                // normalization inside likelihood function (temp)
                ftemplate->SetParameters( xmin[0], 1.0, 1.0, 1.0, 1.0 );
-               double integralsigk = ftemplate->Integral(0,dist->range);
+               double integralsigk = ftemplate->Integral(dist->lbnd, dist->rbnd);
                ftemplate->SetParameters( xmin[0], 0.0, 1.0, 1.0, 1.0 );
-               double integralbkgk = ftemplate->Integral(0,dist->range);
+               double integralbkgk = ftemplate->Integral(dist->lbnd, dist->rbnd);
                ftemplate->SetParameters( xmin[0], kmbl, 1.0, integralsigk, integralbkgk );
 
                const double par [] = {xmin[0], kmbl, 1.0, integralsigk, integralbkgk};
@@ -920,3 +922,26 @@ void Fitter::PDFReweight( vector<Event>& eventvec, int evalue ){
    }
 
 }
+
+void Fitter::FindPTrain( map< string, map<string, TH1D*> >& hists_ ){
+
+   for( map<string, Distribution>::iterator it = dists.begin(); it != dists.end(); it++ ){
+      
+      string name = it->first;
+      Distribution *dist = &(it->second);
+
+      cout << name << " bin centers: ";
+
+      TH1D* hist = (TH1D*)hists_[name]["ttbar172_signal"];
+      for(int i=1; i <= hist->GetNbinsX(); i++){
+         dist->ptrain.push_back( hist->GetBinCenter(i) );
+         cout << hist->GetBinCenter(i) << " ";
+      }
+
+      cout << endl;
+
+   }
+
+   return;
+}
+

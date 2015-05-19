@@ -18,7 +18,7 @@ using namespace std;
 // constructor and destructor
 //
 
-Shapes::Shapes( string var, double gplength_x, double gplength_mt, double norm1, double norm2, double range ){
+Shapes::Shapes( string var, vector<double>& ptraintmp, double gplength_x, double gplength_mt, double norm1, double norm2, double lbound, double rbound ){
 
    name = var;
    // GP options
@@ -26,9 +26,11 @@ Shapes::Shapes( string var, double gplength_x, double gplength_mt, double norm1,
    lmass = gplength_mt;
    gnorm1 = norm1;
    gnorm2 = norm2;
-   int ntrain = 100;
-   rtrain = range;
-   for(int i=0; i < ntrain; i++) ptrain.push_back( (i+0.5)*rtrain/ntrain );
+   //ntrain = 100;
+   ltrain = lbound;
+   rtrain = rbound;
+   //for(int i=0; i < ntrain; i++) ptrain.push_back( ltrain + (i+0.5)*(rtrain-ltrain)/ntrain );
+   for(unsigned int i=0; i < ptraintmp.size(); i++) ptrain.push_back( ptraintmp[i] );
 
    // right and left bounds -- set to zero unless needed
    lbx = 0.0;
@@ -289,14 +291,23 @@ void Shapes::LearnGPparams( map< string, map<string, TH1D*> > & hists_ ){
    //fFunc = new ROOT::Math::Functor ( this, &Shapes::GPm2llLOOCV, 4 );
    gMinuit->SetFunction( *fFunc );
 
-   do_gpvar = true;
    /*
-   gMinuit->SetLowerLimitedVariable(0, "gpnorm1", 10, 1, 0.0);
-   gMinuit->SetLowerLimitedVariable(1, "gpnorm2", 10, 1, 0.0);
-   gMinuit->SetLowerLimitedVariable(2, "lx", 10, 1, 0.0);
-   gMinuit->SetLowerLimitedVariable(3, "lmass", 10, 1, 0.0);
-   */
+   do_gpvar = false;
+   gMinuit->SetLowerLimitedVariable(0, "gpnorm1", 0.5, 1, 0.0);
+   gMinuit->SetLowerLimitedVariable(1, "gpnorm2", 30, 1, 0.0);
+   gMinuit->SetLowerLimitedVariable(2, "lx", 20, 1, 0.0);
+   gMinuit->SetLowerLimitedVariable(3, "lmass", 30, 1, 0.0);
+   
+   gMinuit->SetTolerance(1);
+   gMinuit->Minimize();
 
+   const double *xs = gMinuit->X();
+   gnorm1 = xs[0];
+   gnorm2 = xs[1];
+   lx = xs[2];
+   lmass = xs[3];
+   */
+   do_gpvar = false;
    // stage 1
    gMinuit->SetFixedVariable(0, "gpnorm1", 1);
    gMinuit->SetFixedVariable(1, "gpnorm2", 1);
@@ -314,7 +325,7 @@ void Shapes::LearnGPparams( map< string, map<string, TH1D*> > & hists_ ){
 
    // stage 2
    gMinuit->SetLowerLimitedVariable(0, "gpnorm1", 1, 0.1, 0.0);
-   gMinuit->SetLowerLimitedVariable(1, "gpnorm2", 1, 0.1, 0.0);
+   gMinuit->SetLowerLimitedVariable(1, "gpnorm2", 10, 1, 0.0);
    gMinuit->SetFixedVariable(2, "lx", lx);
    gMinuit->SetFixedVariable(3, "lmass", lmass);
 
@@ -368,25 +379,23 @@ double Shapes::GPm2llX( const double *x ){
 
    }
 
-   int ntrain = 100;
-
    int nval = 3;
    double m2ll_tot = 0;
    for(int c=0; c < nval; c++){ // n-fold cross validation
 
       ptrain.clear();
       vector<double> ptrainX;
-      for(int i=0; i < ntrain; i++){ // exclude every nth point
+      for(int i=1; i <= hgp_sig[0]->GetNbinsX(); i++){ // exclude every nth point
          // check for zero bins
          bool zerobin = false;
          for(int j=0; j < NMP; j++){
-            double val = hgp_sig[j]->GetBinContent( hgp_sig[j]->FindBin( (i+0.5)*rtrain/ntrain ) );
+            double val = hgp_sig[j]->GetBinContent(i);
             if( val == 0 ) zerobin = true;
          }
          if( i%nval != c or zerobin ){
-            ptrain.push_back( (i+0.5)*rtrain/ntrain );
+            ptrain.push_back( hgp_sig[0]->GetBinCenter(i) );
          }else{
-            ptrainX.push_back( (i+0.5)*rtrain/ntrain );
+            ptrainX.push_back( hgp_sig[0]->GetBinCenter(i) );
          }
       }
       double m2llsig, m2llbkg;
@@ -467,8 +476,10 @@ double Shapes::GPm2llLOOCV( const double *x ){
       int imass = i / ntrain;
 
       double ui = ysig[i] - Ky[i]/Kinv[i][i];
-      double vi = 1/Kinv[i][i];
-      //double vi = pow(hgp_sig[imass]->GetBinContent( hgp_sig[imass]->FindBin(ptrain[im]) ),2);
+      double vi1 = 1/Kinv[i][i];
+      double vi2 = pow(hgp_sig[imass]->GetBinContent( hgp_sig[imass]->FindBin(ptrain[im]) ),2);
+
+      double vi = do_gpvar ? vi1 : vi2;
 
       m2ll += log(vi) + pow(ui-ysig[i],2)/vi + log(2*TMath::Pi());
 

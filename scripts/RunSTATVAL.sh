@@ -1,10 +1,10 @@
 #! /bin/bash
 
-#PBS -e logs/error_staval_${JOBNUM}.txt
-#PBS -o logs/output_statval_${JOBNUM}.txt
+#PBS -o results_mblstat_20150529/output${JOBNUM}.txt
+#PBS -j oe
 
 numberPE=20
 
 cd $PBS_O_WORKDIR
 iter=$(($JOBNUM%$numberPE))
-./DoFit --run_number $JOBNUM --bootstrap --fit --masspnt 172.5 --mbl --numPE $numberPE --PE $iter --outfile results_mblstatval/fitresults_${JOBNUM}.root
+./DoFit --run_number $JOBNUM --bootstrap --fit --masspnt 172.5 --mbl --numPE $numberPE --PE $iter --outdir results_mblstat_20150529

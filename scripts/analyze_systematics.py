@@ -29,6 +29,16 @@ for i in range( tree.GetEntries() ):
 cent = systs['Central'][0]
 print( "\n*** Central Value = %5.2f ***\n" % cent )
 
+# fill in missing systematics
+slist_temp = [ 'MCscaleup', 'MCscaledown', 'MCmatchingup', 'MCmatchingdown', 'PtTopReweighting',
+      'MCTuneP11', 'MCTuneP11mpiHi', 'MCTuneP11TeV', 'MCTuneP11noCR' ]
+for var in range(50):
+   slist_temp.append( 'PDFvar'+str(var) )
+print 'Missing systematics: '
+for n in slist_temp:
+   if ( n not in systs ):
+      print ' * ', n
+      systs.update( {n: [systs['Central'][0] for i in range(5)]} )
 
 # convert up/down into max/min
 for n in systs:
@@ -73,6 +83,12 @@ systs.update( {'MCmatching': [ 0.0, up, dn, max(up-cent,dn-cent), min(up-cent,dn
 up = systs['PtTopReweighting'][1]
 systs['PtTopReweighting'] = [0.0, up, 0.0, abs(up-cent), -1.0*abs(up-cent)]
 
+# b fragmentation rbLEP
+up = systs['BFRAGrbLEP'][1]
+systs['BFRAGrbLEP'] = [0.0, up, 0.0, abs(up-cent), -1.0*abs(up-cent)]
+systs.update( {'BFRAG': [ cent, 0.0, 0.0, sqrt(systs['BFRAGnu'][3]**2+systs['BFRAGrbLEP'][3]**2),
+   sqrt(systs['BFRAGnu'][4]**2+systs['BFRAGrbLEP'][4]**2) ]} )
+
 # underlying event tunes
 central = systs['MCTuneP11'][0]
 up = systs['MCTuneP11mpiHi'][0]
@@ -107,7 +123,7 @@ slist_all = []
 temp = [0.0, 0.0]
 slist_all = [ 'JESTotal', 'JetEnergyResolution', 'METUnclustered', 'PileUp', 'ElectronEnergyScale', 'MuonMomentumScale',
       'RelativeFSR', 'ElectronId', 'MuonId', 'BTagging', 'PtTopReweighting', 'MCscale', 'MCmatching', 'MCEventTunes', 'PDF',
-      'MCColorReconnection' ]
+      'MCColorReconnection', 'BFRAG' ]
 for n in slist_all:
    for i in range(2):
       temp[i] += systs[n][i+3]**2

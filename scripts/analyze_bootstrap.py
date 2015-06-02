@@ -67,8 +67,8 @@ for iter in range(7):
 # conduct the fit
 topgaus = []
 fTop = []
-cTop = TCanvas('cbootstrap','cbootstrap',1400,800)
-cTop.Divide(4,2)
+#cTop = TCanvas('cbootstrap','cbootstrap',1400,800)
+#cTop.Divide(4,2)
 for i in range(7):
    topgaus.append( RooGaussian("topgaus"+str(mcmasses[i]), "topgaus"+str(mcmasses[i]), topMass[i], topMassMean[i], topMassSigma[i]) )
    topMassMean[i].setVal(mcmasses[i])
@@ -80,7 +80,7 @@ for i in range(7):
    varmt[i] = topMassSigma[i].getVal()**2
 
    # display the fit
-   cTop.cd(i+1)
+   #cTop.cd(i+1)
    fTop.append( topMass[i].frame() )
    ds[i].plotOn(fTop[i], RooFit.Binning(40))
    ds[i].statOn(fTop[i], RooFit.Layout( 0.7, 0.97, 0.94),
@@ -90,19 +90,20 @@ for i in range(7):
    topgaus[i].paramOn(fTop[i],RooFit.Parameters(plotShow),
              RooFit.Layout(0.17, 0.48, 0.94),
                  RooFit.Format("NU",RooFit.AutoPrecision(1)))
-   #fTop[i].Draw()
+   if i == 3:
+      fTop[i].Draw()
 
-cTop.Print('results/bootstrap_mt.pdf')
+#cTop.Print('results/bootstrap_mt.pdf')
 
 # temp pull plot
 hpull = TH1D('hpull', 'Pull for M_{t}(MC) = 172.5;(M_{ti}-#mu)/#sigma_{MIGRAD};Pseudoexperiments', 25, -5, 5)
 for i in range( tree.GetEntries() ):
    tree.GetEntry(i)
    if tree.mcmass == 172.5:
-      hpull.Fill( (tree.mt - meanmt[4])/tree.mt_err )
+      hpull.Fill( (tree.mt - meanmt[3])/tree.mt_err )
 
-cpull = TCanvas('cpull','cpull',800,800)
-hpull.Draw()
+#cpull = TCanvas('cpull','cpull',800,800)
+#hpull.Draw()
 
 gresults = TGraphErrors()
 chi2=0

@@ -63,7 +63,8 @@ const double Fitter::masspoints[NMP] = {166.5, 169.5, 171.5, 172.5, 173.5, 175.5
 void Fitter::InitializeDists(){
 
    // gaussian process length scales
-   // name(n), title(t), gnorm1(n1), gnorm2(n2), glx(lx), glmt(lmt), lbnd(lb), rbnd(rb) {
+   // name(n), title(t), gnorm1(n1), gnorm2(n2), glx(lx), glmt(lmt), lbnd(lb), rbnd(rb)
+   // name(n), title(t), theta1, theta0, theta2, theta3
    dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}", 0.54, 2.1, 7.2, 8.1, 20, 300 );
    dists[ "mt2_220_gp" ] = Distribution( "mt2_220_gp", "M_{T2} 220", 0.94, 1.74, 7.1, 1.9, 50, 300 );
    dists[ "maos210_gp" ] = Distribution( "maos210_gp","blv mass from Maos neutrinos from M_{T2} 210", 0.42, 1.82, 9.92, 24.2, 100, 500 );
@@ -91,7 +92,7 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
    string path;
    if( pch != NULL ) path = "root://cmseos:1094//eos/uscms/store/user/nmirman/Ntuples/TopMass/20141030/";
    //if( pch == NULL ) path = "/afs/cern.ch/work/n/nmirman/public/Ntuples/TopMass/20150226/";
-   if( pch == NULL ) path = "root://osg-se.cac.cornell.edu//xrootd/path/cms/store/user/nmirman/Ntuples/TopMassNtuples/20150330_v2/";
+   if( pch == NULL ) path = "root://osg-se.cac.cornell.edu//xrootd/path/cms/store/user/nmirman/Ntuples/TopMassNtuples/20150526/";
 
    // filenames
    //datasets[ "data" ]      = Dataset( path, "ntuple_data.root" );
@@ -114,6 +115,23 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
    datasets[ "ttbarsyst_matchingup" ]     = Dataset( path, "ntuple_TTJets_msdecay_matchingup.root" );
    datasets[ "ttbarsyst_matchingdown" ]   = Dataset( path, "ntuple_TTJets_msdecay_matchingdown.root" );
 
+   datasets[ "ttbarsyst_TuneP11_fulllept" ]        = Dataset( path, "ntuple_TTJets_FullLeptMGDecays_TuneP11.root" );
+   datasets[ "ttbarsyst_TuneP11_semilept" ]        = Dataset( path, "ntuple_TTJets_SemiLeptMGDecays_TuneP11.root" );
+   datasets[ "ttbarsyst_TuneP11_hadronic" ]        = Dataset( path, "ntuple_TTJets_HadronicMGDecays_TuneP11.root" );
+
+   datasets[ "ttbarsyst_TuneP11noCR_fulllept" ]    = Dataset( path, "ntuple_TTJets_FullLeptMGDecays_TuneP11noCR.root" );  
+   datasets[ "ttbarsyst_TuneP11noCR_semilept" ]    = Dataset( path, "ntuple_TTJets_SemiLeptMGDecays_TuneP11noCR.root" );  
+   datasets[ "ttbarsyst_TuneP11noCR_hadronic" ]    = Dataset( path, "ntuple_TTJets_HadronicMGDecays_TuneP11noCR.root" );  
+
+   datasets[ "ttbarsyst_TuneP11mpiHi_fulllept" ]   = Dataset( path, "ntuple_TTJets_FullLeptMGDecays_TuneP11mpiHi.root" );  
+   datasets[ "ttbarsyst_TuneP11mpiHi_semilept" ]   = Dataset( path, "ntuple_TTJets_SemiLeptMGDecays_TuneP11mpiHi.root" );  
+   datasets[ "ttbarsyst_TuneP11mpiHi_hadronic" ]   = Dataset( path, "ntuple_TTJets_HadronicMGDecays_TuneP11mpiHi.root" );  
+
+   datasets[ "ttbarsyst_TuneP11TeV_fulllept" ]     = Dataset( path, "ntuple_TTJets_FullLeptMGDecays_TuneP11TeV.root" );  
+   datasets[ "ttbarsyst_TuneP11TeV_semilept" ]     = Dataset( path, "ntuple_TTJets_SemiLeptMGDecays_TuneP11TeV.root" );  
+   datasets[ "ttbarsyst_TuneP11TeV_hadronic" ]     = Dataset( path, "ntuple_TTJets_HadronicMGDecays_TuneP11TeV.root" );  
+
+
    // for mc weights
    datasets[ "dy" ].mc_nevts         = 30459503;
    datasets[ "ww" ].mc_nevts         = 10000431;
@@ -134,6 +152,22 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
    datasets[ "ttbarsyst_matchingup" ].mc_nevts     = 37083003;
    datasets[ "ttbarsyst_matchingdown" ].mc_nevts   = 13406551;
 
+   datasets[ "ttbarsyst_TuneP11_fulllept" ].mc_nevts        = 5976484;
+   datasets[ "ttbarsyst_TuneP11_semilept" ].mc_nevts        = 12005805;
+   datasets[ "ttbarsyst_TuneP11_hadronic" ].mc_nevts        = 11651739;
+
+   datasets[ "ttbarsyst_TuneP11noCR_fulllept" ].mc_nevts    = 5974627;
+   datasets[ "ttbarsyst_TuneP11noCR_semilept" ].mc_nevts    = 12024653;
+   datasets[ "ttbarsyst_TuneP11noCR_hadronic" ].mc_nevts    = 11919063;
+
+   datasets[ "ttbarsyst_TuneP11mpiHi_fulllept" ].mc_nevts   = 3982409;
+   datasets[ "ttbarsyst_TuneP11mpiHi_semilept" ].mc_nevts   = 7978174;
+   datasets[ "ttbarsyst_TuneP11mpiHi_hadronic" ].mc_nevts   = 7953758;
+
+   datasets[ "ttbarsyst_TuneP11TeV_fulllept" ].mc_nevts     = 3984963;
+   datasets[ "ttbarsyst_TuneP11TeV_semilept" ].mc_nevts     = 7853450;
+   datasets[ "ttbarsyst_TuneP11TeV_hadronic" ].mc_nevts     = 7946264;
+
    datasets[ "dy" ].mc_xsec          = 3351.97;
    datasets[ "ww" ].mc_xsec          = 54.838;
    datasets[ "wz" ].mc_xsec          = 33.21;
@@ -153,6 +187,22 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
    datasets[ "ttbarsyst_matchingup" ].mc_xsec      = 234;
    datasets[ "ttbarsyst_matchingdown" ].mc_xsec    = 234;
 
+   datasets[ "ttbarsyst_TuneP11_fulllept" ].mc_xsec        = 234*0.09;
+   datasets[ "ttbarsyst_TuneP11_semilept" ].mc_xsec        = 234*0.45;
+   datasets[ "ttbarsyst_TuneP11_hadronic" ].mc_xsec        = 234*0.44;
+
+   datasets[ "ttbarsyst_TuneP11noCR_fulllept" ].mc_xsec    = 234*0.09;  
+   datasets[ "ttbarsyst_TuneP11noCR_semilept" ].mc_xsec    = 234*0.45;  
+   datasets[ "ttbarsyst_TuneP11noCR_hadronic" ].mc_xsec    = 234*0.44;  
+
+   datasets[ "ttbarsyst_TuneP11mpiHi_fulllept" ].mc_xsec   = 234*0.09;  
+   datasets[ "ttbarsyst_TuneP11mpiHi_semilept" ].mc_xsec   = 234*0.45;  
+   datasets[ "ttbarsyst_TuneP11mpiHi_hadronic" ].mc_xsec   = 234*0.44;  
+
+   datasets[ "ttbarsyst_TuneP11TeV_fulllept" ].mc_xsec     = 234*0.09;  
+   datasets[ "ttbarsyst_TuneP11TeV_semilept" ].mc_xsec     = 234*0.45;  
+   datasets[ "ttbarsyst_TuneP11TeV_hadronic" ].mc_xsec     = 234*0.44;  
+
    return;
 }
 
@@ -163,25 +213,36 @@ void Fitter::ReadDatasets(map<string, Dataset>& datasets, vector<Event>& events,
       string name = it->first;
       Dataset *dat = &(it->second);
 
-      // don't load systematics files yet
-      if( name.find("syst") != string::npos ) continue;
+      string nametmp = name;
+
+      // don't load systematics files if not necessary
+      if( nsyst.empty() and name.find("syst") != string::npos ) continue;
+
+      // don't load ttbar172 file if being substituted
+      if( !nsyst.empty() ){
+         if( nsyst.find("MC") != string::npos and name == "ttbar172" ){
+            cout << "---> swapping out central 172.5 masspoint." << endl;
+            continue;
+         }
+      }
+
+      // don't load irrelevant systematics files
+      string nsysttmp = nsyst;
+      nsysttmp.erase(0,2);
+      if( !nsyst.empty() and name.find("syst") != string::npos and name.find(nsysttmp) == string::npos ) continue;
+      if( nsysttmp == "TuneP11" ){
+         if( name.find("noCR") != string::npos or name.find("mpiHi") != string::npos
+               or name.find("TeV") != string::npos ) continue;
+      }
+      if( !nsyst.empty() and name.find("syst") != string::npos and name.find(nsysttmp) != string::npos ){
+         nametmp = "ttbar172";
+      }
 
       string tsyst = "Central";
       // if a jes systematic is specified, change to the appropriate ttree
       if( !nsyst.empty() and nsyst.find("MC") == string::npos
             and nsyst.find("PDFvar") == string::npos ) tsyst = nsyst;
 
-      string nfile = dat->file;
-
-      // if a HAD systematic is specified, swap the appropriate ntuple into the test set
-      if( type == "test" ){
-         if( nsyst.find("MC") != string::npos and name.find("ttbar172") != string::npos ){
-            string nametemp = nsyst;
-            nametemp.erase(0,2);
-            nfile = "ntuple_TTJets_"+nametemp+".root";
-            cout << "---> swapping sytematics file " << nfile << " for 172.5 masspoint." << endl;
-         }
-      }
 
       TFile *file = TFile::Open( (dat->path+dat->file).c_str() );
       TTree *trees = (TTree*)file->Get(tsyst.c_str());
@@ -193,18 +254,18 @@ void Fitter::ReadDatasets(map<string, Dataset>& datasets, vector<Event>& events,
          << " (reweighted)" << endl;
 
       if( type == "diagnostics" ){
-         ReadNtuple( dat->path+dat->file, name, dat->mc_xsec/dat->mc_nevts,
+         ReadNtuple( dat->path+dat->file, nametmp, dat->mc_xsec/dat->mc_nevts,
                tsyst.c_str(), events, 0, -1, -1, -1 );
       }
 
       // events for training and testing
       if( name.compare("data") != 0 ){
          if( type == "train" ){
-            ReadNtuple( dat->path+nfile, name, dat->mc_xsec/dat->mc_nevts,
+            ReadNtuple( dat->path+dat->file, nametmp, dat->mc_xsec/dat->mc_nevts,
                   tsyst.c_str(), events, 0, -1, -1, -1 );
          }
          if( type == "test" ){
-            ReadNtuple( dat->path+nfile, name, dat->mc_xsec/dat->mc_nevts,
+            ReadNtuple( dat->path+dat->file, nametmp, dat->mc_xsec/dat->mc_nevts,
                   "Central", events, 0, fracevts, statval_numPE, statval_PE );
          }
       }

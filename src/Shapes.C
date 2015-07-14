@@ -206,13 +206,21 @@ void Shapes::TrainGP( map< string, map<string, TH1D*> > & hists_,
    // inverse of sum
    TMatrixD Asig = K + Nsig;
    TMatrixD Abkg = K + Nbkg;
+   cout << "Cholsig" << endl;
    TDecompChol Cholsig(Asig);
+   cout << "done" << endl;
+   cout << "Cholbkg" << endl;
    TDecompChol Cholbkg(Abkg);
+   cout << "done" << endl;
    TMatrixD AsigU = Cholsig.GetU();
    TMatrixD AbkgU = Cholbkg.GetU();
    bool status = 0;
+   cout << "Cholsig Invert" << endl;
    TMatrixDSym Asinv_sig = Cholsig.Invert(status);
+   cout << "done" << endl;
+   cout << "Cholbkg Invert" << endl;
    TMatrixDSym Asinv_bkg = Cholbkg.Invert(status);
+   cout << "done" << endl;
    Ainv_sig.Clear();
    Ainv_bkg.Clear();
    Ainv_sig.ResizeTo( ntrain*NMP, ntrain*NMP );

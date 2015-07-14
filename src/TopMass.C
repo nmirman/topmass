@@ -360,6 +360,7 @@ void Fitter::ReadNtuple( string path, string process, double mcweight,
 
    // fill event vector
    for(int ev=start; ev < end; ev++){
+      if( ev%10 == 0 )
       tree->GetEntry(ev);
 
       Event evtemp;
@@ -571,7 +572,7 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
    gMinuit->SetPrintLevel(3);
 
    // Dimension of fFunc needs to be changed if adding more variables
-   fFunc = new ROOT::Math::Functor ( this, &Fitter::Min2LL, 5 );
+   fFunc = new ROOT::Math::Functor ( this, &Fitter::Min2LL, 6 );
    gMinuit->SetFunction( *fFunc );
    gMinuit->SetVariable(0, "topMass", 175.0, 0.1);
 
@@ -602,6 +603,8 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
    } else {
       gMinuit->SetFixedVariable(4, "norm_maos210", 0.70712);
    }
+
+   gMinuit->SetVariable(5, "jesfactor", 0.0, 0.1);
 
    // set event vector and minimize
    eventvec_fit = &eventvec;
@@ -642,12 +645,51 @@ double Fitter::Min2LL(const double *x){
          fptr->aGPbkg = dist->aGPbkg;
 
          TF1 *fshape_tot = new TF1( ("f"+name+"_tot").c_str(), fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 5);
+
+         // normalization inside likelihood function (temp)
+         Shapes * fptrUP = new Shapes( name, dist->ptrain, 
+               dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+         fptrUP->aGPsig.ResizeTo( dist->aGPsigUP.GetNoElements() );
+         fptrUP->aGPsig = dist->aGPsigUP;
+         fptrUP->aGPbkg.ResizeTo( dist->aGPbkgUP.GetNoElements() );
+         fptrUP->aGPbkg = dist->aGPbkgUP;
+
+         TF1 *fshape_totUP = new TF1( ("f"+name+"_totUP").c_str(), fptrUP, &Shapes::Ftot, dist->lbnd, dist->rbnd, 5);
+
+         // normalization inside likelihood function (temp)
+         Shapes * fptrDN = new Shapes( name, dist->ptrain, 
+               dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+         fptrDN->aGPsig.ResizeTo( dist->aGPsigDN.GetNoElements() );
+         fptrDN->aGPsig = dist->aGPsigDN;
+         fptrDN->aGPbkg.ResizeTo( dist->aGPbkgDN.GetNoElements() );
+         fptrDN->aGPbkg = dist->aGPbkgDN;
+
+         TF1 *fshape_totDN = new TF1( ("f"+name+"_totDN").c_str(), fptrDN, &Shapes::Ftot, dist->lbnd, dist->rbnd, 5);
+
          fshape_tot->SetParameters( x[0], 1.0, 1.0, 1.0, 1.0 );
-         double integralsig = fshape_tot->Integral(dist->lbnd, dist->rbnd);
+         fshape_totUP->SetParameters( x[0], 1.0, 1.0, 1.0, 1.0 );
+         fshape_totDN->SetParameters( x[0], 1.0, 1.0, 1.0, 1.0 );
+
+         double integralsig = linapprox( x[5], 
+               fshape_totDN->Integral(dist->lbnd, dist->rbnd),
+               fshape_tot->Integral(dist->lbnd, dist->rbnd),
+               fshape_totUP->Integral(dist->lbnd, dist->rbnd) );
+
          fshape_tot->SetParameters( x[0], 0.0, 1.0, 1.0, 1.0 );
-         double integralbkg = fshape_tot->Integral(dist->lbnd, dist->rbnd);
+         fshape_totUP->SetParameters( x[0], 0.0, 1.0, 1.0, 1.0 );
+         fshape_totDN->SetParameters( x[0], 0.0, 1.0, 1.0, 1.0 );
+
+         double integralbkg = linapprox( x[5], 
+               fshape_totDN->Integral(dist->lbnd, dist->rbnd),
+               fshape_tot->Integral(dist->lbnd, dist->rbnd),
+               fshape_totUP->Integral(dist->lbnd, dist->rbnd) );
+
          delete fshape_tot;
          delete fptr;
+         delete fshape_totUP;
+         delete fptrUP;
+         delete fshape_totDN;
+         delete fptrDN;
 
          Shapes shape( name, dist->ptrain, 
                dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
@@ -655,6 +697,18 @@ double Fitter::Min2LL(const double *x){
          shape.aGPsig = dist->aGPsig;
          shape.aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
          shape.aGPbkg = dist->aGPbkg;
+         Shapes shapeUP( name, dist->ptrain, 
+               dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+         shapeUP.aGPsig.ResizeTo( dist->aGPsigUP.GetNoElements() );
+         shapeUP.aGPsig = dist->aGPsigUP;
+         shapeUP.aGPbkg.ResizeTo( dist->aGPbkgUP.GetNoElements() );
+         shapeUP.aGPbkg = dist->aGPbkgUP;
+         Shapes shapeDN( name, dist->ptrain, 
+               dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+         shapeDN.aGPsig.ResizeTo( dist->aGPsigDN.GetNoElements() );
+         shapeDN.aGPsig = dist->aGPsigDN;
+         shapeDN.aGPbkg.ResizeTo( dist->aGPbkgDN.GetNoElements() );
+         shapeDN.aGPbkg = dist->aGPbkgDN;
 
          double pfit [] = {x[0], x[iparam], 1.0, integralsig, integralbkg};
 
@@ -665,7 +719,10 @@ double Fitter::Min2LL(const double *x){
             if ( name.compare("mbl_gp") == 0 ){ // for mbl
                for( unsigned int j=0; j < ev->mbls.size(); j++ ){
                   if( ev->mbls[j] < dist->lbnd or ev->mbls[j] > dist->rbnd ) continue;
-                  double val = shape.Ftot( &(ev->mbls[j]), pfit );
+                  double val = linapprox( x[5],
+                     shapeDN.Ftot( &(ev->mbls[j]), pfit ),
+                     shape.Ftot( &(ev->mbls[j]), pfit ),
+                     shapeUP.Ftot( &(ev->mbls[j]), pfit ) );
                   m2ll -= 2.0*ev->weight*log( val );
                }
             }
@@ -676,7 +733,10 @@ double Fitter::Min2LL(const double *x){
                }
                if( matchmbl ) continue;
                if( ev->mt2_220 < dist->lbnd or ev->mt2_220 > dist->rbnd ) continue;
-               double val = shape.Ftot( &(ev->mt2_220), pfit );
+               double val = linapprox( x[5],
+                     shapeDN.Ftot( &(ev->mt2_220), pfit ),
+                     shape.Ftot( &(ev->mt2_220), pfit ),
+                     shapeUP.Ftot( &(ev->mt2_220), pfit ) );
                m2ll -= 2.0*ev->weight*log( val );
             }
             else if ( name.compare("maos220_gp") == 0 ){ // for Maos 220
@@ -686,7 +746,10 @@ double Fitter::Min2LL(const double *x){
                for ( unsigned int j=0; j < sizeof(blv220array)/sizeof(blv220array[0]); j++){           
                   if( blv220array[j] < dist->lbnd or blv220array[j] > dist->rbnd ) continue;
                   if (useMaos220[j]){
-                     double val = shape.Ftot( &(blv220array[j]), pfit );
+                     double val = linapprox( x[5],
+                           shapeDN.Ftot( &(blv220array[j]), pfit ),
+                           shape.Ftot( &(blv220array[j]), pfit ),
+                           shapeUP.Ftot( &(blv220array[j]), pfit ) );
                      m2ll -= 2.0*ev->weight*log( val );
                   }
 
@@ -1004,5 +1067,18 @@ void Fitter::FindPTrain( map< string, map<string, TH1D*> >& hists_ ){
    }
 
    return;
+}
+
+double Fitter::linapprox( double x, double y1, double y2, double y3 ){
+   // assumes x1 = -1, x2 = 0, x3 = 1
+
+   double denom = 3.0*2 - 2.0;
+
+   double num1 = 2*(y1+y2+y3);
+   double num2 = 3*(-1.0*y1 + y2);
+
+   double sol = (num1 + x*num2)/denom;
+
+   return sol;
 }
 

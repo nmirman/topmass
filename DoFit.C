@@ -49,12 +49,18 @@ int main(int argc, char* argv[]){
    map<string, Dataset> datasets;
    vector<Event> eventvec_datamc;
    vector<Event> eventvec_train;
+   vector<Event> eventvec_trainUP;
+   vector<Event> eventvec_trainDN;
    vector<Event> eventvec_test;
    map< string, map<string, TH1D*> > hists_all_;
    map< string, map<string, TH1D*> > hists_train_;
+   map< string, map<string, TH1D*> > hists_trainUP_;
+   map< string, map<string, TH1D*> > hists_trainDN_;
    map< string, map<string, TH1D*> > hists_test_;
    map< string, map<string, TH2D*> > hists2d_all_;
    map< string, map<string, TH2D*> > hists2d_train_;
+   map< string, map<string, TH2D*> > hists2d_trainUP_;
+   map< string, map<string, TH2D*> > hists2d_trainDN_;
    map< string, map<string, TH2D*> > hists2d_test_;
 
    // output fit results
@@ -342,6 +348,25 @@ int main(int argc, char* argv[]){
    // release memory in eventvec_train
    vector<Event>().swap( eventvec_train );
 
+   fitter.ReadDatasets( datasets, eventvec_trainUP, "train", "TotalUP", fracevts, statval_numPE, statval_PE );
+   fitter.GetVariables( eventvec_trainUP );
+   fitter.DeclareHists( hists_trainUP_, hists2d_trainUP_, "trainUP" );
+   fitter.FillHists( hists_trainUP_, hists2d_trainUP_, eventvec_trainUP );
+   fitter.FindPTrain( hists_trainUP_ );
+
+   // release memory in eventvec_train
+   vector<Event>().swap( eventvec_trainUP );
+
+   fitter.ReadDatasets( datasets, eventvec_trainDN, "train", "TotalDN", fracevts, statval_numPE, statval_PE );
+   fitter.GetVariables( eventvec_trainDN );
+   fitter.DeclareHists( hists_trainDN_, hists2d_trainDN_, "trainDN" );
+   fitter.FillHists( hists_trainDN_, hists2d_trainDN_, eventvec_trainDN );
+   fitter.FindPTrain( hists_trainDN_ );
+
+   // release memory in eventvec_train
+   vector<Event>().swap( eventvec_trainDN );
+
+
    // ********************************************************
    // events for fit
    // ********************************************************
@@ -538,7 +563,9 @@ int main(int argc, char* argv[]){
                if( dist->activate ){
                   Shapes * fptr = new Shapes( name, dist->ptrain,
                         dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+                  cout << "aGP CENTRAL" << endl;
                   fptr->TrainGP( hists_train_, m2llsig, m2llbkg );
+                  cout << "done" << endl;
 
                   dist->aGPsig.ResizeTo( fptr->aGPsig.GetNoElements() );
                   dist->aGPsig = fptr->aGPsig;
@@ -546,6 +573,32 @@ int main(int argc, char* argv[]){
                   dist->aGPbkg = fptr->aGPbkg;
 
                   delete fptr;
+
+                  Shapes * fptr2 = new Shapes( name, dist->ptrain,
+                        dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+                  cout << "aGP UP" << endl;
+                  fptr2->TrainGP( hists_trainUP_, m2llsig, m2llbkg );
+                  cout << "done" << endl;
+
+                  dist->aGPsigUP.ResizeTo( fptr2->aGPsig.GetNoElements() );
+                  dist->aGPsigUP = fptr2->aGPsig;
+                  dist->aGPbkgUP.ResizeTo( fptr2->aGPbkg.GetNoElements() );
+                  dist->aGPbkgUP = fptr2->aGPbkg;
+
+                  delete fptr2;
+
+                  Shapes * fptr3 = new Shapes( name, dist->ptrain,
+                        dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+                  cout << "aGP DN" << endl;
+                  fptr3->TrainGP( hists_trainDN_, m2llsig, m2llbkg );
+                  cout << "done" << endl;
+
+                  dist->aGPsigDN.ResizeTo( fptr3->aGPsig.GetNoElements() );
+                  dist->aGPsigDN = fptr3->aGPsig;
+                  dist->aGPbkgDN.ResizeTo( fptr3->aGPbkg.GetNoElements() );
+                  dist->aGPbkgDN = fptr3->aGPbkg;
+
+                  delete fptr3;
 
                }
 

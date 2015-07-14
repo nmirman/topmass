@@ -152,6 +152,11 @@ struct Distribution {
    TVectorD aGPsig;
    TVectorD aGPbkg;
 
+   TVectorD aGPsigUP;
+   TVectorD aGPbkgUP;
+   TVectorD aGPsigDN;
+   TVectorD aGPbkgDN;
+
    double lbnd;
    double rbnd;
 
@@ -195,6 +200,8 @@ class Fitter{
       void PlotTemplates( map< string, map<string, TH1D*> >& );
 
       void FindPTrain( map< string, map<string, TH1D*> >& );
+
+      double linapprox( double, double, double, double );
 
       map<string, Distribution> dists;
 

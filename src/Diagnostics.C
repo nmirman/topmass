@@ -54,6 +54,8 @@ void Fitter::DeclareHists( map< string, map<string, TH1D*> >& hists_, map< strin
             "M_{bl};M_{bl} (GeV);Events", 100, dists["mbl_gp"].lbnd, dists["mbl_gp"].rbnd );
       hists_["mt2_220_gp"][name] = new TH1D( ("hmt2_220_gp_"+namel).c_str(),
             "M_{T2} 220;M_{T2} 220 (GeV);Events", 100, dists["mt2_220_gp"].lbnd, dists["mt2_220_gp"].rbnd );
+      hists_["mt2_221_gp"][name] = new TH1D( ("hmt2_221_gp_"+namel).c_str(),
+            "M_{T2} 221;M_{T2} 221 (GeV);Events", 100, dists["mt2_221_gp"].lbnd, dists["mt2_221_gp"].rbnd );
       hists_["maos220_gp"][name] = new TH1D( ("hmaos220_gp_"+namel).c_str(),
             "MAOS from M_{T2} 220;blv mass(GeV);Events", 100, dists["maos220_gp"].lbnd, dists["maos220_gp"].rbnd );
       hists_["maos210_gp"][name] = new TH1D( ("hmaos210_gp_"+namel).c_str(),
@@ -213,6 +215,7 @@ void Fitter::FillHists( map< string, map<string, TH1D*> >& hists_, map< string, 
 
       if (sin((jet1).DeltaPhi(up221))*sin((jet2).DeltaPhi(up221)) > 0){
          hists_["mt2_221"][type]->Fill( ev->mt2_221, ev->weight );
+         hists_["mt2_221_gp"][type]->Fill( ev->mt2_221, ev->weight );
       }
 
       //MAOS

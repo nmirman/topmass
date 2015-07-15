@@ -67,6 +67,7 @@ void Fitter::InitializeDists(){
    // name(n), title(t), theta1, theta0, theta2, theta3
    dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}", 0.54, 2.1, 7.2, 8.1, 20, 300 );
    dists[ "mt2_220_gp" ] = Distribution( "mt2_220_gp", "M_{T2} 220", 0.94, 1.74, 7.1, 1.9, 50, 300 );
+   dists[ "mt2_221_gp" ] = Distribution( "mt2_221_gp", "M_{T2} 221", 0.94, 1.74, 7.1, 1.9, 90, 250 );
    dists[ "maos210_gp" ] = Distribution( "maos210_gp","blv mass from Maos neutrinos from M_{T2} 210", 0.42, 1.82, 9.92, 24.2, 100, 500 );
    dists[ "maos220_gp" ] = Distribution( "maos220_gp","blv mass from Maos neutrinos from M_{T2} 220", 1.6, 6.4, 19.2, 19.2, 100, 500 );
 
@@ -354,13 +355,13 @@ void Fitter::ReadNtuple( string path, string process, double mcweight,
    }
 
    // run on fraction of total events
+   fracevts = 0.1;
    if( fracevts != -1 ){
       end = start + fracevts*(end-start);
    }
 
    // fill event vector
    for(int ev=start; ev < end; ev++){
-      if( ev%10 == 0 )
       tree->GetEntry(ev);
 
       Event evtemp;
@@ -447,6 +448,11 @@ void Fitter::GetVariables( vector<Event>& eventvec ){
       ev->mt2_220 = Calc.GetMt2(2,0);
       ev->mt2_210 = Calc.GetMt2(1,0);
       ev->mbls = Calc.GetBlInvariantMasses();
+
+      TLorentzVector up221 = -((ev->jet1)+(ev->jet2)+(ev->lep1)+(ev->lep2)+(ev->met));
+      if (sin((ev->jet1).DeltaPhi(up221))*sin((ev->jet2).DeltaPhi(up221)) <= 0){
+         ev->mt2_221 = 0;
+      }
 
       //Maos
       //Declare variables to accept Maos values
@@ -536,7 +542,7 @@ vector<int> Fitter::Resample( vector<Event>& eventvec, int randseed, bool statva
       if( ev->weight > maxweight ) maxweight = ev->weight;
    }
 
-   int numevts_data = 49243;
+   int numevts_data = 49243.0/10;
    vector<int> evlist;
    if( statval ) numevts_data = eventvec.size();
    // resample with replacement, taking into account event weights
@@ -572,7 +578,7 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
    gMinuit->SetPrintLevel(3);
 
    // Dimension of fFunc needs to be changed if adding more variables
-   fFunc = new ROOT::Math::Functor ( this, &Fitter::Min2LL, 6 );
+   fFunc = new ROOT::Math::Functor ( this, &Fitter::Min2LL, 7 );
    gMinuit->SetFunction( *fFunc );
    gMinuit->SetVariable(0, "topMass", 175.0, 0.1);
 
@@ -604,7 +610,14 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
       gMinuit->SetFixedVariable(4, "norm_maos210", 0.70712);
    }
 
-   gMinuit->SetVariable(5, "jesfactor", 0.0, 0.1);
+   if (dists["mt2_221_gp"].activate){
+      gMinuit->SetLimitedVariable(5, "norm221", 0.7, 0.1, 0, 1.0);
+   } else {
+      gMinuit->SetFixedVariable(5, "norm221", 0.70712);
+   }
+
+   gMinuit->SetLimitedVariable(6, "jesfactor", 0.0, 0.1, -2.0, 2.0);
+   //gMinuit->SetFixedVariable(6, "jesfactor", 0.0);
 
    // set event vector and minimize
    eventvec_fit = &eventvec;
@@ -633,6 +646,7 @@ double Fitter::Min2LL(const double *x){
       if( name.compare("mt2_220_gp") == 0 ) iparam = 2;
       if( name.compare("maos220_gp") == 0 ) iparam = 3;
       if( name.compare("maos210_gp") == 0 ) iparam = 4;
+      if( name.compare("mt2_221_gp") == 0 ) iparam = 5;
 
       if( dist->activate ){// only do this if we're fitting the variable in question
 
@@ -670,7 +684,7 @@ double Fitter::Min2LL(const double *x){
          fshape_totUP->SetParameters( x[0], 1.0, 1.0, 1.0, 1.0 );
          fshape_totDN->SetParameters( x[0], 1.0, 1.0, 1.0, 1.0 );
 
-         double integralsig = linapprox( x[5], 
+         double integralsig = linapprox( x[6], 
                fshape_totDN->Integral(dist->lbnd, dist->rbnd),
                fshape_tot->Integral(dist->lbnd, dist->rbnd),
                fshape_totUP->Integral(dist->lbnd, dist->rbnd) );
@@ -679,7 +693,7 @@ double Fitter::Min2LL(const double *x){
          fshape_totUP->SetParameters( x[0], 0.0, 1.0, 1.0, 1.0 );
          fshape_totDN->SetParameters( x[0], 0.0, 1.0, 1.0, 1.0 );
 
-         double integralbkg = linapprox( x[5], 
+         double integralbkg = linapprox( x[6], 
                fshape_totDN->Integral(dist->lbnd, dist->rbnd),
                fshape_tot->Integral(dist->lbnd, dist->rbnd),
                fshape_totUP->Integral(dist->lbnd, dist->rbnd) );
@@ -719,10 +733,16 @@ double Fitter::Min2LL(const double *x){
             if ( name.compare("mbl_gp") == 0 ){ // for mbl
                for( unsigned int j=0; j < ev->mbls.size(); j++ ){
                   if( ev->mbls[j] < dist->lbnd or ev->mbls[j] > dist->rbnd ) continue;
-                  double val = linapprox( x[5],
+                  double dn = shapeDN.Ftot( &(ev->mbls[j]), pfit );
+                  double ct = shape.Ftot( &(ev->mbls[j]), pfit );
+                  double up = shapeUP.Ftot( &(ev->mbls[j]), pfit );
+                  /*
+                  double val = linapprox( x[6],
                      shapeDN.Ftot( &(ev->mbls[j]), pfit ),
                      shape.Ftot( &(ev->mbls[j]), pfit ),
                      shapeUP.Ftot( &(ev->mbls[j]), pfit ) );
+                     */
+                  double val = linapprox( x[6], dn, ct, up );
                   m2ll -= 2.0*ev->weight*log( val );
                }
             }
@@ -733,7 +753,7 @@ double Fitter::Min2LL(const double *x){
                }
                if( matchmbl ) continue;
                if( ev->mt2_220 < dist->lbnd or ev->mt2_220 > dist->rbnd ) continue;
-               double val = linapprox( x[5],
+               double val = linapprox( x[6],
                      shapeDN.Ftot( &(ev->mt2_220), pfit ),
                      shape.Ftot( &(ev->mt2_220), pfit ),
                      shapeUP.Ftot( &(ev->mt2_220), pfit ) );
@@ -746,7 +766,7 @@ double Fitter::Min2LL(const double *x){
                for ( unsigned int j=0; j < sizeof(blv220array)/sizeof(blv220array[0]); j++){           
                   if( blv220array[j] < dist->lbnd or blv220array[j] > dist->rbnd ) continue;
                   if (useMaos220[j]){
-                     double val = linapprox( x[5],
+                     double val = linapprox( x[6],
                            shapeDN.Ftot( &(blv220array[j]), pfit ),
                            shape.Ftot( &(blv220array[j]), pfit ),
                            shapeUP.Ftot( &(blv220array[j]), pfit ) );
@@ -768,11 +788,20 @@ double Fitter::Min2LL(const double *x){
 
                }
             }
+            else if ( name.compare("mt2_221_gp") == 0 ){ // for 221
+               if( ev->mt2_221 < dist->lbnd or ev->mt2_221 > dist->rbnd ) continue;
+               double val = linapprox( x[6],
+                     shapeDN.Ftot( &(ev->mt2_221), pfit ),
+                     shape.Ftot( &(ev->mt2_221), pfit ),
+                     shapeUP.Ftot( &(ev->mt2_221), pfit ) );
+               m2ll -= 2.0*ev->weight*log( val );
+            }
 
          }
       }
    }
 
+   cout << m2ll << ": " << x[0] << " " << x[6] << endl;
    return m2ll;
 }
 
@@ -800,6 +829,7 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_, string outf
       if( name.compare("mt2_220_gp") == 0 ) iparam = 2;
       if( name.compare("maos220_gp") == 0 ) iparam = 3;
       if( name.compare("maos210_gp") == 0 ) iparam = 4;
+      if( name.compare("mt2_221_gp") == 0 ) iparam = 5;
 
       if( dist->activate ){// only do this if we're fitting the variable in question
 
@@ -1072,7 +1102,7 @@ void Fitter::FindPTrain( map< string, map<string, TH1D*> >& hists_ ){
 double Fitter::linapprox( double x, double y1, double y2, double y3 ){
    // assumes x1 = -1, x2 = 0, x3 = 1
 
-   double denom = 3.0*2 - 2.0;
+   double denom = 6.0;
 
    double num1 = 2*(y1+y2+y3);
    double num2 = 3*(-1.0*y1 + y2);

@@ -32,6 +32,7 @@ void print_usage(){
    cout << setw(25) << "\t-i --PE" << "PE index (out of numPE total).\n";
    cout << setw(25) << "\t-b --mbl" << "Activate Mbl distribution.\n";
    cout << setw(25) << "\t-t --mt2_220" << "Activate MT2 220 distribution.\n";
+   cout << setw(25) << "\t-k --mt2_221" << "Activate MT2 221 distribution.\n";
    cout << setw(25) << "\t-2 --maos220" << "Activate MAOS 220 distribution.\n";
    cout << setw(25) << "\t-1 --maos210" << "Activate MAOS 210 distribution.\n";
    cout << setw(25) << "\t-9 --syst <string>" << "Run with a systematic variation.\n";
@@ -69,8 +70,10 @@ int main(int argc, char* argv[]){
    double mt=0, mt_err=0;
    double kmbl=0, kmbl_err=0;
    double k220=0, k220_err=0;
+   double k221=0, k221_err=0;
    double kmaos220=0, kmaos220_err=0;
    double kmaos210=0, kmaos210_err=0;
+   double jesfactor=0, jesfactor_err=0;
    bool distcut220 = 0;
    bool etadisamb220 = 0;
    bool blmatch220 = 0;
@@ -95,10 +98,14 @@ int main(int argc, char* argv[]){
    tree->Branch("kbml_err", &kmbl_err);
    tree->Branch("k220", &k220);
    tree->Branch("k220_err", &k220_err);
+   tree->Branch("k221", &k221);
+   tree->Branch("k221_err", &k221_err);
    tree->Branch("kmaos220", &kmaos220);
    tree->Branch("kmaos220_err", &kmaos220_err);
    tree->Branch("kmaos210", &kmaos210);
    tree->Branch("kmaos210_err", &kmaos210_err);
+   tree->Branch("jesfactor", &jesfactor);
+   tree->Branch("jesfactor_err", &jesfactor_err);
    tree->Branch("distcut220", &distcut220);
    tree->Branch("etadisamb220", &etadisamb220);
    tree->Branch("blmatch220", &blmatch220);
@@ -125,6 +132,7 @@ int main(int argc, char* argv[]){
    int do_learnparams = 0;
    int do_mbl = 0;
    int do_mt2_220 = 0;
+   int do_mt2_221 = 0;
    int do_maos220 = 0;
    int do_maos210 = 0;
    int maoscuts220 = 0;
@@ -147,7 +155,8 @@ int main(int argc, char* argv[]){
       { "numPE",        required_argument,   0,                's' },
       { "PE",           required_argument,   0,                'i' },
       { "mbl",          no_argument,         &do_mbl,          'b' },
-      { "mt2_220",      no_argument,         &do_mt2_220,      't' },
+      { "mt2_220",      no_argument,         &do_mt2_220,      'k' },
+      { "mt2_221",      no_argument,         &do_mt2_221,      't' },
       { "maos220",      no_argument,         &do_maos220,      '2' },
       { "maos210",      no_argument,         &do_maos210,      '1' },
       { "maoscuts220",  required_argument,   0,                'y' },
@@ -160,7 +169,7 @@ int main(int argc, char* argv[]){
       { 0, 0, 0, 0 }
    };
 
-   while( (c = getopt_long(argc, argv, "fdexahponbt21yzm:c:s:i:9:g:", longopts, NULL)) != -1 ) {
+   while( (c = getopt_long(argc, argv, "fdexahponbkt21yzm:c:s:i:9:g:", longopts, NULL)) != -1 ) {
       switch(c)
       {
          case 'n' :
@@ -220,6 +229,10 @@ int main(int argc, char* argv[]){
             do_mt2_220 = true;
             break;
 
+         case 'k' :
+            do_mt2_221 = true;
+            break;
+
          case '2' :
             do_maos220 = true;
             break;
@@ -271,6 +284,7 @@ int main(int argc, char* argv[]){
 
    fitter.dists["mbl_gp"].activate = do_mbl;
    fitter.dists["mt2_220_gp"].activate = do_mt2_220;
+   fitter.dists["mt2_221_gp"].activate = do_mt2_221;
    fitter.dists["maos220_gp"].activate = do_maos220;
    fitter.dists["maos210_gp"].activate = do_maos210;
    if( do_maos220 ) fitter.compute_maos220 = true;
@@ -352,7 +366,6 @@ int main(int argc, char* argv[]){
    fitter.GetVariables( eventvec_trainUP );
    fitter.DeclareHists( hists_trainUP_, hists2d_trainUP_, "trainUP" );
    fitter.FillHists( hists_trainUP_, hists2d_trainUP_, eventvec_trainUP );
-   fitter.FindPTrain( hists_trainUP_ );
 
    // release memory in eventvec_train
    vector<Event>().swap( eventvec_trainUP );
@@ -361,11 +374,9 @@ int main(int argc, char* argv[]){
    fitter.GetVariables( eventvec_trainDN );
    fitter.DeclareHists( hists_trainDN_, hists2d_trainDN_, "trainDN" );
    fitter.FillHists( hists_trainDN_, hists2d_trainDN_, eventvec_trainDN );
-   fitter.FindPTrain( hists_trainDN_ );
 
    // release memory in eventvec_train
    vector<Event>().swap( eventvec_trainDN );
-
 
    // ********************************************************
    // events for fit
@@ -599,7 +610,6 @@ int main(int argc, char* argv[]){
                   dist->aGPbkgDN = fptr3->aGPbkg;
 
                   delete fptr3;
-
                }
 
             }
@@ -638,6 +648,10 @@ int main(int argc, char* argv[]){
             kmaos220_err = par_err[3];
             kmaos210 = par[4];
             kmaos210_err = par_err[4]; 
+            k221 = par[5];
+            k221_err = par_err[5];
+            jesfactor = par[6];
+            jesfactor_err = par_err[6];
             fitchi2 = fitter.fitchi2;
 
             eventvec_fit.clear();

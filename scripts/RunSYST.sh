@@ -1,6 +1,6 @@
 #! /bin/bash
 
-#PBS -o results_mt2maossyst_20150526/output${JOBNUM}.txt
+#PBS -o results_mblmt2syst_jfact_20150715/output${JOBNUM}.txt
 #PBS -j oe
 
 cd $PBS_O_WORKDIR
@@ -63,5 +63,5 @@ do
    syst[ipdf+i]=PDFvar$i
 done
 
-./DoFit --run_number ${JOBNUM} --syst ${syst[$JOBNUM]} --fit --masspnt 172.5 --mt2_220 --maos210 --outdir results_mt2maossyst_20150526
+./DoFit --run_number ${JOBNUM} --syst ${syst[$JOBNUM]} --fit --masspnt 172.5 --mt2_220 --mbl --outdir results_mblmt2syst_jfact_20150715
 

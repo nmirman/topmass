@@ -1,32 +1,32 @@
 #! /bin/bash
 
-#PBS -o results_mblmt2syst_jfact_20150715/output${JOBNUM}.txt
+#PBS -o results_mbl221syst_jfact_20150722/output${JOBNUM}.txt
 #PBS -j oe
 
 cd $PBS_O_WORKDIR
 
 # systematic variations
 syst[0]=Central
-syst[1]=TotalUP
-syst[2]=TotalDN
-syst[3]=CorrelationGroupMPFInSituUP
-syst[4]=CorrelationGroupMPFInSituDN
-syst[5]=CorrelationGroupFlavorUP
-syst[6]=CorrelationGroupFlavorDN
-syst[7]=CorrelationGroupIntercalibrationUP
-syst[8]=CorrelationGroupIntercalibrationDN
-syst[9]=CorrelationGroupUncorrelatedUP
-syst[10]=CorrelationGroupUncorrelatedDN
-syst[11]=CorrelationGroupbJESUP
-syst[12]=CorrelationGroupbJESDN
-syst[13]=FlavorPureGluonUP
-syst[14]=FlavorPureGluonDN
-syst[15]=FlavorPureQuarkUP
-syst[16]=FlavorPureQuarkDN
-syst[17]=FlavorPureCharmUP
-syst[18]=FlavorPureCharmDN
-syst[19]=FlavorPureBottomUP
-syst[20]=FlavorPureBottomDN
+syst[1]=JESTotalUP
+syst[2]=JESTotalDN
+syst[3]=JESCorrelationGroupMPFInSituUP
+syst[4]=JESCorrelationGroupMPFInSituDN
+syst[5]=JESCorrelationGroupFlavorUP
+syst[6]=JESCorrelationGroupFlavorDN
+syst[7]=JESCorrelationGroupIntercalibrationUP
+syst[8]=JESCorrelationGroupIntercalibrationDN
+syst[9]=JESCorrelationGroupUncorrelatedUP
+syst[10]=JESCorrelationGroupUncorrelatedDN
+syst[11]=JESCorrelationGroupbJESUP
+syst[12]=JESCorrelationGroupbJESDN
+syst[13]=JESFlavorPureGluonUP
+syst[14]=JESFlavorPureGluonDN
+syst[15]=JESFlavorPureQuarkUP
+syst[16]=JESFlavorPureQuarkDN
+syst[17]=JESFlavorPureCharmUP
+syst[18]=JESFlavorPureCharmDN
+syst[19]=JESFlavorPureBottomUP
+syst[20]=JESFlavorPureBottomDN
 syst[21]=MCscaleup
 syst[22]=MCscaledown
 syst[23]=MCmatchingup
@@ -63,5 +63,4 @@ do
    syst[ipdf+i]=PDFvar$i
 done
 
-./DoFit --run_number ${JOBNUM} --syst ${syst[$JOBNUM]} --fit --masspnt 172.5 --mt2_220 --mbl --outdir results_mblmt2syst_jfact_20150715
-
+./DoFit --run_number ${JOBNUM} --syst ${syst[$JOBNUM]} --fit --masspnt 172.5 --mt2_221 --mbl --jfactor --outdir results_mbl221syst_jfact_20150722

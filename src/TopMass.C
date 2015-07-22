@@ -8,6 +8,7 @@
 #include "TGraph.h"
 #include "TMath.h"
 #include "TTree.h"
+#include "TChain.h"
 #include "TFile.h"
 #include "TCanvas.h"
 #include "TROOT.h"
@@ -21,6 +22,7 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <fstream>
 
 #include "Math/Functor.h"
 #include "Minuit2/Minuit2Minimizer.h"
@@ -93,45 +95,45 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
    string path;
    if( pch != NULL ) path = "root://cmseos:1094//eos/uscms/store/user/nmirman/Ntuples/TopMass/20141030/";
    //if( pch == NULL ) path = "/afs/cern.ch/work/n/nmirman/public/Ntuples/TopMass/20150226/";
-   if( pch == NULL ) path = "root://osg-se.cac.cornell.edu//xrootd/path/cms/store/user/nmirman/Ntuples/TopMassNtuples/20150526/";
+   if( pch == NULL ) path = "root://osg-se.cac.cornell.edu//xrootd/path/cms/store/user/nmirman/Ntuples/TopMassNtuples/";
+   string date = "20150720";
 
    // filenames
    //datasets[ "data" ]      = Dataset( path, "ntuple_data.root" );
-   datasets[ "t_tw" ]      = Dataset( path, "ntuple_T_tW.root" );
-   datasets[ "tbar_tw" ]   = Dataset( path, "ntuple_Tbar_tW.root" );
-   datasets[ "dy" ]        = Dataset( path, "ntuple_DYJetsToLL.root" );
-   datasets[ "wjets" ]     = Dataset( path, "ntuple_WJetsToLNu.root" );
-   datasets[ "ww" ]        = Dataset( path, "ntuple_WW.root" );
-   datasets[ "wz" ]        = Dataset( path, "ntuple_WZ.root" );
-   datasets[ "zz" ]        = Dataset( path, "ntuple_ZZ.root" );
-   datasets[ "ttbar166" ]  = Dataset( path, "ntuple_TTJets_msdecay_mass166_5.root" ); 
-   datasets[ "ttbar169" ]  = Dataset( path, "ntuple_TTJets_msdecay_mass169_5.root" ); 
-   datasets[ "ttbar171" ]  = Dataset( path, "ntuple_TTJets_msdecay_mass171_5.root" );
-   datasets[ "ttbar172" ]  = Dataset( path, "ntuple_TTJets_msdecay.root" );
-   datasets[ "ttbar173" ]  = Dataset( path, "ntuple_TTJets_msdecay_mass173_5.root" ); 
-   datasets[ "ttbar175" ]  = Dataset( path, "ntuple_TTJets_msdecay_mass175_5.root" ); 
-   datasets[ "ttbar178" ]  = Dataset( path, "ntuple_TTJets_msdecay_mass178_5.root" ); 
-   datasets[ "ttbarsyst_scaleup" ]        = Dataset( path, "ntuple_TTJets_msdecay_scaleup.root" );
-   datasets[ "ttbarsyst_scaledown" ]      = Dataset( path, "ntuple_TTJets_msdecay_scaledown.root" );
-   datasets[ "ttbarsyst_matchingup" ]     = Dataset( path, "ntuple_TTJets_msdecay_matchingup.root" );
-   datasets[ "ttbarsyst_matchingdown" ]   = Dataset( path, "ntuple_TTJets_msdecay_matchingdown.root" );
+   datasets[ "t_tw" ]      = Dataset( "T_tW" );
+   datasets[ "tbar_tw" ]   = Dataset( "Tbar_tW" );
+   datasets[ "dy" ]        = Dataset( "DYJetsToLL" );
+   datasets[ "wjets" ]     = Dataset( "WJetsToLNu" );
+   datasets[ "ww" ]        = Dataset( "WW" );
+   datasets[ "wz" ]        = Dataset( "WZ" );
+   datasets[ "zz" ]        = Dataset( "ZZ" );
+   datasets[ "ttbar166" ]  = Dataset( "TTJets_msdecay_mass166_5" ); 
+   datasets[ "ttbar169" ]  = Dataset( "TTJets_msdecay_mass169_5" ); 
+   datasets[ "ttbar171" ]  = Dataset( "TTJets_msdecay_mass171_5" );
+   datasets[ "ttbar172" ]  = Dataset( "TTJets_msdecay" );
+   datasets[ "ttbar173" ]  = Dataset( "TTJets_msdecay_mass173_5" ); 
+   datasets[ "ttbar175" ]  = Dataset( "TTJets_msdecay_mass175_5" ); 
+   datasets[ "ttbar178" ]  = Dataset( "TTJets_msdecay_mass178_5" ); 
+   datasets[ "ttbarsyst_scaleup" ]        = Dataset( "TTJets_msdecay_scaleup" );
+   datasets[ "ttbarsyst_scaledown" ]      = Dataset( "TTJets_msdecay_scaledown" );
+   datasets[ "ttbarsyst_matchingup" ]     = Dataset( "TTJets_msdecay_matchingup" );
+   datasets[ "ttbarsyst_matchingdown" ]   = Dataset( "TTJets_msdecay_matchingdown" );
 
-   datasets[ "ttbarsyst_TuneP11_fulllept" ]        = Dataset( path, "ntuple_TTJets_FullLeptMGDecays_TuneP11.root" );
-   datasets[ "ttbarsyst_TuneP11_semilept" ]        = Dataset( path, "ntuple_TTJets_SemiLeptMGDecays_TuneP11.root" );
-   datasets[ "ttbarsyst_TuneP11_hadronic" ]        = Dataset( path, "ntuple_TTJets_HadronicMGDecays_TuneP11.root" );
+   datasets[ "ttbarsyst_TuneP11_fulllept" ]        = Dataset( "TTJets_FullLeptMGDecays_TuneP11" );
+   datasets[ "ttbarsyst_TuneP11_semilept" ]        = Dataset( "TTJets_SemiLeptMGDecays_TuneP11" );
+   datasets[ "ttbarsyst_TuneP11_hadronic" ]        = Dataset( "TTJets_HadronicMGDecays_TuneP11" );
 
-   datasets[ "ttbarsyst_TuneP11noCR_fulllept" ]    = Dataset( path, "ntuple_TTJets_FullLeptMGDecays_TuneP11noCR.root" );  
-   datasets[ "ttbarsyst_TuneP11noCR_semilept" ]    = Dataset( path, "ntuple_TTJets_SemiLeptMGDecays_TuneP11noCR.root" );  
-   datasets[ "ttbarsyst_TuneP11noCR_hadronic" ]    = Dataset( path, "ntuple_TTJets_HadronicMGDecays_TuneP11noCR.root" );  
+   datasets[ "ttbarsyst_TuneP11noCR_fulllept" ]    = Dataset( "TTJets_FullLeptMGDecays_TuneP11noCR" );  
+   datasets[ "ttbarsyst_TuneP11noCR_semilept" ]    = Dataset( "TTJets_SemiLeptMGDecays_TuneP11noCR" );  
+   datasets[ "ttbarsyst_TuneP11noCR_hadronic" ]    = Dataset( "TTJets_HadronicMGDecays_TuneP11noCR" );  
 
-   datasets[ "ttbarsyst_TuneP11mpiHi_fulllept" ]   = Dataset( path, "ntuple_TTJets_FullLeptMGDecays_TuneP11mpiHi.root" );  
-   datasets[ "ttbarsyst_TuneP11mpiHi_semilept" ]   = Dataset( path, "ntuple_TTJets_SemiLeptMGDecays_TuneP11mpiHi.root" );  
-   datasets[ "ttbarsyst_TuneP11mpiHi_hadronic" ]   = Dataset( path, "ntuple_TTJets_HadronicMGDecays_TuneP11mpiHi.root" );  
+   datasets[ "ttbarsyst_TuneP11mpiHi_fulllept" ]   = Dataset( "TTJets_FullLeptMGDecays_TuneP11mpiHi" );  
+   datasets[ "ttbarsyst_TuneP11mpiHi_semilept" ]   = Dataset( "TTJets_SemiLeptMGDecays_TuneP11mpiHi" );  
+   datasets[ "ttbarsyst_TuneP11mpiHi_hadronic" ]   = Dataset( "TTJets_HadronicMGDecays_TuneP11mpiHi" );  
 
-   datasets[ "ttbarsyst_TuneP11TeV_fulllept" ]     = Dataset( path, "ntuple_TTJets_FullLeptMGDecays_TuneP11TeV.root" );  
-   datasets[ "ttbarsyst_TuneP11TeV_semilept" ]     = Dataset( path, "ntuple_TTJets_SemiLeptMGDecays_TuneP11TeV.root" );  
-   datasets[ "ttbarsyst_TuneP11TeV_hadronic" ]     = Dataset( path, "ntuple_TTJets_HadronicMGDecays_TuneP11TeV.root" );  
-
+   datasets[ "ttbarsyst_TuneP11TeV_fulllept" ]     = Dataset( "TTJets_FullLeptMGDecays_TuneP11TeV" );  
+   datasets[ "ttbarsyst_TuneP11TeV_semilept" ]     = Dataset( "TTJets_SemiLeptMGDecays_TuneP11TeV" );  
+   datasets[ "ttbarsyst_TuneP11TeV_hadronic" ]     = Dataset( "TTJets_HadronicMGDecays_TuneP11TeV" );  
 
    // for mc weights
    datasets[ "dy" ].mc_nevts         = 30459503;
@@ -204,6 +206,42 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
    datasets[ "ttbarsyst_TuneP11TeV_semilept" ].mc_xsec     = 234*0.45;  
    datasets[ "ttbarsyst_TuneP11TeV_hadronic" ].mc_xsec     = 234*0.44;  
 
+   // read files from list
+
+    ifstream inFile;
+    inFile.open("file_catalog.txt");
+
+    while(!inFile.eof()){
+
+       string xrdopt = "cache";
+
+       // get line from file
+       string line;
+       getline(inFile,line);
+       stringstream stream(line);
+
+       // get ntuple attributes
+       string indate, indir;
+       stream >> indate;
+       stream >> indir;
+
+       for(map<string, Dataset>::iterator it = datasets.begin(); it != datasets.end(); it++){
+          string name = it->first;
+          Dataset *dat = &(it->second);
+
+          if( indate == date and indir == dat->dir ){
+             dat->path = path+"/"+indate+"/"+indir+"/";
+             string file;
+             while( stream >> file ){
+                dat->filenames.push_back( file );
+             }
+          }
+       }
+
+    }
+
+    inFile.close();
+
    return;
 }
 
@@ -240,33 +278,37 @@ void Fitter::ReadDatasets(map<string, Dataset>& datasets, vector<Event>& events,
       }
 
       string tsyst = "Central";
-      // if a jes systematic is specified, change to the appropriate ttree
+      // if a relevant systematic is specified, change to the appropriate ttree
       if( !nsyst.empty() and nsyst.find("MC") == string::npos
             and nsyst.find("PDFvar") == string::npos ) tsyst = nsyst;
 
+      // get number of events in each dataset
+      TChain chain(tsyst.c_str());
+      for( vector<string>::iterator file = dat->filenames.begin();
+            file != dat->filenames.end(); file++ ){
+         TString fn = dat->path+(*file);
+         chain.Add( fn );
+      }
 
-      TFile *file = TFile::Open( (dat->path+dat->file).c_str() );
-      TTree *trees = (TTree*)file->Get(tsyst.c_str());
-
-      int numevents = trees->GetEntries();
+      int numevents = chain.GetEntries();
       cout << setiosflags(ios::left);
       cout << "... " << setw(25) << name
          << ": " << numevents << " events, " << numevents*(dat->mc_xsec/dat->mc_nevts)
          << " (reweighted)" << endl;
 
       if( type == "diagnostics" ){
-         ReadNtuple( dat->path+dat->file, nametmp, dat->mc_xsec/dat->mc_nevts,
+         ReadNtuple( *dat, nametmp, dat->mc_xsec/dat->mc_nevts,
                tsyst.c_str(), events, 0, -1, -1, -1 );
       }
 
       // events for training and testing
       if( name.compare("data") != 0 ){
          if( type == "train" ){
-            ReadNtuple( dat->path+dat->file, nametmp, dat->mc_xsec/dat->mc_nevts,
-                  tsyst.c_str(), events, 0, -1, -1, -1 );
+            ReadNtuple( *dat, nametmp, dat->mc_xsec/dat->mc_nevts,
+                  tsyst.c_str(), events, 0, fracevts, -1, -1 );
          }
          if( type == "test" ){
-            ReadNtuple( dat->path+dat->file, nametmp, dat->mc_xsec/dat->mc_nevts,
+            ReadNtuple( *dat, nametmp, dat->mc_xsec/dat->mc_nevts,
                   "Central", events, 0, fracevts, statval_numPE, statval_PE );
          }
       }
@@ -276,7 +318,7 @@ void Fitter::ReadDatasets(map<string, Dataset>& datasets, vector<Event>& events,
    return;
 }
 
-void Fitter::ReadNtuple( string path, string process, double mcweight, 
+void Fitter::ReadNtuple( Dataset dat, string process, double mcweight, 
       string selection, vector<Event>& eventvec, int opt, double fracevts,
       int statval_numPE, int statval_PE ){
    
@@ -286,6 +328,7 @@ void Fitter::ReadNtuple( string path, string process, double mcweight,
    TLorentzVector *lep1 = new TLorentzVector();
    TLorentzVector *lep2 = new TLorentzVector();
    TLorentzVector *met = new TLorentzVector();
+   TLorentzVector *metUncl = new TLorentzVector();
 
    int nvert;
    double jet1PtRes, jet1PhiRes, jet1EtaRes, jet2PtRes, jet2PhiRes, jet2EtaRes;
@@ -296,15 +339,22 @@ void Fitter::ReadNtuple( string path, string process, double mcweight,
    vector<float> *pdf_weights = 0;
 
    // open ntuple
-   TFile *file = TFile::Open( path.c_str() );
-   TTree *tree = (TTree*)file->Get(selection.c_str());
+   //TFile *file = TFile::Open( path.c_str() );
+   //TTree *tree = (TTree*)file->Get(selection.c_str());
    //TBranch *branch = 0;
+   TChain *tree = new TChain(selection.c_str());
+   for( vector<string>::iterator file = dat.filenames.begin();
+         file != dat.filenames.end(); file++ ){
+      TString fn = dat.path+(*file);
+      tree->Add( fn );
+   }
 
    tree->SetBranchAddress("jet1FourVector", &jet1);
    tree->SetBranchAddress("jet2FourVector", &jet2);
    tree->SetBranchAddress("lep1FourVector", &lep1);
    tree->SetBranchAddress("lep2FourVector", &lep2);
    tree->SetBranchAddress("metFourVector", &met);
+   tree->SetBranchAddress("metUnclustered", &metUncl);
    tree->SetBranchAddress("jet1PtResolution", &jet1PtRes);
    tree->SetBranchAddress("jet1PhiResolution", &jet1PhiRes);
    tree->SetBranchAddress("jet1EtaResolution", &jet1EtaRes);
@@ -355,7 +405,7 @@ void Fitter::ReadNtuple( string path, string process, double mcweight,
    }
 
    // run on fraction of total events
-   fracevts = 0.1;
+   fracevts = 0.5;
    if( fracevts != -1 ){
       end = start + fracevts*(end-start);
    }
@@ -379,10 +429,25 @@ void Fitter::ReadNtuple( string path, string process, double mcweight,
       evtemp.lep2 = *lep2;
 
       evtemp.met = *met;
+      evtemp.met_uncl = *metUncl;
 
       evtemp.isemu = nmuons==1 and nelectrons==1;
 
       evtemp.pdf_weights = *pdf_weights;
+
+      // jes systematics
+      /*
+      if( jsyst.find("JES") != string::npos ){
+         for(int i=0; i < nameJESUnc->size(); i++){
+            if( jsyst == nameJESUnc->at(i) ){
+               evtemp.jet1 *= jet1JESUnc->at(i);
+               evtemp.jet2 *= jet2JESUnc->at(i);
+               TLorentzVector dmet( metpxJESUnc->at(i), metpyJESUnc->at(i), metpzJESUnc->at(i), meteJESUnc->at(i) );
+               evtemp.met += dmet;
+            }
+         }
+      }
+      */
 
       //
       // classify events
@@ -425,15 +490,39 @@ void Fitter::ReadNtuple( string path, string process, double mcweight,
       //cout << "STRUCT SIZE CHECK: " << sizeof(evtemp) << endl;
 
       // push back event
-      if ( (jet1->M() < 40 and jet2->M() < 40)/* and evtemp.isemu*/ )
+      bool met_ok = evtemp.isemu or (met->Pt() > 40);
+      bool jet1_ok = jet1->Pt() > 30 and fabs(jet1->Eta()) < 2.5;
+      bool jet2_ok = jet2->Pt() > 30 and fabs(jet2->Eta()) < 2.5;
+      bool jetmass_ok = jet1->M() < 40 and jet2->M() < 40;
+      if ( jet1_ok and jet2_ok and jetmass_ok and met_ok )
          eventvec.push_back( evtemp );
 
    }
 
-   file->Close();
    return;
 }
 
+void Fitter::JShift( vector<Event>& eventvec, double jshift ){
+
+   for( vector<Event>::iterator ev = eventvec.begin(); ev < eventvec.end(); ev++){
+      TLorentzVector jet1 = ev->jet1;
+      TLorentzVector jet2 = ev->jet2;
+      TLorentzVector met = ev->met;
+      TLorentzVector met_uncl= ev->met_uncl;
+
+      if( jshift != 1.0 ){
+         jet1 *= jshift;
+         jet2 *= jshift;
+         met = (met-met_uncl)*jshift + met_uncl;
+      }
+
+      ev->jet1 = jet1;
+      ev->jet2 = jet2;
+      ev->met = met;
+   }
+
+   return;
+}
 
 void Fitter::GetVariables( vector<Event>& eventvec ){
 
@@ -542,7 +631,7 @@ vector<int> Fitter::Resample( vector<Event>& eventvec, int randseed, bool statva
       if( ev->weight > maxweight ) maxweight = ev->weight;
    }
 
-   int numevts_data = 49243.0/10;
+   int numevts_data = 49243.0/2;
    vector<int> evlist;
    if( statval ) numevts_data = eventvec.size();
    // resample with replacement, taking into account event weights
@@ -572,7 +661,6 @@ vector<int> Fitter::Resample( vector<Event>& eventvec, int randseed, bool statva
 }
 
 void Fitter::RunMinimizer( vector<Event>& eventvec ){
-
 
    gMinuit = new ROOT::Minuit2::Minuit2Minimizer ( ROOT::Minuit2::kMigrad );
    gMinuit->SetPrintLevel(3);
@@ -616,8 +704,11 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
       gMinuit->SetFixedVariable(5, "norm221", 0.70712);
    }
 
-   gMinuit->SetLimitedVariable(6, "jesfactor", 0.0, 0.1, -2.0, 2.0);
-   //gMinuit->SetFixedVariable(6, "jesfactor", 0.0);
+   if( fit_jfactor ){
+      gMinuit->SetVariable(6, "jesfactor", 0.0, 0.01);
+   }else{
+      gMinuit->SetFixedVariable(6, "jesfactor", 0.0);
+   }
 
    // set event vector and minimize
    eventvec_fit = &eventvec;
@@ -684,19 +775,30 @@ double Fitter::Min2LL(const double *x){
          fshape_totUP->SetParameters( x[0], 1.0, 1.0, 1.0, 1.0 );
          fshape_totDN->SetParameters( x[0], 1.0, 1.0, 1.0, 1.0 );
 
-         double integralsig = linapprox( x[6], 
+         double integralsig = 1.0;
+         
+         if( fit_jfactor ){
+            integralsig = linapprox( x[6], 
                fshape_totDN->Integral(dist->lbnd, dist->rbnd),
                fshape_tot->Integral(dist->lbnd, dist->rbnd),
                fshape_totUP->Integral(dist->lbnd, dist->rbnd) );
+         }else{
+            integralsig = fshape_tot->Integral(dist->lbnd, dist->rbnd);
+         }
 
          fshape_tot->SetParameters( x[0], 0.0, 1.0, 1.0, 1.0 );
          fshape_totUP->SetParameters( x[0], 0.0, 1.0, 1.0, 1.0 );
          fshape_totDN->SetParameters( x[0], 0.0, 1.0, 1.0, 1.0 );
 
-         double integralbkg = linapprox( x[6], 
+         double integralbkg = 1.0;
+         if( fit_jfactor ){
+            integralbkg = linapprox( x[6], 
                fshape_totDN->Integral(dist->lbnd, dist->rbnd),
                fshape_tot->Integral(dist->lbnd, dist->rbnd),
                fshape_totUP->Integral(dist->lbnd, dist->rbnd) );
+         }else{
+            integralbkg = fshape_tot->Integral(dist->lbnd, dist->rbnd);
+         }
 
          delete fshape_tot;
          delete fptr;
@@ -733,16 +835,11 @@ double Fitter::Min2LL(const double *x){
             if ( name.compare("mbl_gp") == 0 ){ // for mbl
                for( unsigned int j=0; j < ev->mbls.size(); j++ ){
                   if( ev->mbls[j] < dist->lbnd or ev->mbls[j] > dist->rbnd ) continue;
-                  double dn = shapeDN.Ftot( &(ev->mbls[j]), pfit );
+                  double dn = fit_jfactor ? shapeDN.Ftot( &(ev->mbls[j]), pfit ) : 0.0;
                   double ct = shape.Ftot( &(ev->mbls[j]), pfit );
-                  double up = shapeUP.Ftot( &(ev->mbls[j]), pfit );
-                  /*
-                  double val = linapprox( x[6],
-                     shapeDN.Ftot( &(ev->mbls[j]), pfit ),
-                     shape.Ftot( &(ev->mbls[j]), pfit ),
-                     shapeUP.Ftot( &(ev->mbls[j]), pfit ) );
-                     */
-                  double val = linapprox( x[6], dn, ct, up );
+                  double up = fit_jfactor ? shapeUP.Ftot( &(ev->mbls[j]), pfit ) : 0.0;
+
+                  double val = fit_jfactor ? linapprox( x[6], dn, ct, up ) : ct;
                   m2ll -= 2.0*ev->weight*log( val );
                }
             }
@@ -753,10 +850,11 @@ double Fitter::Min2LL(const double *x){
                }
                if( matchmbl ) continue;
                if( ev->mt2_220 < dist->lbnd or ev->mt2_220 > dist->rbnd ) continue;
-               double val = linapprox( x[6],
-                     shapeDN.Ftot( &(ev->mt2_220), pfit ),
-                     shape.Ftot( &(ev->mt2_220), pfit ),
-                     shapeUP.Ftot( &(ev->mt2_220), pfit ) );
+               double dn = fit_jfactor ? shapeDN.Ftot( &(ev->mt2_220), pfit ) : 0.0;
+               double ct = shape.Ftot( &(ev->mt2_220), pfit );
+               double up = fit_jfactor ? shapeUP.Ftot( &(ev->mt2_220), pfit ) : 0.0;
+
+               double val = fit_jfactor ? linapprox( x[6], dn, ct, up ) : ct;
                m2ll -= 2.0*ev->weight*log( val );
             }
             else if ( name.compare("maos220_gp") == 0 ){ // for Maos 220
@@ -766,10 +864,11 @@ double Fitter::Min2LL(const double *x){
                for ( unsigned int j=0; j < sizeof(blv220array)/sizeof(blv220array[0]); j++){           
                   if( blv220array[j] < dist->lbnd or blv220array[j] > dist->rbnd ) continue;
                   if (useMaos220[j]){
-                     double val = linapprox( x[6],
-                           shapeDN.Ftot( &(blv220array[j]), pfit ),
-                           shape.Ftot( &(blv220array[j]), pfit ),
-                           shapeUP.Ftot( &(blv220array[j]), pfit ) );
+                     double dn = fit_jfactor ? shapeDN.Ftot( &(blv220array[j]), pfit ) : 0.0;
+                     double ct = shape.Ftot( &(blv220array[j]), pfit );
+                     double up = fit_jfactor ? shapeUP.Ftot( &(blv220array[j]), pfit ) : 0.0;
+
+                     double val = fit_jfactor ? linapprox( x[6], dn, ct, up ) : ct;
                      m2ll -= 2.0*ev->weight*log( val );
                   }
 
@@ -790,10 +889,10 @@ double Fitter::Min2LL(const double *x){
             }
             else if ( name.compare("mt2_221_gp") == 0 ){ // for 221
                if( ev->mt2_221 < dist->lbnd or ev->mt2_221 > dist->rbnd ) continue;
-               double val = linapprox( x[6],
-                     shapeDN.Ftot( &(ev->mt2_221), pfit ),
-                     shape.Ftot( &(ev->mt2_221), pfit ),
-                     shapeUP.Ftot( &(ev->mt2_221), pfit ) );
+               double dn = fit_jfactor ? shapeDN.Ftot( &(ev->mt2_221), pfit ) : 0.0;
+               double ct = shape.Ftot( &(ev->mt2_221), pfit );
+               double up = fit_jfactor ? shapeUP.Ftot( &(ev->mt2_221), pfit ) : 0.0;
+               double val = fit_jfactor ? linapprox( x[6], dn, ct, up ) : ct;
                m2ll -= 2.0*ev->weight*log( val );
             }
 

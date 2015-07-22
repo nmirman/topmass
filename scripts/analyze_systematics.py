@@ -31,7 +31,7 @@ print( "\n*** Central Value = %5.2f ***\n" % cent )
 
 # fill in missing systematics
 slist_temp = [ 'MCscaleup', 'MCscaledown', 'MCmatchingup', 'MCmatchingdown', 'PtTopReweighting',
-      'MCTuneP11', 'MCTuneP11mpiHi', 'MCTuneP11TeV', 'MCTuneP11noCR' ]
+      'MCTuneP11', 'MCTuneP11mpiHi', 'MCTuneP11TeV', 'MCTuneP11noCR', 'BFRAGrbLEP', 'BFRAGnu', 'JetEnergyResolution', 'METUnclustered', 'PileUp', 'ElectronEnergyScale', 'MuonMomentumScale', 'RelativeFSR', 'ElectronId', 'MuonId', 'BTagging' ]
 for var in range(50):
    slist_temp.append( 'PDFvar'+str(var) )
 print 'Missing systematics: '

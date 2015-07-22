@@ -22,14 +22,16 @@ struct Dataset {
 
    // dataset info
    string path;
-   string file;
+   string dir;
 
    // monte carlo
    double mc_xsec;
    int mc_nevts;
 
+   vector<string> filenames;
+
    // constructor
-   Dataset( string p="", string f="" ): path(p), file(f) {
+   Dataset( string d="" ): dir(d) {
       mc_xsec = 1.0;
       mc_nevts = 1;
    }
@@ -78,7 +80,7 @@ struct Event {
    vector<double> mbls;
 
    // reconstructed objects
-   TLorentzVector jet1, jet2, lep1, lep2, met;
+   TLorentzVector jet1, jet2, lep1, lep2, met, met_uncl;
 
    bool isemu;
 
@@ -103,6 +105,7 @@ struct Event {
       lep1 = TLorentzVector();
       lep2 = TLorentzVector();
       met = TLorentzVector();
+      met_uncl = TLorentzVector();
 
       mt2_220 = 0;
       mt2_210 = 0;
@@ -177,10 +180,11 @@ class Fitter{
       ~Fitter();
 
       void InitializeDists();
-      void ReadNtuple(string, string, double, string, vector<Event>&, int, double, int, int);
+      void ReadNtuple(Dataset, string, double, string, vector<Event>&, int, double, int, int);
       void LoadDatasets(map<string, Dataset>&);
       void ReadDatasets(map<string, Dataset>&, vector<Event>&, string, string, double, double, double);
       void GetVariables(vector<Event>&);
+      void JShift(vector<Event>&, double=1.0);
       void ReweightMC(vector<Event>&, string);
       vector<int> Resample(vector<Event>&, int, bool);
       void PDFReweight(vector<Event>&, int);
@@ -218,6 +222,8 @@ class Fitter{
 
       bool compute_maos220;
       bool compute_maos210;
+
+      bool fit_jfactor;
 
    private:
 

@@ -405,7 +405,6 @@ void Fitter::ReadNtuple( Dataset dat, string process, double mcweight,
    }
 
    // run on fraction of total events
-   fracevts = 0.5;
    if( fracevts != -1 ){
       end = start + fracevts*(end-start);
    }
@@ -631,7 +630,7 @@ vector<int> Fitter::Resample( vector<Event>& eventvec, int randseed, bool statva
       if( ev->weight > maxweight ) maxweight = ev->weight;
    }
 
-   int numevts_data = 49243.0/2;
+   int numevts_data = 49243.0;
    vector<int> evlist;
    if( statval ) numevts_data = eventvec.size();
    // resample with replacement, taking into account event weights
@@ -705,7 +704,7 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
    }
 
    if( fit_jfactor ){
-      gMinuit->SetVariable(6, "jesfactor", 0.0, 0.01);
+      gMinuit->SetLimitedVariable(6, "jesfactor", 0.0, 0.01, -2, 2);
    }else{
       gMinuit->SetFixedVariable(6, "jesfactor", 0.0);
    }

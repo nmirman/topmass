@@ -59,14 +59,17 @@ int main(int argc, char* argv[]){
    vector<Event> eventvec_test;
    map< string, map<string, TH1D*> > hists_all_;
    map< string, map<string, TH1D*> > hists_train_;
-   map< string, map<string, TH1D*> > hists_trainUP_;
-   map< string, map<string, TH1D*> > hists_trainDN_;
+   //map< string, map<string, TH1D*> > hists_trainUP_;
+   //map< string, map<string, TH1D*> > hists_trainDN_;
    map< string, map<string, TH1D*> > hists_test_;
    map< string, map<string, TH2D*> > hists2d_all_;
    map< string, map<string, TH2D*> > hists2d_train_;
-   map< string, map<string, TH2D*> > hists2d_trainUP_;
-   map< string, map<string, TH2D*> > hists2d_trainDN_;
+   //map< string, map<string, TH2D*> > hists2d_trainUP_;
+   //map< string, map<string, TH2D*> > hists2d_trainDN_;
    map< string, map<string, TH2D*> > hists2d_test_;
+
+   vector<map< string, map<string, TH1D*> > > hists_jvec_train_;
+   vector<map< string, map<string, TH1D*> > > hists2d_jvec_train_;
 
    // output fit results
    int run_number=-1;
@@ -369,29 +372,26 @@ int main(int argc, char* argv[]){
    fitter.FindPTrain( hists_train_ );
 
    if( fitter.fit_jfactor ){
-      //fitter.ReadDatasets( datasets, eventvec_trainUP, "train", "TotalUP", fracevts, statval_numPE, statval_PE );
-      for(vector<Event>::iterator ev = eventvec_train.begin(); ev != eventvec_train.end(); ev++){
-         eventvec_trainUP.push_back( *ev );
+
+      hists_jvec_train_.resize(5);
+      hists2d_jvec_train_.resize(5);
+
+      for(int i=0; i < 5; i++){
+         vector<Event> eventvec_temp;
+
+         for(vector<Event>::iterator ev = eventvec_train.begin(); ev != eventvec_train.end(); ev++){
+            eventvec_temp.push_back( *ev );
+         }
+         `
+         fitter.JShift( eventvec_temp, 0.98+0.01*i );
+         fitter.GetVariables( eventvec_temp );
+         fitter.DeclareHists( hists_jvec_train_[i], hists2d_jvec_train_[i], "train"+string(98+i) );
+         fitter.FillHists( hists_jvec_train_[i], hists2d_jvec_train_[i], eventvec_temp );
+
+         // release memory in eventvec_temp
+         vector<Event>().swap( eventvec_temp );
       }
-      fitter.JShift( eventvec_trainUP, 1.05 );
-      fitter.GetVariables( eventvec_trainUP );
-      fitter.DeclareHists( hists_trainUP_, hists2d_trainUP_, "trainUP" );
-      fitter.FillHists( hists_trainUP_, hists2d_trainUP_, eventvec_trainUP );
 
-      // release memory in eventvec_train
-      vector<Event>().swap( eventvec_trainUP );
-
-      //fitter.ReadDatasets( datasets, eventvec_trainDN, "train", "TotalDN", fracevts, statval_numPE, statval_PE );
-      for(vector<Event>::iterator ev = eventvec_train.begin(); ev != eventvec_train.end(); ev++){
-         eventvec_trainDN.push_back( *ev );
-      }
-      fitter.JShift( eventvec_trainDN, 0.95 );
-      fitter.GetVariables( eventvec_trainDN );
-      fitter.DeclareHists( hists_trainDN_, hists2d_trainDN_, "trainDN" );
-      fitter.FillHists( hists_trainDN_, hists2d_trainDN_, eventvec_trainDN );
-
-      // release memory in eventvec_train
-      vector<Event>().swap( eventvec_trainDN );
    }
 
    // release memory in eventvec_train

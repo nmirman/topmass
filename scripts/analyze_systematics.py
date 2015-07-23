@@ -11,6 +11,9 @@ systs = { 'Central': [0 for i in range(5)] }
 for i in range( tree.GetEntries() ):
    tree.GetEntry(i)
 
+   if( tree.fitStatus != 0 ):
+      continue
+
    name = str(tree.syst)
 
    var = 0
@@ -31,7 +34,7 @@ print( "\n*** Central Value = %5.2f ***\n" % cent )
 
 # fill in missing systematics
 slist_temp = [ 'MCscaleup', 'MCscaledown', 'MCmatchingup', 'MCmatchingdown', 'PtTopReweighting',
-      'MCTuneP11', 'MCTuneP11mpiHi', 'MCTuneP11TeV', 'MCTuneP11noCR', 'BFRAGrbLEP', 'BFRAGnu', 'JetEnergyResolution', 'METUnclustered', 'PileUp', 'ElectronEnergyScale', 'MuonMomentumScale', 'RelativeFSR', 'ElectronId', 'MuonId', 'BTagging' ]
+      'MCTuneP11', 'MCTuneP11mpiHi', 'MCTuneP11TeV', 'MCTuneP11noCR', 'BFRAGrbLEP', 'BFRAGnu', 'JetEnergyResolution', 'METUnclustered', 'PileUp', 'ElectronEnergyScale', 'MuonMomentumScale', 'RelativeFSR', 'ElectronId', 'MuonId', 'BTagging', 'JESFlavorPureGluon', 'JESFlavorPureQuark', 'JESFlavorPureCharm', 'JESFlavorPureBottom', 'JESCorrelationGroupMPFInSitu' ]
 for var in range(50):
    slist_temp.append( 'PDFvar'+str(var) )
 print 'Missing systematics: '
@@ -52,14 +55,14 @@ for n in systs:
    systs[n][4] = smin
 
 # flavor systematics
-systs.update( {'FlavorTotal': [0 for i in range(5)]} )
+systs.update( {'JESFlavorTotal': [0 for i in range(5)]} )
 for i in range(3,5):
-   systs['FlavorTotal'][i] = systs['FlavorPureGluon'][i] + systs['FlavorPureQuark'][i] + \
-         systs['FlavorPureCharm'][i] + systs['FlavorPureBottom'][i]
+   systs['JESFlavorTotal'][i] = systs['JESFlavorPureGluon'][i] + systs['JESFlavorPureQuark'][i] + \
+         systs['JESFlavorPureCharm'][i] + systs['JESFlavorPureBottom'][i]
 
 # jes systematics
-slist_jes = [ 'CorrelationGroupMPFInSitu', 'CorrelationGroupIntercalibration', 'CorrelationGroupUncorrelated',
-      'FlavorTotal' ]
+slist_jes = [ 'JESCorrelationGroupMPFInSitu', 'JESCorrelationGroupIntercalibration', 'JESCorrelationGroupUncorrelated',
+      'JESFlavorTotal' ]
 temp = [0.0, 0.0]
 for n in slist_jes:
    for i in range(2):

@@ -73,6 +73,7 @@ void Fitter::InitializeDists(){
    dists[ "maos210_gp" ] = Distribution( "maos210_gp","blv mass from Maos neutrinos from M_{T2} 210", 0.42, 1.82, 9.92, 24.2, 100, 500 );
    dists[ "maos220_gp" ] = Distribution( "maos220_gp","blv mass from Maos neutrinos from M_{T2} 220", 1.6, 6.4, 19.2, 19.2, 100, 500 );
 
+
    dists[ "maos220blv" ] = Distribution( "maos220blv","blv mass from Maos neutrinos from M_{T2} 220", 1.6, 6.4, 19.2, 19.2, 0, 500 );
    dists[ "mbl" ] = Distribution( "mbl", "M_{bl}", 0.54, 2.1, 7.2, 8.1, 0, 300 );
    dists[ "mt2_220_nomatchmbl" ] = Distribution( "mt2_220_nomatchmbl", "M_{T2} 220", 0.94, 1.74, 7.1, 1.9, 0, 300 );
@@ -506,13 +507,19 @@ void Fitter::JShift( vector<Event>& eventvec, double jshift ){
    for( vector<Event>::iterator ev = eventvec.begin(); ev < eventvec.end(); ev++){
       TLorentzVector jet1 = ev->jet1;
       TLorentzVector jet2 = ev->jet2;
+      TLorentzVector lep1 = ev->lep1;
+      TLorentzVector lep2 = ev->lep2;
       TLorentzVector met = ev->met;
       TLorentzVector met_uncl= ev->met_uncl;
 
+      // met_uncl = met + lep1 + lep2 + jets
+      TLorentzVector jets = metuncl - (met + lep1 + lep2);
+
+      // met = met_uncl - lep1 - lep2 - jets
       if( jshift != 1.0 ){
          jet1 *= jshift;
          jet2 *= jshift;
-         met = (met-met_uncl)*jshift + met_uncl;
+         met -= jshift*jets;
       }
 
       ev->jet1 = jet1;
@@ -630,7 +637,7 @@ vector<int> Fitter::Resample( vector<Event>& eventvec, int randseed, bool statva
       if( ev->weight > maxweight ) maxweight = ev->weight;
    }
 
-   int numevts_data = 49243.0;
+   int numevts_data = 49243;
    vector<int> evlist;
    if( statval ) numevts_data = eventvec.size();
    // resample with replacement, taking into account event weights

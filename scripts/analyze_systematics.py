@@ -34,7 +34,7 @@ print( "\n*** Central Value = %5.2f ***\n" % cent )
 
 # fill in missing systematics
 slist_temp = [ 'MCscaleup', 'MCscaledown', 'MCmatchingup', 'MCmatchingdown', 'PtTopReweighting',
-      'MCTuneP11', 'MCTuneP11mpiHi', 'MCTuneP11TeV', 'MCTuneP11noCR', 'BFRAGrbLEP', 'BFRAGnu', 'JetEnergyResolution', 'METUnclustered', 'PileUp', 'ElectronEnergyScale', 'MuonMomentumScale', 'RelativeFSR', 'ElectronId', 'MuonId', 'BTagging', 'JESFlavorPureGluon', 'JESFlavorPureQuark', 'JESFlavorPureCharm', 'JESFlavorPureBottom', 'JESCorrelationGroupMPFInSitu' ]
+      'MCTuneP11', 'MCTuneP11mpiHi', 'MCTuneP11TeV', 'MCTuneP11noCR', 'BFRAGrbLEP', 'BFRAGnu', 'JetEnergyResolution', 'METUnclustered', 'PileUp', 'ElectronEnergyScale', 'MuonMomentumScale', 'JESRelativeFSR', 'ElectronId', 'MuonId', 'BTagging', 'JESFlavorPureGluon', 'JESFlavorPureQuark', 'JESFlavorPureCharm', 'JESFlavorPureBottom', 'JESCorrelationGroupMPFInSitu' ]
 for var in range(50):
    slist_temp.append( 'PDFvar'+str(var) )
 print 'Missing systematics: '
@@ -62,7 +62,8 @@ for i in range(3,5):
 
 # jes systematics
 slist_jes = [ 'JESCorrelationGroupMPFInSitu', 'JESCorrelationGroupIntercalibration', 'JESCorrelationGroupUncorrelated',
-      'JESFlavorTotal' ]
+      #'JESFlavorTotal' ]
+      'JESFlavorPureGluon', 'JESFlavorPureQuark', 'JESFlavorPureCharm', 'JESFlavorPureBottom' ]
 temp = [0.0, 0.0]
 for n in slist_jes:
    for i in range(2):
@@ -125,7 +126,7 @@ for n in systs:
 slist_all = []
 temp = [0.0, 0.0]
 slist_all = [ 'JESTotal', 'JetEnergyResolution', 'METUnclustered', 'PileUp', 'ElectronEnergyScale', 'MuonMomentumScale',
-      'RelativeFSR', 'ElectronId', 'MuonId', 'BTagging', 'PtTopReweighting', 'MCscale', 'MCmatching', 'MCEventTunes', 'PDF',
+      'JESRelativeFSR', 'ElectronId', 'MuonId', 'BTagging', 'PtTopReweighting', 'MCscale', 'MCmatching', 'MCEventTunes', 'PDF',
       'MCColorReconnection', 'BFRAG' ]
 for n in slist_all:
    for i in range(2):

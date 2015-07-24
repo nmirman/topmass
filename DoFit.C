@@ -382,7 +382,6 @@ int main(int argc, char* argv[]){
          for(vector<Event>::iterator ev = eventvec_train.begin(); ev != eventvec_train.end(); ev++){
             eventvec_temp.push_back( *ev );
          }
-         `
          fitter.JShift( eventvec_temp, 0.98+0.01*i );
          fitter.GetVariables( eventvec_temp );
          fitter.DeclareHists( hists_jvec_train_[i], hists2d_jvec_train_[i], "train"+string(98+i) );

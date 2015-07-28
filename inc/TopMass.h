@@ -17,6 +17,7 @@
 using namespace std;
 
 #define NMP 7
+#define NJP 3
 
 struct Dataset {
 
@@ -197,11 +198,12 @@ class Fitter{
       // diagnostics
       void DeclareHists( map< string, map<string, TH1D*> >&, map< string, map<string, TH2D*> >&, string label );
       void DeleteHists( map< string, map<string, TH1D*> >&, map< string, map<string, TH2D*> >& );
-      void FillHists( map< string, map<string, TH1D*> >&, map< string, map<string, TH2D*> >&, vector<Event>&, bool=false );
+      void FillHists( map< string, map<string, TH1D*> >&,
+            map< string, map<string, TH2D*> >&, vector<Event>&, bool=false );
       void PrintHists( map< string, map<string, TH1D*> >&, map< string, map<string, TH2D*> >& );
       vector<bool> MaosCut210( vector<Event>::iterator ev, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector& );
       vector<bool> MaosCut220( vector<Event>::iterator ev, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector& );
-      void PlotTemplates( map< string, map<string, TH1D*> >& );
+      void PlotTemplates( vector< map< string, map<string, TH1D*> > >& );
 
       void FindPTrain( map< string, map<string, TH1D*> >& );
 
@@ -219,6 +221,7 @@ class Fitter{
       int maoscuts210;
 
       static const double masspoints [NMP];
+      static const double jfactpoints [NJP];
 
       bool compute_maos220;
       bool compute_maos210;

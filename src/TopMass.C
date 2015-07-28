@@ -61,6 +61,7 @@ Fitter::~Fitter(){
 }
 
 const double Fitter::masspoints[NMP] = {166.5, 169.5, 171.5, 172.5, 173.5, 175.5, 178.5};
+const double Fitter::jfactpoints[NJP] = {0.95, 1.0, 1.05};
 
 void Fitter::InitializeDists(){
 
@@ -513,13 +514,13 @@ void Fitter::JShift( vector<Event>& eventvec, double jshift ){
       TLorentzVector met_uncl= ev->met_uncl;
 
       // met_uncl = met + lep1 + lep2 + jets
-      TLorentzVector jets = metuncl - (met + lep1 + lep2);
+      TLorentzVector jets = met_uncl - (met + lep1 + lep2);
 
       // met = met_uncl - lep1 - lep2 - jets
       if( jshift != 1.0 ){
          jet1 *= jshift;
          jet2 *= jshift;
-         met -= jshift*jets;
+         met -= (jshift-1)*jets;
       }
 
       ev->jet1 = jet1;
@@ -676,44 +677,44 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
    gMinuit->SetFunction( *fFunc );
    gMinuit->SetVariable(0, "topMass", 175.0, 0.1);
 
+   if( fit_jfactor ){
+      gMinuit->SetLimitedVariable(1, "jesfactor", 1.0, 0.01, 0.95, 1.05);
+   }else{
+      gMinuit->SetFixedVariable(1, "jesfactor", 1.0);
+   }
+
    // If we're fitting mbl, set mbl background as a limited variable, otherwise set it as a fixed variable
    if (dists["mbl_gp"].activate){
-      gMinuit->SetLimitedVariable(1, "norm", 0.7, 0.1, 0, 1.0);
+      gMinuit->SetLimitedVariable(2, "norm", 0.7, 0.1, 0, 1.0);
    } else {
-      gMinuit->SetFixedVariable(1, "norm", 0.70712);
+      gMinuit->SetFixedVariable(2, "norm", 0.70712);
    }
 
    // If we're fitting 220, set 220 background as a limited variable, otherwise set it as a fixed variable
    if (dists["mt2_220_gp"].activate){
-      gMinuit->SetLimitedVariable(2, "norm220", 0.7, 0.1, 0, 1.0);
+      gMinuit->SetLimitedVariable(3, "norm220", 0.7, 0.1, 0, 1.0);
    } else {
-      gMinuit->SetFixedVariable(2, "norm220", 0.70712);
+      gMinuit->SetFixedVariable(3, "norm220", 0.70712);
    }
 
    //MAOS 220
    if (dists["maos220_gp"].activate){
-      gMinuit->SetLimitedVariable(3, "norm_maos220", 0.7, 0.1, 0, 1.0);
+      gMinuit->SetLimitedVariable(4, "norm_maos220", 0.7, 0.1, 0, 1.0);
    } else {
-      gMinuit->SetFixedVariable(3, "norm_maos220", 0.70712);
+      gMinuit->SetFixedVariable(4, "norm_maos220", 0.70712);
    }
 
    //MAOS 210
    if (dists["maos210_gp"].activate){
-      gMinuit->SetLimitedVariable(4, "norm_maos210", 0.7, 0.1, 0, 1.0);
+      gMinuit->SetLimitedVariable(5, "norm_maos210", 0.7, 0.1, 0, 1.0);
    } else {
-      gMinuit->SetFixedVariable(4, "norm_maos210", 0.70712);
+      gMinuit->SetFixedVariable(5, "norm_maos210", 0.70712);
    }
 
    if (dists["mt2_221_gp"].activate){
-      gMinuit->SetLimitedVariable(5, "norm221", 0.7, 0.1, 0, 1.0);
+      gMinuit->SetLimitedVariable(6, "norm221", 0.7, 0.1, 0, 1.0);
    } else {
-      gMinuit->SetFixedVariable(5, "norm221", 0.70712);
-   }
-
-   if( fit_jfactor ){
-      gMinuit->SetLimitedVariable(6, "jesfactor", 0.0, 0.01, -2, 2);
-   }else{
-      gMinuit->SetFixedVariable(6, "jesfactor", 0.0);
+      gMinuit->SetFixedVariable(6, "norm221", 0.70712);
    }
 
    // set event vector and minimize
@@ -739,11 +740,11 @@ double Fitter::Min2LL(const double *x){
       string name = it->first;
       Distribution *dist = &(it->second);
       int iparam = -1;
-      if( name.compare("mbl_gp") == 0 ) iparam = 1;
-      if( name.compare("mt2_220_gp") == 0 ) iparam = 2;
-      if( name.compare("maos220_gp") == 0 ) iparam = 3;
-      if( name.compare("maos210_gp") == 0 ) iparam = 4;
-      if( name.compare("mt2_221_gp") == 0 ) iparam = 5;
+      if( name.compare("mbl_gp") == 0 ) iparam = 2;
+      if( name.compare("mt2_220_gp") == 0 ) iparam = 3;
+      if( name.compare("maos220_gp") == 0 ) iparam = 4;
+      if( name.compare("maos210_gp") == 0 ) iparam = 5;
+      if( name.compare("mt2_221_gp") == 0 ) iparam = 6;
 
       if( dist->activate ){// only do this if we're fitting the variable in question
 
@@ -755,63 +756,13 @@ double Fitter::Min2LL(const double *x){
          fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
          fptr->aGPbkg = dist->aGPbkg;
 
-         TF1 *fshape_tot = new TF1( ("f"+name+"_tot").c_str(), fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 5);
-
-         // normalization inside likelihood function (temp)
-         Shapes * fptrUP = new Shapes( name, dist->ptrain, 
-               dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
-         fptrUP->aGPsig.ResizeTo( dist->aGPsigUP.GetNoElements() );
-         fptrUP->aGPsig = dist->aGPsigUP;
-         fptrUP->aGPbkg.ResizeTo( dist->aGPbkgUP.GetNoElements() );
-         fptrUP->aGPbkg = dist->aGPbkgUP;
-
-         TF1 *fshape_totUP = new TF1( ("f"+name+"_totUP").c_str(), fptrUP, &Shapes::Ftot, dist->lbnd, dist->rbnd, 5);
-
-         // normalization inside likelihood function (temp)
-         Shapes * fptrDN = new Shapes( name, dist->ptrain, 
-               dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
-         fptrDN->aGPsig.ResizeTo( dist->aGPsigDN.GetNoElements() );
-         fptrDN->aGPsig = dist->aGPsigDN;
-         fptrDN->aGPbkg.ResizeTo( dist->aGPbkgDN.GetNoElements() );
-         fptrDN->aGPbkg = dist->aGPbkgDN;
-
-         TF1 *fshape_totDN = new TF1( ("f"+name+"_totDN").c_str(), fptrDN, &Shapes::Ftot, dist->lbnd, dist->rbnd, 5);
-
-         fshape_tot->SetParameters( x[0], 1.0, 1.0, 1.0, 1.0 );
-         fshape_totUP->SetParameters( x[0], 1.0, 1.0, 1.0, 1.0 );
-         fshape_totDN->SetParameters( x[0], 1.0, 1.0, 1.0, 1.0 );
-
-         double integralsig = 1.0;
-         
-         if( fit_jfactor ){
-            integralsig = linapprox( x[6], 
-               fshape_totDN->Integral(dist->lbnd, dist->rbnd),
-               fshape_tot->Integral(dist->lbnd, dist->rbnd),
-               fshape_totUP->Integral(dist->lbnd, dist->rbnd) );
-         }else{
-            integralsig = fshape_tot->Integral(dist->lbnd, dist->rbnd);
-         }
-
-         fshape_tot->SetParameters( x[0], 0.0, 1.0, 1.0, 1.0 );
-         fshape_totUP->SetParameters( x[0], 0.0, 1.0, 1.0, 1.0 );
-         fshape_totDN->SetParameters( x[0], 0.0, 1.0, 1.0, 1.0 );
-
-         double integralbkg = 1.0;
-         if( fit_jfactor ){
-            integralbkg = linapprox( x[6], 
-               fshape_totDN->Integral(dist->lbnd, dist->rbnd),
-               fshape_tot->Integral(dist->lbnd, dist->rbnd),
-               fshape_totUP->Integral(dist->lbnd, dist->rbnd) );
-         }else{
-            integralbkg = fshape_tot->Integral(dist->lbnd, dist->rbnd);
-         }
-
+         TF1 *fshape_tot = new TF1( ("f"+name+"_tot").c_str(), fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 6);
+         fshape_tot->SetParameters( x[0], x[1], 1.0, 1.0, 1.0, 1.0 );
+         double integralsig = fshape_tot->Integral(dist->lbnd, dist->rbnd);
+         fshape_tot->SetParameters( x[0], x[1], 0.0, 1.0, 1.0, 1.0 );
+         double integralbkg = fshape_tot->Integral(dist->lbnd, dist->rbnd);
          delete fshape_tot;
          delete fptr;
-         delete fshape_totUP;
-         delete fptrUP;
-         delete fshape_totDN;
-         delete fptrDN;
 
          Shapes shape( name, dist->ptrain, 
                dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
@@ -819,20 +770,8 @@ double Fitter::Min2LL(const double *x){
          shape.aGPsig = dist->aGPsig;
          shape.aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
          shape.aGPbkg = dist->aGPbkg;
-         Shapes shapeUP( name, dist->ptrain, 
-               dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
-         shapeUP.aGPsig.ResizeTo( dist->aGPsigUP.GetNoElements() );
-         shapeUP.aGPsig = dist->aGPsigUP;
-         shapeUP.aGPbkg.ResizeTo( dist->aGPbkgUP.GetNoElements() );
-         shapeUP.aGPbkg = dist->aGPbkgUP;
-         Shapes shapeDN( name, dist->ptrain, 
-               dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
-         shapeDN.aGPsig.ResizeTo( dist->aGPsigDN.GetNoElements() );
-         shapeDN.aGPsig = dist->aGPsigDN;
-         shapeDN.aGPbkg.ResizeTo( dist->aGPbkgDN.GetNoElements() );
-         shapeDN.aGPbkg = dist->aGPbkgDN;
 
-         double pfit [] = {x[0], x[iparam], 1.0, integralsig, integralbkg};
+         double pfit [] = {x[0], x[1], x[iparam], 1.0, integralsig, integralbkg};
 
          // evaluate likelihood
          for( vector<Event>::iterator ev = eventvec_fit->begin(); ev < eventvec_fit->end(); ev++ ){
@@ -841,11 +780,7 @@ double Fitter::Min2LL(const double *x){
             if ( name.compare("mbl_gp") == 0 ){ // for mbl
                for( unsigned int j=0; j < ev->mbls.size(); j++ ){
                   if( ev->mbls[j] < dist->lbnd or ev->mbls[j] > dist->rbnd ) continue;
-                  double dn = fit_jfactor ? shapeDN.Ftot( &(ev->mbls[j]), pfit ) : 0.0;
-                  double ct = shape.Ftot( &(ev->mbls[j]), pfit );
-                  double up = fit_jfactor ? shapeUP.Ftot( &(ev->mbls[j]), pfit ) : 0.0;
-
-                  double val = fit_jfactor ? linapprox( x[6], dn, ct, up ) : ct;
+                  double val = shape.Ftot( &(ev->mbls[j]), pfit );
                   m2ll -= 2.0*ev->weight*log( val );
                }
             }
@@ -856,11 +791,7 @@ double Fitter::Min2LL(const double *x){
                }
                if( matchmbl ) continue;
                if( ev->mt2_220 < dist->lbnd or ev->mt2_220 > dist->rbnd ) continue;
-               double dn = fit_jfactor ? shapeDN.Ftot( &(ev->mt2_220), pfit ) : 0.0;
-               double ct = shape.Ftot( &(ev->mt2_220), pfit );
-               double up = fit_jfactor ? shapeUP.Ftot( &(ev->mt2_220), pfit ) : 0.0;
-
-               double val = fit_jfactor ? linapprox( x[6], dn, ct, up ) : ct;
+               double val = shape.Ftot( &(ev->mt2_220), pfit );
                m2ll -= 2.0*ev->weight*log( val );
             }
             else if ( name.compare("maos220_gp") == 0 ){ // for Maos 220
@@ -870,11 +801,7 @@ double Fitter::Min2LL(const double *x){
                for ( unsigned int j=0; j < sizeof(blv220array)/sizeof(blv220array[0]); j++){           
                   if( blv220array[j] < dist->lbnd or blv220array[j] > dist->rbnd ) continue;
                   if (useMaos220[j]){
-                     double dn = fit_jfactor ? shapeDN.Ftot( &(blv220array[j]), pfit ) : 0.0;
-                     double ct = shape.Ftot( &(blv220array[j]), pfit );
-                     double up = fit_jfactor ? shapeUP.Ftot( &(blv220array[j]), pfit ) : 0.0;
-
-                     double val = fit_jfactor ? linapprox( x[6], dn, ct, up ) : ct;
+                     double val = shape.Ftot( &(blv220array[j]), pfit );
                      m2ll -= 2.0*ev->weight*log( val );
                   }
 
@@ -895,10 +822,7 @@ double Fitter::Min2LL(const double *x){
             }
             else if ( name.compare("mt2_221_gp") == 0 ){ // for 221
                if( ev->mt2_221 < dist->lbnd or ev->mt2_221 > dist->rbnd ) continue;
-               double dn = fit_jfactor ? shapeDN.Ftot( &(ev->mt2_221), pfit ) : 0.0;
-               double ct = shape.Ftot( &(ev->mt2_221), pfit );
-               double up = fit_jfactor ? shapeUP.Ftot( &(ev->mt2_221), pfit ) : 0.0;
-               double val = fit_jfactor ? linapprox( x[6], dn, ct, up ) : ct;
+               double val = shape.Ftot( &(ev->mt2_221), pfit );
                m2ll -= 2.0*ev->weight*log( val );
             }
 
@@ -906,7 +830,7 @@ double Fitter::Min2LL(const double *x){
       }
    }
 
-   cout << m2ll << ": " << x[0] << " " << x[6] << endl;
+   cout << m2ll << ": " << x[0] << " " << x[1] << endl;
    return m2ll;
 }
 
@@ -920,8 +844,8 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_, string outf
    TFile *fileout = new TFile( outfile.c_str() , "RECREATE" );
    fileout->cd();
 
-   double xmin1s [] = {xmin[1], xmin[1], xmin[2], xmin[3], xmin[4]}; // the background for each variable, as it is positioned in minuit's parameter vector
-   double xerr1s [] = {xerr[1], xerr[1], xerr[2], xerr[3], xerr[4]}; // the background for each variable, as it is positioned in minuit's parameter vector
+   //double xmin1s [] = {xmin[2], xmin[3], xmin[4], xmin[3], xmin[4]}; // the background for each variable, as it is positioned in minuit's parameter vector
+   //double xerr1s [] = {xerr[1], xerr[1], xerr[2], xerr[3], xerr[4]}; // the background for each variable, as it is positioned in minuit's parameter vector
 
    // loop over distributions
    double chi2 = 0;
@@ -930,11 +854,11 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_, string outf
       string name = it->first;
       Distribution *dist = &(it->second);
       int iparam = -1;
-      if( name.compare("mbl_gp") == 0 ) iparam = 1;
-      if( name.compare("mt2_220_gp") == 0 ) iparam = 2;
-      if( name.compare("maos220_gp") == 0 ) iparam = 3;
-      if( name.compare("maos210_gp") == 0 ) iparam = 4;
-      if( name.compare("mt2_221_gp") == 0 ) iparam = 5;
+      if( name.compare("mbl_gp") == 0 ) iparam = 2;
+      if( name.compare("mt2_220_gp") == 0 ) iparam = 3;
+      if( name.compare("maos220_gp") == 0 ) iparam = 4;
+      if( name.compare("maos210_gp") == 0 ) iparam = 5;
+      if( name.compare("mt2_221_gp") == 0 ) iparam = 6;
 
       if( dist->activate ){// only do this if we're fitting the variable in question
 
@@ -946,7 +870,7 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_, string outf
          fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
          fptr->aGPbkg = dist->aGPbkg;
 
-         TF1 *ftemplate = new TF1( "ftemplate", fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 5);
+         TF1 *ftemplate = new TF1( "ftemplate", fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 6);
 
          TCanvas *canvas = new TCanvas( ("c_"+name).c_str(), ("c_"+name).c_str(), 800, 800);
          canvas->SetFillColor(0);
@@ -989,11 +913,11 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_, string outf
          hdata->Draw();
 
          // normalization inside likelihood function (temp)
-         ftemplate->SetParameters( xmin[0], 1.0, 1.0, 1.0, 1.0 );
+         ftemplate->SetParameters( xmin[0], xmin[1], 1.0, 1.0, 1.0, 1.0 );
          double integralsig = ftemplate->Integral(dist->lbnd, dist->rbnd);
-         ftemplate->SetParameters( xmin[0], 0.0, 1.0, 1.0, 1.0 );
+         ftemplate->SetParameters( xmin[0], xmin[1], 0.0, 1.0, 1.0, 1.0 );
          double integralbkg = ftemplate->Integral(dist->lbnd, dist->rbnd);
-         ftemplate->SetParameters( xmin[0], xmin1s[iparam],
+         ftemplate->SetParameters( xmin[0], xmin[1], xmin[iparam],
                hdata->Integral("width"), integralsig, integralbkg );
 
          ftemplate->SetLineWidth(2);
@@ -1041,6 +965,7 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_, string outf
 
          // This part (the profile computation may not yet be working correctly, or may not make sense.
          if ( compute_profile ){
+            /*
             //
             // plot likelihood near minimum
             //
@@ -1121,8 +1046,7 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_, string outf
             hLmbl->Draw("colz");
             cLmbl->Write("cLmbl");
 
-
-
+            */
          }
 
          delete fptr;

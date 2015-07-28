@@ -782,7 +782,7 @@ vector<bool> Fitter::MaosCut210( vector<Event>::iterator ev, TLorentzVector &nu1
    return toreturn;
 }
 
-void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
+void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ ){
 
    std::string pathstr;
    char* path = std::getenv("WORKING_DIR");
@@ -846,12 +846,12 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
 
                TH1D *hmc;
                if( sb[k] == "sig" ){
-                  hmc = (TH1D*)hists_[name]["ttbar"+smass+"_signal"]->Clone("hmc");
+                  hmc = (TH1D*)hists_[1][name]["ttbar"+smass+"_signal"]->Clone("hmc");
                }else{
-                  hmc = (TH1D*)hists_[name]["ttbar"+smass+"_mistag"]->Clone("hmc");
-                  hmc->Add( hists_[name]["ttbar"+smass+"_taus"] );
-                  hmc->Add( hists_[name]["ttbar"+smass+"_hadronic"] );
-                  hmc->Add( hists_[name]["other"] );
+                  hmc = (TH1D*)hists_[1][name]["ttbar"+smass+"_mistag"]->Clone("hmc");
+                  hmc->Add( hists_[1][name]["ttbar"+smass+"_taus"] );
+                  hmc->Add( hists_[1][name]["ttbar"+smass+"_hadronic"] );
+                  hmc->Add( hists_[1][name]["other"] );
                }
 
                hmc->SetTitle( hmc->GetTitle()+TString(" "+sb[k]+" shape @ "+smass+".5") );
@@ -881,14 +881,14 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
                fptr->Ainv_bkg.ResizeTo( dist->aGPbkg.GetNoElements(), dist->aGPbkg.GetNoElements() );
                fptr->Ainv_bkg = dist->Ainv_bkg;
 
-               TF1 *ftemplate = new TF1("ftemplate", fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 5);
+               TF1 *ftemplate = new TF1("ftemplate", fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 6);
                ftemplate->SetNpx(500);
 
                // normalization inside likelihood function (temp)
-               ftemplate->SetParameters( masspoints[j], 1-k, 1.0, 1.0, 1.0 );
+               ftemplate->SetParameters( masspoints[j], 1.0, 1-k, 1.0, 1.0, 1.0 );
                double integralsig = (sb[k] == "sig") ? ftemplate->Integral(dist->lbnd, dist->rbnd) : 1.0;
                double integralbkg = (sb[k] == "bkg") ? ftemplate->Integral(dist->lbnd, dist->rbnd) : 1.0;
-               ftemplate->SetParameters( masspoints[j], 1-k,
+               ftemplate->SetParameters( masspoints[j], 1.0, 1-k,
                      1.0, integralsig, integralbkg );
                ftemplate->SetLineWidth(2);
 
@@ -896,7 +896,7 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
                TGraphErrors *gpvar = new TGraphErrors();
                for(int x=dist->lbnd; x < dist->rbnd; x++){
                   gpvar->SetPoint(x, x, ftemplate->Eval(x));
-                  gpvar->SetPointError(x, 0, sqrt(fptr->Fmbl_gp_var(x,masspoints[j],sb[k])));
+                  gpvar->SetPointError(x, 0, sqrt(fptr->Fmbl_gp_var(x,masspoints[j],1.0,sb[k])));
                }
                gpvar->SetLineColor(2);
                gpvar->SetFillColor(5);
@@ -1119,9 +1119,9 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
          cmbl_signal->cd();
 
          // mass points
-         TH1D* mbl166 = (TH1D*)hists_[name]["ttbar166_signal"]->Clone("mbl166");
-         TH1D* mbl172 = (TH1D*)hists_[name]["ttbar172_signal"]->Clone("mbl172");
-         TH1D* mbl178 = (TH1D*)hists_[name]["ttbar178_signal"]->Clone("mbl178");
+         TH1D* mbl166 = (TH1D*)hists_[1][name]["ttbar166_signal"]->Clone("mbl166");
+         TH1D* mbl172 = (TH1D*)hists_[1][name]["ttbar172_signal"]->Clone("mbl172");
+         TH1D* mbl178 = (TH1D*)hists_[1][name]["ttbar178_signal"]->Clone("mbl178");
 
          mbl166->Scale( 1.0/mbl166->Integral("width") );
          mbl172->Scale( 1.0/mbl172->Integral("width") );
@@ -1146,20 +1146,20 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
          fptr->aGPsig = dist->aGPsig;
          fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
          fptr->aGPbkg = dist->aGPbkg;
-         TF1 *fmbl_tot = new TF1( ("f"+name+"_tot").c_str(), fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 5);
+         TF1 *fmbl_tot = new TF1( ("f"+name+"_tot").c_str(), fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 6);
 
-         fmbl_tot->SetParameters( 166.5, 1.0, 1.0, 1.0, 1.0 );
-         fmbl_tot->SetParameters( 166.5, 1.0, 1.0, fmbl_tot->Integral(dist->lbnd, dist->rbnd), 1.0 );
+         fmbl_tot->SetParameters( 166.5, 1.0, 1.0, 1.0, 1.0, 1.0 );
+         fmbl_tot->SetParameters( 166.5, 1.0, 1.0, 1.0, fmbl_tot->Integral(dist->lbnd, dist->rbnd), 1.0 );
          fmbl_tot->SetLineColor(2);
          fmbl_tot->DrawCopy("same");
 
-         fmbl_tot->SetParameters( 172.5, 1.0, 1.0, 1.0, 1.0 );
-         fmbl_tot->SetParameters( 172.5, 1.0, 1.0, fmbl_tot->Integral(dist->lbnd, dist->rbnd), 1.0 );
+         fmbl_tot->SetParameters( 172.5, 1.0, 1.0, 1.0, 1.0, 1.0 );
+         fmbl_tot->SetParameters( 172.5, 1.0, 1.0, 1.0, fmbl_tot->Integral(dist->lbnd, dist->rbnd), 1.0 );
          fmbl_tot->SetLineColor(1);
          fmbl_tot->DrawCopy("same");
 
-         fmbl_tot->SetParameters( 178.5, 1.0, 1.0, 1.0, 1.0 );
-         fmbl_tot->SetParameters( 178.5, 1.0, 1.0, fmbl_tot->Integral(dist->lbnd, dist->rbnd), 1.0 );
+         fmbl_tot->SetParameters( 178.5, 1.0, 1.0, 1.0, 1.0, 1.0 );
+         fmbl_tot->SetParameters( 178.5, 1.0, 1.0, 1.0, fmbl_tot->Integral(dist->lbnd, dist->rbnd), 1.0 );
          fmbl_tot->SetLineColor(3);
          fmbl_tot->DrawCopy("same");
 
@@ -1177,6 +1177,69 @@ void Fitter::PlotTemplates( map< string, map<string, TH1D*> >& hists_ ){
          delete cmbl_signal;
          delete fmbl_tot;
          delete lm;
+
+         TCanvas *cmbl_signal_jfact = new TCanvas( ("c_"+name+"_signal_jfact").c_str(),
+               (dist->title+" Template").c_str(), 800, 800);
+         cmbl_signal_jfact->cd();
+
+         // jfactor points
+         TH1D* mblDN = (TH1D*)hists_[0][name]["ttbar172_signal"]->Clone("mblDN");
+         TH1D* mblCENT = (TH1D*)hists_[1][name]["ttbar172_signal"]->Clone("mblCENT");
+         TH1D* mblUP = (TH1D*)hists_[2][name]["ttbar172_signal"]->Clone("mblUP");
+
+         mblDN->Scale( 1.0/mblDN->Integral("width") );
+         mblCENT->Scale( 1.0/mblCENT->Integral("width") );
+         mblUP->Scale( 1.0/mblUP->Integral("width") );
+
+         mblDN->SetLineColor(2);
+         mblCENT->SetLineColor(1);
+         mblUP->SetLineColor(3);
+         mblDN->SetMarkerColor(2);
+         mblCENT->SetMarkerColor(1);
+         mblUP->SetMarkerColor(3);
+
+         mblDN->DrawCopy();
+         mblCENT->DrawCopy("same");
+         mblUP->DrawCopy("same");
+
+         // likelihood
+         Shapes * fptr_jfact = new Shapes( name, dist->ptrain,
+               dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+         fptr_jfact->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
+         fptr_jfact->aGPsig = dist->aGPsig;
+         fptr_jfact->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
+         fptr_jfact->aGPbkg = dist->aGPbkg;
+         TF1 *fmbl_tot_jfact = new TF1( ("f"+name+"_tot").c_str(), fptr_jfact, &Shapes::Ftot, dist->lbnd, dist->rbnd, 6);
+
+         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[0], 1.0, 1.0, 1.0, 1.0 );
+         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[0], 1.0, 1.0, fmbl_tot_jfact->Integral(dist->lbnd, dist->rbnd), 1.0 );
+         fmbl_tot_jfact->SetLineColor(2);
+         fmbl_tot_jfact->DrawCopy("same");
+
+         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[1], 1.0, 1.0, 1.0, 1.0 );
+         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[1], 1.0, 1.0, fmbl_tot_jfact->Integral(dist->lbnd, dist->rbnd), 1.0 );
+         fmbl_tot_jfact->SetLineColor(1);
+         fmbl_tot_jfact->DrawCopy("same");
+
+         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[2], 1.0, 1.0, 1.0, 1.0 );
+         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[2], 1.0, 1.0, fmbl_tot_jfact->Integral(dist->lbnd, dist->rbnd), 1.0 );
+         fmbl_tot_jfact->SetLineColor(3);
+         fmbl_tot_jfact->DrawCopy("same");
+
+         TLegend *lm_jfact = new TLegend(0.76,0.59,0.98,0.77);
+         lm_jfact->SetFillStyle(0);
+         lm_jfact->SetBorderSize(0);
+         lm_jfact->AddEntry( mblDN, "j=0.95" );
+         lm_jfact->AddEntry( mblCENT, "j=1.00" );
+         lm_jfact->AddEntry( mblUP, "j=1.05" );
+         lm_jfact->Draw("same");
+
+         cmbl_signal_jfact->Write();
+
+         delete fptr_jfact;
+         delete cmbl_signal_jfact;
+         delete fmbl_tot_jfact;
+         delete lm_jfact;
 
       }
    }

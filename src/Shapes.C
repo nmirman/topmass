@@ -32,6 +32,8 @@ Shapes::Shapes( string var, vector<double>& ptraintmp, double gplength_x, double
    //for(int i=0; i < ntrain; i++) ptrain.push_back( ltrain + (i+0.5)*(rtrain-ltrain)/ntrain );
    for(unsigned int i=0; i < ptraintmp.size(); i++) ptrain.push_back( ptraintmp[i] );
 
+   ljfact = 0.1;
+
    // right and left bounds -- set to zero unless needed
    lbx = 0.0;
    rbx = 0.0;
@@ -40,6 +42,7 @@ Shapes::Shapes( string var, vector<double>& ptraintmp, double gplength_x, double
    do_gpvar = false;
 
    for(int i=0; i < NMP; i++) masspnts[i] = Fitter::masspoints[i];
+   for(int i=0; i < NJP; i++) jfactpnts[i] = Fitter::jfactpoints[i];
 
 }
 
@@ -55,12 +58,14 @@ double Shapes::Ftot(double *px, double *pp){
 
    double x = px[0];
    double mt = pp[0];
-   double k = pp[1];
-   double norm = pp[2];
-   double integralsig = pp[3];
-   double integralbkg = pp[4];
+   double jfact = pp[1];
+   double k = pp[2];
+   double norm = pp[3];
+   double integralsig = pp[4];
+   double integralbkg = pp[5];
 
-   double val = norm*(k*Fmbl_gp(x, mt, "sig")/integralsig + (1-k)*Fmbl_gp(x, mt, "bkg")/integralbkg);
+   double val = norm*(k*Fmbl_gp(x, mt, jfact, "sig")/integralsig
+         + (1-k)*Fmbl_gp(x, mt, jfact, "bkg")/integralbkg);
    if( val <= 0 or (x > lbx and x < rbx) ) return 1E-10;
    else return val;
 }
@@ -85,40 +90,43 @@ double Shapes::Fsig_param(double x, double mt){
    return gaus1+gaus2+landau;
 }
 
-double Shapes::Fmbl_gp(double x, double mt, string sb){
+double Shapes::Fmbl_gp(double x, double mt, double jfact, string sb){
 
    double fgp = 0;
    for(unsigned int i=0; i < ptrain.size(); i++){
       for(int j=0; j < NMP; j++){
-         double agp = 0;
-         if( sb.compare("sig") == 0 ) agp = aGPsig[i+j*ptrain.size()];
-         else if( sb.compare("bkg") == 0 ) agp = aGPbkg[i+j*ptrain.size()];
-         else{
-            cout << "ERROR in GP shape." << endl;
-            return -1;
+         for(int k=0; k < NJP; k++){
+            double agp = 0;
+            if( sb.compare("sig") == 0 ) agp = aGPsig[i+j*ptrain.size()+k*ptrain.size()*NMP];
+            else if( sb.compare("bkg") == 0 ) agp = aGPbkg[i+j*ptrain.size()+k*ptrain.size()*NMP];
+            else{
+               cout << "ERROR in GP shape." << endl;
+               return -1;
+            }
+            fgp += agp*GPkern( x, ptrain[i], lx, mt, masspnts[j], lmass, jfact, jfactpnts[k], ljfact );
          }
-         fgp += agp*GPkern( x, ptrain[i], lx, mt, masspnts[j], lmass );
       }
    }
 
    return fgp;
 }
 
-double Shapes::Fmbl_gp_var(double x, double mt, string sb){
+double Shapes::Fmbl_gp_var(double x, double mt, double jfact, string sb){
 
    int ntrain = ptrain.size();
 
    // vector of covariances
    TVectorD k(ntrain*NMP);
-   for(int i=0; i < ntrain*NMP; i++){
+   for(int i=0; i < ntrain*NMP*NJP; i++){
       int im = i % ntrain;
       int imass = i / ntrain;
-      k[i] = GPkern( x, ptrain[im], lx, mt, masspnts[imass], lmass );
+      int ijfact = i / (ntrain*NMP);
+      k[i] = GPkern( x, ptrain[im], lx, mt, masspnts[imass], lmass, jfact, jfactpnts[ijfact], ljfact );
    }
    TVectorD kT = k;
 
    double c1=0, c2=0;
-   c1 = GPkern( x, x, lx, mt, mt, lmass );
+   c1 = GPkern( x, x, lx, mt, mt, lmass, jfact, jfact, ljfact );
    if( sb.compare("sig") == 0 ) k *= Ainv_sig;
    else if( sb.compare("bkg") == 0 ) k *= Ainv_bkg;
    else{
@@ -130,13 +138,15 @@ double Shapes::Fmbl_gp_var(double x, double mt, string sb){
    return (c1-c2);
 }
 
-double Shapes::GPkern(double x1, double x2, double lsx, double m1, double m2, double lsm ){
+double Shapes::GPkern(double x1, double x2, double lsx, double m1, double m2, double lsm,
+     double j1, double j2, double lj ){
 
-   double kernel = 1E-06*gnorm2*gnorm1*exp(-0.5*(pow( (x1-x2)/lsx, 2)+pow( (m1-m2)/lsm, 2)));
+   double kernel = 1E-06*gnorm2*gnorm1*exp(-0.5*(pow( (x1-x2)/lsx, 2)+pow( (m1-m2)/lsm, 2)
+            +pow( (j1-j2)/lj, 2)));
    return kernel;
 }
 
-void Shapes::TrainGP( map< string, map<string, TH1D*> > & hists_,
+void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
      double &m2llsig, double &m2llbkg ){
 
    int ntrain = ptrain.size();
@@ -144,55 +154,67 @@ void Shapes::TrainGP( map< string, map<string, TH1D*> > & hists_,
    // histograms
    vector<TH1D*> hgp_sig;
    vector<TH1D*> hgp_bkg;
-   for(int i=0; i < NMP; i++){
+   for(int i=0; i < NMP*NJP; i++){
+
+      int im, ijfact;
+      iGP(i,im,ijfact);
 
       stringstream ssmass;
-      ssmass << floor(masspnts[i]);
+      ssmass << floor(masspnts[im]);
       string smass = ssmass.str();
 
+      stringstream sjfact;
+      sjfact << jfactpnts[ijfact];
+      string jfact = sjfact.str();
+
       // signal shape
-      hgp_sig.push_back( (TH1D*)hists_[name]["ttbar"+smass+"_signal"]
+      hgp_sig.push_back( (TH1D*)hists_[ijfact][name]["ttbar"+smass+"_signal"]
             ->Clone( ("hgp_sig"+smass).c_str()) );
       hgp_sig[i]->Scale( 1.0/hgp_sig[i]->Integral("width") );
 
       // background shape
-      hgp_bkg.push_back( (TH1D*)hists_[name]["ttbar"+smass+"_mistag"]
+      hgp_bkg.push_back( (TH1D*)hists_[ijfact][name]["ttbar"+smass+"_mistag"]
             ->Clone( ("hgp_bkg"+smass).c_str()) );
-      hgp_bkg[i]->Add( hists_[name]["ttbar"+smass+"_hadronic"] );
-      hgp_bkg[i]->Add( hists_[name]["ttbar"+smass+"_taus"] );
-      hgp_bkg[i]->Add( hists_[name]["other"] );
+      hgp_bkg[i]->Add( hists_[ijfact][name]["ttbar"+smass+"_hadronic"] );
+      hgp_bkg[i]->Add( hists_[ijfact][name]["ttbar"+smass+"_taus"] );
+      hgp_bkg[i]->Add( hists_[ijfact][name]["other"] );
       hgp_bkg[i]->Scale( 1.0/hgp_bkg[i]->Integral("width") );
 
       for(int n=0; n < hgp_sig[i]->GetNbinsX(); n++){
          if( hgp_sig[i]->GetBinError(n) < 5E-06 ) hgp_sig[i]->SetBinError(n, 5E-06);
          if( hgp_bkg[i]->GetBinError(n) < 5E-06 ) hgp_bkg[i]->SetBinError(n, 5E-06);
       }
-      
 
    }
 
    // compute covariance matrix
-   TMatrixD K(ntrain*NMP,ntrain*NMP);
-   for(int i=0; i < ntrain*NMP; i++){
-      for(int j=0; j < ntrain*NMP; j++){
+   TMatrixD K(ntrain*NMP*NJP,ntrain*NMP*NJP);
+   for(int i=0; i < ntrain*NMP*NJP; i++){
+      for(int j=0; j < ntrain*NMP*NJP; j++){
          int im = i % ntrain;
          int jm = j % ntrain;
-         int imass = i / ntrain;
-         int jmass = j / ntrain;
-         K[i][j] = GPkern( ptrain[im], ptrain[jm], lx, masspnts[imass], masspnts[jmass], lmass );
+
+         int i_index = i / ntrain;
+         int j_index = j / ntrain;
+         int imass, jmass, ijfact, jjfact;
+         iGP( i_index, imass, ijfact );
+         iGP( j_index, jmass, jjfact );
+
+         K[i][j] = GPkern( ptrain[im], ptrain[jm], lx, masspnts[imass], masspnts[jmass], lmass,
+              jfactpnts[ijfact], jfactpnts[jjfact], ljfact );
      }
    }
    // compute noise matrix
-   TMatrixD Nsig(ntrain*NMP,ntrain*NMP);
-   TMatrixD Nbkg(ntrain*NMP,ntrain*NMP);
-   for(int i=0; i < ntrain*NMP; i++){
+   TMatrixD Nsig(ntrain*NMP*NJP,ntrain*NMP*NJP);
+   TMatrixD Nbkg(ntrain*NMP*NJP,ntrain*NMP*NJP);
+   for(int i=0; i < ntrain*NMP*NJP; i++){
       int im = i % ntrain;
-      int imass = i / ntrain;
-      double binerr_sig = hgp_sig[imass]->GetBinError( hgp_sig[imass]->FindBin(ptrain[im]) );
-      double binerr_bkg = hgp_bkg[imass]->GetBinError( hgp_bkg[imass]->FindBin(ptrain[im]) );
+      int index = i / ntrain;
+      double binerr_sig = hgp_sig[index]->GetBinError( hgp_sig[index]->FindBin(ptrain[im]) );
+      double binerr_bkg = hgp_bkg[index]->GetBinError( hgp_bkg[index]->FindBin(ptrain[im]) );
       binerr_sig *= sqrt(gnorm2);
       binerr_bkg *= sqrt(gnorm2);
-      for(int j=0; j < ntrain*NMP; j++){
+      for(int j=0; j < ntrain*NMP*NJP; j++){
          if( i==j ){
             Nsig[i][j] = binerr_sig*binerr_sig;//pow( max(binerr_sig,0.001), 2 );
             Nbkg[i][j] = binerr_bkg*binerr_bkg;//pow( max(binerr_bkg,0.001), 2 );
@@ -223,41 +245,41 @@ void Shapes::TrainGP( map< string, map<string, TH1D*> > & hists_,
    cout << "done" << endl;
    Ainv_sig.Clear();
    Ainv_bkg.Clear();
-   Ainv_sig.ResizeTo( ntrain*NMP, ntrain*NMP );
-   Ainv_bkg.ResizeTo( ntrain*NMP, ntrain*NMP );
+   Ainv_sig.ResizeTo( ntrain*NMP*NJP, ntrain*NMP*NJP );
+   Ainv_bkg.ResizeTo( ntrain*NMP*NJP, ntrain*NMP*NJP );
    Ainv_sig = (TMatrixD)Asinv_sig;
    Ainv_bkg = (TMatrixD)Asinv_bkg;
 
    TMatrixD Ktmp = K;
-   for(int i=0; i < ntrain*NMP; i++) Ktmp[i][i] += 10E-9;
+   for(int i=0; i < ntrain*NMP*NJP; i++) Ktmp[i][i] += 10E-9;
    TDecompChol CholK(Ktmp);
    status = 0;
    TMatrixDSym Ksinv = CholK.Invert(status);
    Kinv.Clear();
-   Kinv.ResizeTo( ntrain*NMP, ntrain*NMP );
+   Kinv.ResizeTo( ntrain*NMP*NJP, ntrain*NMP*NJP );
    Kinv = (TMatrixD)Ksinv;
 
    TMatrixD Ainv_sigtemp = Ainv_sig;
    TMatrixD Ainv_bkgtemp = Ainv_bkg;
 
    // vector of training points
-   TVectorD ysig(ntrain*NMP);
-   TVectorD ybkg(ntrain*NMP);
-   for(int i=0; i < ntrain*NMP; i++){
+   TVectorD ysig(ntrain*NMP*NJP);
+   TVectorD ybkg(ntrain*NMP*NJP);
+   for(int i=0; i < ntrain*NMP*NJP; i++){
       int im = i % ntrain;
-      int imass = i / ntrain;
-      ysig[i] = hgp_sig[imass]->GetBinContent( hgp_sig[imass]->FindBin(ptrain[im]) );
-      ybkg[i] = hgp_bkg[imass]->GetBinContent( hgp_bkg[imass]->FindBin(ptrain[im]) );
+      int index = i / ntrain;
+      ysig[i] = hgp_sig[index]->GetBinContent( hgp_sig[index]->FindBin(ptrain[im]) );
+      ybkg[i] = hgp_bkg[index]->GetBinContent( hgp_bkg[index]->FindBin(ptrain[im]) );
    }
 
    // alpha vector
    aGPsig.Clear();
    aGPbkg.Clear();
 
-   aGPsig.ResizeTo( ntrain*NMP );
+   aGPsig.ResizeTo( ntrain*NMP*NJP );
    aGPsig = Ainv_sigtemp*ysig;
 
-   aGPbkg.ResizeTo( ntrain*NMP );
+   aGPbkg.ResizeTo( ntrain*NMP*NJP );
    aGPbkg = Ainv_bkgtemp*ybkg;
 
    // compute marginal likelihood
@@ -287,7 +309,7 @@ void Shapes::TrainGP( map< string, map<string, TH1D*> > & hists_,
    return;
 }
 
-void Shapes::LearnGPparams( map< string, map<string, TH1D*> > & hists_ ){
+void Shapes::LearnGPparams( vector< map< string, map<string, TH1D*> > >& hists_ ){
 
    gMinuit = new ROOT::Minuit2::Minuit2Minimizer ( ROOT::Minuit2::kMigrad );
    gMinuit->SetPrintLevel(3);
@@ -381,7 +403,7 @@ double Shapes::GPm2llX( const double *x ){
       string smass = ssmass.str();
 
       // signal shape
-      hgp_sig.push_back( (TH1D*)(*hists_train_)[name]["ttbar"+smass+"_signal"]
+      hgp_sig.push_back( (TH1D*)(*hists_train_)[1][name]["ttbar"+smass+"_signal"]
             ->Clone( ("hgp_sigx"+smass).c_str()) );
       hgp_sig[j]->Scale( 1.0/hgp_sig[j]->Integral("width") );
 
@@ -414,10 +436,10 @@ double Shapes::GPm2llX( const double *x ){
       for(unsigned int i=0; i < ptrainX.size(); i++){
          for(int j=0; j < NMP; j++){
 
-            double mean = Fmbl_gp(ptrainX[i],masspnts[j],"sig");
+            double mean = Fmbl_gp(ptrainX[i],masspnts[j],1.0,"sig");
             double yi = hgp_sig[j]->GetBinContent( hgp_sig[j]->FindBin(ptrainX[i]) );
             double var = -1;
-            if( do_gpvar ) var = Fmbl_gp_var(ptrainX[i],masspnts[j],"sig");
+            if( do_gpvar ) var = Fmbl_gp_var(ptrainX[i],masspnts[j],1.0,"sig");
             else var = pow(hgp_sig[j]->GetBinError( hgp_sig[j]->FindBin(ptrainX[i]) ), 2);
 
             if( var <= 0 ){
@@ -457,7 +479,7 @@ double Shapes::GPm2llLOOCV( const double *x ){
       string smass = ssmass.str();
 
       // signal shape
-      hgp_sig.push_back( (TH1D*)(*hists_train_)[name]["ttbar"+smass+"_signal"]
+      hgp_sig.push_back( (TH1D*)(*hists_train_)[1][name]["ttbar"+smass+"_signal"]
             ->Clone( ("hgp_sigx"+smass).c_str()) );
       hgp_sig[j]->Scale( 1.0/hgp_sig[j]->Integral("width") );
 
@@ -495,4 +517,12 @@ double Shapes::GPm2llLOOCV( const double *x ){
 
    return m2ll;
 
+}
+
+void Shapes::iGP( int index, int &mass, int &jfactor ){
+
+   mass = index % NMP;
+   jfactor = index / NMP;
+   
+   return;
 }

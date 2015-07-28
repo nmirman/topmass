@@ -37,7 +37,7 @@ void print_usage(){
    cout << setw(25) << "\t-2 --maos220" << "Activate MAOS 220 distribution.\n";
    cout << setw(25) << "\t-1 --maos210" << "Activate MAOS 210 distribution.\n";
    cout << setw(25) << "\t-9 --syst <string>" << "Run with a systematic variation.\n";
-   cout << setw(25) << "\t-1 --jfactor" << "JES-stable fit.\n";
+   cout << setw(25) << "\t-q --jfactor" << "JES-stable fit.\n";
    cout << setw(25) << "\t-g --outdir <string>" << "Output fit results.\n";
    cout << setw(25) << "\t-h --help" << "Display this menu.\n";
    cout << endl;
@@ -69,7 +69,7 @@ int main(int argc, char* argv[]){
    map< string, map<string, TH2D*> > hists2d_test_;
 
    vector<map< string, map<string, TH1D*> > > hists_jvec_train_;
-   vector<map< string, map<string, TH1D*> > > hists2d_jvec_train_;
+   vector<map< string, map<string, TH2D*> > > hists2d_jvec_train_;
 
    // output fit results
    int run_number=-1;
@@ -371,25 +371,26 @@ int main(int argc, char* argv[]){
    fitter.FillHists( hists_train_, hists2d_train_, eventvec_train );
    fitter.FindPTrain( hists_train_ );
 
-   if( fitter.fit_jfactor ){
+   hists_jvec_train_.resize(3);
+   hists2d_jvec_train_.resize(3);
 
-      hists_jvec_train_.resize(5);
-      hists2d_jvec_train_.resize(5);
+   for(int i=0; i < 3; i++){
+      vector<Event> eventvec_temp;
 
-      for(int i=0; i < 5; i++){
-         vector<Event> eventvec_temp;
-
-         for(vector<Event>::iterator ev = eventvec_train.begin(); ev != eventvec_train.end(); ev++){
-            eventvec_temp.push_back( *ev );
-         }
-         fitter.JShift( eventvec_temp, 0.98+0.01*i );
-         fitter.GetVariables( eventvec_temp );
-         fitter.DeclareHists( hists_jvec_train_[i], hists2d_jvec_train_[i], "train"+string(98+i) );
-         fitter.FillHists( hists_jvec_train_[i], hists2d_jvec_train_[i], eventvec_temp );
-
-         // release memory in eventvec_temp
-         vector<Event>().swap( eventvec_temp );
+      for(vector<Event>::iterator ev = eventvec_train.begin(); ev != eventvec_train.end(); ev++){
+         eventvec_temp.push_back( *ev );
       }
+
+      ostringstream jstring;
+      jstring << 100*fitter.jfactpoints[i];
+
+      fitter.JShift( eventvec_temp, fitter.jfactpoints[i] );
+      fitter.GetVariables( eventvec_temp );
+      fitter.DeclareHists( hists_jvec_train_[i], hists2d_jvec_train_[i], "train"+jstring.str() );
+      fitter.FillHists( hists_jvec_train_[i], hists2d_jvec_train_[i], eventvec_temp );
+
+      // release memory in eventvec_temp
+      vector<Event>().swap( eventvec_temp );
 
    }
 
@@ -597,7 +598,7 @@ int main(int argc, char* argv[]){
                   Shapes * fptr = new Shapes( name, dist->ptrain,
                         dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
                   cout << "aGP CENTRAL" << endl;
-                  fptr->TrainGP( hists_train_, m2llsig, m2llbkg );
+                  fptr->TrainGP( hists_jvec_train_, m2llsig, m2llbkg );
                   cout << "done" << endl;
 
                   dist->aGPsig.ResizeTo( fptr->aGPsig.GetNoElements() );
@@ -607,6 +608,7 @@ int main(int argc, char* argv[]){
 
                   delete fptr;
 
+                  /*
                   if( fitter.fit_jfactor ){
                      Shapes * fptr2 = new Shapes( name, dist->ptrain,
                            dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
@@ -634,6 +636,7 @@ int main(int argc, char* argv[]){
 
                      delete fptr3;
                   }
+                  */
                }
 
             }
@@ -663,19 +666,19 @@ int main(int argc, char* argv[]){
             const double *par = fitter.gMinuit->X();
             const double *par_err = fitter.gMinuit->Errors();
             mt = par[0];
-            kmbl = par[1];
             mt_err = par_err[0];
-            kmbl_err = par_err[1];
-            k220 = par[2];
-            k220_err = par_err[2];
-            kmaos220 = par[3];
-            kmaos220_err = par_err[3];
-            kmaos210 = par[4];
-            kmaos210_err = par_err[4]; 
-            k221 = par[5];
-            k221_err = par_err[5];
-            jesfactor = par[6];
-            jesfactor_err = par_err[6];
+            jesfactor = par[1];
+            jesfactor_err = par_err[1];
+            kmbl = par[2];
+            kmbl_err = par_err[2];
+            k220 = par[3];
+            k220_err = par_err[3];
+            kmaos220 = par[4];
+            kmaos220_err = par_err[4];
+            kmaos210 = par[5];
+            kmaos210_err = par_err[5]; 
+            k221 = par[6];
+            k221_err = par_err[6];
             fitchi2 = fitter.fitchi2;
 
             eventvec_fit.clear();
@@ -699,7 +702,7 @@ int main(int argc, char* argv[]){
                if( dist->activate ){
                   Shapes * fptr = new Shapes( name, dist->ptrain,
                         dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
-                  fptr->TrainGP( hists_train_, m2llsig, m2llbkg );
+                  fptr->TrainGP( hists_jvec_train_, m2llsig, m2llbkg );
 
                   dist->aGPsig.ResizeTo( fptr->aGPsig.GetNoElements() );
                   dist->aGPsig = fptr->aGPsig;
@@ -716,7 +719,7 @@ int main(int argc, char* argv[]){
 
             }
 
-            fitter.PlotTemplates( hists_train_ );
+            fitter.PlotTemplates( hists_jvec_train_ );
 
             for(int j=0; j < NMP; j++){
                tsig_mbl_chi2[j] = fitter.tsig_mbl_chi2[j];
@@ -735,7 +738,7 @@ int main(int argc, char* argv[]){
             cout << "Learning hyperparameters for distribution " << name << "..." << endl;
             Shapes * fptrtmp = new Shapes( name, dist->ptrain,
                   dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
-            fptrtmp->LearnGPparams( hists_train_ );
+            fptrtmp->LearnGPparams( hists_jvec_train_ );
 
             dist->glx = fptrtmp->lx;
             dist->glmt = fptrtmp->lmass;
@@ -745,7 +748,7 @@ int main(int argc, char* argv[]){
             double m2llsig, m2llbkg;
             Shapes * fptr = new Shapes( name, dist->ptrain,
                   dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
-            fptr->TrainGP( hists_train_, m2llsig, m2llbkg );
+            fptr->TrainGP( hists_jvec_train_, m2llsig, m2llbkg );
 
             dist->aGPsig.ResizeTo( fptr->aGPsig.GetNoElements() );
             dist->aGPsig = fptr->aGPsig;
@@ -758,7 +761,7 @@ int main(int argc, char* argv[]){
             dist->Ainv_bkg = fptr->Ainv_bkg;
 
             cout << "begin PlotTemplates" << endl;
-            fitter.PlotTemplates( hists_train_ );
+            fitter.PlotTemplates( hists_jvec_train_ );
             cout << "end PlotTemplates" << endl;
             delete fptr;
             delete fptrtmp;

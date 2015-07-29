@@ -518,11 +518,11 @@ void Fitter::JShift( vector<Event>& eventvec, double jshift ){
 
       // met = met_uncl - lep1 - lep2 - jets
       if( jshift != 1.0 ){
-         //met -= (jshift-1)*jet1;
-         //met -= (jshift-1)*jet2;
+         met -= (jshift-1)*jet1;
+         met -= (jshift-1)*jet2;
          jet1 *= jshift;
          jet2 *= jshift;
-         met -= (jshift-1)*jets;
+         //met -= (jshift-1)*jets;
       }
 
       ev->jet1 = jet1;

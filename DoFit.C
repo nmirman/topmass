@@ -53,9 +53,9 @@ int main(int argc, char* argv[]){
    Fitter fitter;
    map<string, Dataset> datasets;
    vector<Event> eventvec_datamc;
-   vector<Event> eventvec_train;
-   vector<Event> eventvec_trainUP;
-   vector<Event> eventvec_trainDN;
+   //vector<Event> eventvec_train;
+   //vector<Event> eventvec_trainUP;
+   //vector<Event> eventvec_trainDN;
    vector<Event> eventvec_test;
    map< string, map<string, TH1D*> > hists_all_;
    map< string, map<string, TH1D*> > hists_train_;
@@ -379,32 +379,32 @@ int main(int argc, char* argv[]){
    string systs [] = {"JESTotalDN", "Central", "JESTotalUP"};
    for(int i=0; i < 3; i++){
       cout << "\nLoading datasets: training " << i << endl;
-      vector<Event> eventvec_train;
+      vector<Event> eventvec_temp;
 
-      //for(vector<Event>::iterator ev = eventvec_train.begin(); ev != eventvec_train.end(); ev++){
+      //for(vector<Event>::iterator ev = eventvec_temp.begin(); ev != eventvec_temp.end(); ev++){
       //   eventvec_temp.push_back( *ev );
       //}
-      //fitter.ReadDatasets( datasets, eventvec_train, "train", systs[i], fracevts, statval_numPE, statval_PE );
-      fitter.ReadDatasets( datasets, eventvec_train, "train", nsyst, fracevts, statval_numPE, statval_PE );
+      //fitter.ReadDatasets( datasets, eventvec_temp, "train", systs[i], fracevts, statval_numPE, statval_PE );
+      fitter.ReadDatasets( datasets, eventvec_temp, "train", nsyst, fracevts, statval_numPE, statval_PE );
 
       int pdfvar = -1;
       if( nsyst.find("PDFvar") != string::npos ){
          string nametemp = nsyst;
          nametemp.erase(0,6);
          pdfvar = atoi( nametemp.c_str() );
-         fitter.PDFReweight( eventvec_train, pdfvar );
+         fitter.PDFReweight( eventvec_temp, pdfvar );
       }
 
       ostringstream jstring;
       jstring << 100*fitter.jfactpoints[i];
 
-      fitter.JShift( eventvec_train, fitter.jfactpoints[i] );
-      fitter.GetVariables( eventvec_train );
+      fitter.JShift( eventvec_temp, fitter.jfactpoints[i] );
+      fitter.GetVariables( eventvec_temp );
       fitter.DeclareHists( hists_jvec_train_[i], hists2d_jvec_train_[i], "train"+jstring.str() );
-      fitter.FillHists( hists_jvec_train_[i], hists2d_jvec_train_[i], eventvec_train );
+      fitter.FillHists( hists_jvec_train_[i], hists2d_jvec_train_[i], eventvec_temp );
 
       // release memory in eventvec_temp
-      vector<Event>().swap( eventvec_train );
+      vector<Event>().swap( eventvec_temp );
 
    }
 

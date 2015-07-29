@@ -354,10 +354,11 @@ int main(int argc, char* argv[]){
    // events for GP training
    // ********************************************************
    
-   cout << "\nLoading datasets: training" << endl;
-   fitter.ReadDatasets( datasets, eventvec_train, "train", nsyst, fracevts, statval_numPE, statval_PE );
+   //cout << "\nLoading datasets: training" << endl;
+   //fitter.ReadDatasets( datasets, eventvec_train, "train", nsyst, fracevts, statval_numPE, statval_PE );
 
    // pdf systematics
+   /*
    int pdfvar = -1;
    if( nsyst.find("PDFvar") != string::npos ){
          string nametemp = nsyst;
@@ -370,32 +371,48 @@ int main(int argc, char* argv[]){
    fitter.DeclareHists( hists_train_, hists2d_train_, "train" );
    fitter.FillHists( hists_train_, hists2d_train_, eventvec_train );
    fitter.FindPTrain( hists_train_ );
+   */
 
    hists_jvec_train_.resize(3);
    hists2d_jvec_train_.resize(3);
 
+   string systs [] = {"JESTotalDN", "Central", "JESTotalUP"};
    for(int i=0; i < 3; i++){
-      vector<Event> eventvec_temp;
+      cout << "\nLoading datasets: training " << i << endl;
+      vector<Event> eventvec_train;
 
-      for(vector<Event>::iterator ev = eventvec_train.begin(); ev != eventvec_train.end(); ev++){
-         eventvec_temp.push_back( *ev );
+      //for(vector<Event>::iterator ev = eventvec_train.begin(); ev != eventvec_train.end(); ev++){
+      //   eventvec_temp.push_back( *ev );
+      //}
+      //fitter.ReadDatasets( datasets, eventvec_train, "train", systs[i], fracevts, statval_numPE, statval_PE );
+      fitter.ReadDatasets( datasets, eventvec_train, "train", nsyst, fracevts, statval_numPE, statval_PE );
+
+      int pdfvar = -1;
+      if( nsyst.find("PDFvar") != string::npos ){
+         string nametemp = nsyst;
+         nametemp.erase(0,6);
+         pdfvar = atoi( nametemp.c_str() );
+         fitter.PDFReweight( eventvec_train, pdfvar );
       }
 
       ostringstream jstring;
       jstring << 100*fitter.jfactpoints[i];
 
-      fitter.JShift( eventvec_temp, fitter.jfactpoints[i] );
-      fitter.GetVariables( eventvec_temp );
+      fitter.JShift( eventvec_train, fitter.jfactpoints[i] );
+      fitter.GetVariables( eventvec_train );
       fitter.DeclareHists( hists_jvec_train_[i], hists2d_jvec_train_[i], "train"+jstring.str() );
-      fitter.FillHists( hists_jvec_train_[i], hists2d_jvec_train_[i], eventvec_temp );
+      fitter.FillHists( hists_jvec_train_[i], hists2d_jvec_train_[i], eventvec_train );
 
       // release memory in eventvec_temp
-      vector<Event>().swap( eventvec_temp );
+      vector<Event>().swap( eventvec_train );
 
    }
 
+   fitter.FindPTrain( hists_jvec_train_[1] );
+
+
    // release memory in eventvec_train
-   vector<Event>().swap( eventvec_train );
+   //vector<Event>().swap( eventvec_train );
 
 
    // ********************************************************

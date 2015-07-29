@@ -61,7 +61,7 @@ Fitter::~Fitter(){
 }
 
 const double Fitter::masspoints[NMP] = {166.5, 169.5, 171.5, 172.5, 173.5, 175.5, 178.5};
-const double Fitter::jfactpoints[NJP] = {0.95, 1.0, 1.05};
+const double Fitter::jfactpoints[NJP] = {0.98, 1.00, 1.02};
 
 void Fitter::InitializeDists(){
 
@@ -518,6 +518,8 @@ void Fitter::JShift( vector<Event>& eventvec, double jshift ){
 
       // met = met_uncl - lep1 - lep2 - jets
       if( jshift != 1.0 ){
+         //met -= (jshift-1)*jet1;
+         //met -= (jshift-1)*jet2;
          jet1 *= jshift;
          jet2 *= jshift;
          met -= (jshift-1)*jets;
@@ -678,7 +680,7 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
    gMinuit->SetVariable(0, "topMass", 175.0, 0.1);
 
    if( fit_jfactor ){
-      gMinuit->SetLimitedVariable(1, "jesfactor", 1.0, 0.01, 0.95, 1.05);
+      gMinuit->SetLimitedVariable(1, "jesfactor", 1.0, 0.001, 0.95, 1.05);
    }else{
       gMinuit->SetFixedVariable(1, "jesfactor", 1.0);
    }

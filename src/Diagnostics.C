@@ -1229,9 +1229,9 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
          TLegend *lm_jfact = new TLegend(0.76,0.59,0.98,0.77);
          lm_jfact->SetFillStyle(0);
          lm_jfact->SetBorderSize(0);
-         lm_jfact->AddEntry( mblDN, "j=0.95" );
+         lm_jfact->AddEntry( mblDN, "j=0.98" );
          lm_jfact->AddEntry( mblCENT, "j=1.00" );
-         lm_jfact->AddEntry( mblUP, "j=1.05" );
+         lm_jfact->AddEntry( mblUP, "j=1.02" );
          lm_jfact->Draw("same");
 
          cmbl_signal_jfact->Write();

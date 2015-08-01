@@ -9,7 +9,7 @@
 #define SHAPES_H
 
 #define NMP 7
-#define NJP 3
+#define NJP 5
 #define NGLB = NMP * NJP
 
 using namespace std;

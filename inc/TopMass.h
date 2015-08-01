@@ -17,7 +17,7 @@
 using namespace std;
 
 #define NMP 7
-#define NJP 3
+#define NJP 5
 
 struct Dataset {
 

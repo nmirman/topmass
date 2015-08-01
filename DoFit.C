@@ -373,11 +373,11 @@ int main(int argc, char* argv[]){
    fitter.FindPTrain( hists_train_ );
    */
 
-   hists_jvec_train_.resize(3);
-   hists2d_jvec_train_.resize(3);
+   hists_jvec_train_.resize(5);
+   hists2d_jvec_train_.resize(5);
 
    string systs [] = {"JESTotalDN", "Central", "JESTotalUP"};
-   for(int i=0; i < 3; i++){
+   for(int i=0; i < 5; i++){
       cout << "\nLoading datasets: training " << i << endl;
       vector<Event> eventvec_temp;
 
@@ -408,7 +408,7 @@ int main(int argc, char* argv[]){
 
    }
 
-   fitter.FindPTrain( hists_jvec_train_[1] );
+   fitter.FindPTrain( hists_jvec_train_[2] );
 
 
    // release memory in eventvec_train

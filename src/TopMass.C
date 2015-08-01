@@ -61,7 +61,7 @@ Fitter::~Fitter(){
 }
 
 const double Fitter::masspoints[NMP] = {166.5, 169.5, 171.5, 172.5, 173.5, 175.5, 178.5};
-const double Fitter::jfactpoints[NJP] = {0.98, 1.00, 1.02};
+const double Fitter::jfactpoints[NJP] = {0.996, 0.998, 1.000, 1.002, 1.004};
 
 void Fitter::InitializeDists(){
 
@@ -303,6 +303,8 @@ void Fitter::ReadDatasets(map<string, Dataset>& datasets, vector<Event>& events,
                tsyst.c_str(), events, 0, -1, -1, -1 );
       }
 
+      string test_syst = "Central";
+      if( nsyst.find("JES") != string::npos ) test_syst = nsyst;
       // events for training and testing
       if( name.compare("data") != 0 ){
          if( type == "train" ){
@@ -311,7 +313,8 @@ void Fitter::ReadDatasets(map<string, Dataset>& datasets, vector<Event>& events,
          }
          if( type == "test" ){
             ReadNtuple( *dat, nametmp, dat->mc_xsec/dat->mc_nevts,
-                  "Central", events, 0, fracevts, statval_numPE, statval_PE );
+                  //"Central", events, 0, fracevts, statval_numPE, statval_PE );
+                  test_syst.c_str(), events, 0, fracevts, statval_numPE, statval_PE );
          }
       }
 

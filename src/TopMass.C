@@ -53,6 +53,8 @@ Fitter::Fitter(){
    compute_maos220 = false;
    compute_maos210 = false;
 
+   fit_jfactor = false;
+
 }
 
 Fitter::~Fitter(){
@@ -303,6 +305,11 @@ void Fitter::ReadDatasets(map<string, Dataset>& datasets, vector<Event>& events,
                tsyst.c_str(), events, 0, -1, -1, -1 );
       }
 
+      string test_syst = "Central";
+      if( nsyst.find("JES") != string::npos ){
+         tsyst = "Central";
+         test_syst = nsyst;
+      }
       // events for training and testing
       if( name.compare("data") != 0 ){
          if( type == "train" ){
@@ -311,7 +318,7 @@ void Fitter::ReadDatasets(map<string, Dataset>& datasets, vector<Event>& events,
          }
          if( type == "test" ){
             ReadNtuple( *dat, nametmp, dat->mc_xsec/dat->mc_nevts,
-                  "Central", events, 0, fracevts, statval_numPE, statval_PE );
+                  test_syst.c_str(), events, 0, fracevts, statval_numPE, statval_PE );
          }
       }
 
@@ -518,11 +525,11 @@ void Fitter::JShift( vector<Event>& eventvec, double jshift ){
 
       // met = met_uncl - lep1 - lep2 - jets
       if( jshift != 1.0 ){
-         met -= (jshift-1)*jet1;
-         met -= (jshift-1)*jet2;
+         //met -= (jshift-1)*jet1;
+         //met -= (jshift-1)*jet2;
          jet1 *= jshift;
          jet2 *= jshift;
-         //met -= (jshift-1)*jets;
+         met -= (jshift-1)*jets;
       }
 
       ev->jet1 = jet1;

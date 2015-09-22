@@ -343,7 +343,7 @@ void Fitter::FillHists( map< string, map<string, TH1D*> >& hists_, map< string, 
    return;
 }
 
-void Fitter::PrintHists( map< string, map<string, TH1D*> >& hists_, map< string, map<string, TH2D*> >& hists2d_ ){
+void Fitter::PrintHists( map< string, map<string, TH1D*> >& hists_, map< string, map<string, TH2D*> >& hists2d_, string outfile ){
    cout << "Printing data/mc plots." << endl;
 
    typedef map<string, TH1D*> tmap;
@@ -352,15 +352,7 @@ void Fitter::PrintHists( map< string, map<string, TH1D*> >& hists_, map< string,
    typedef map<string, TH2D*> t2map;
    typedef map<string, t2map> h2map;
 
-   std::string pathstr;
-   char* path = std::getenv("WORKING_DIR");
-   if (path==NULL) {
-      pathstr = "./results";
-   }else {
-      pathstr = path;
-   }
-
-   TFile *fileout = new TFile( (pathstr+"/plotsDataMC.root").c_str(), "RECREATE" );
+   TFile *fileout = new TFile( outfile.c_str(), "RECREATE" );
    fileout->cd();
 
    TDirectory *dall = fileout->mkdir( "all" );

@@ -200,7 +200,7 @@ class Fitter{
       void DeleteHists( map< string, map<string, TH1D*> >&, map< string, map<string, TH2D*> >& );
       void FillHists( map< string, map<string, TH1D*> >&,
             map< string, map<string, TH2D*> >&, vector<Event>&, bool=false );
-      void PrintHists( map< string, map<string, TH1D*> >&, map< string, map<string, TH2D*> >& );
+      void PrintHists( map< string, map<string, TH1D*> >&, map< string, map<string, TH2D*> >&, string );
       vector<bool> MaosCut210( vector<Event>::iterator ev, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector& );
       vector<bool> MaosCut220( vector<Event>::iterator ev, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector& );
       void PlotTemplates( vector< map< string, map<string, TH1D*> > >& );

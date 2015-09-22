@@ -346,7 +346,7 @@ int main(int argc, char* argv[]){
       fitter.GetVariables( eventvec_datamc );
       fitter.DeclareHists( hists_all_, hists2d_all_, "all" );
       fitter.FillHists( hists_all_, hists2d_all_, eventvec_datamc );
-      fitter.PrintHists( hists_all_, hists2d_all_ );
+      fitter.PrintHists( hists_all_, hists2d_all_, outdir+"/plotsDataMC"+run_number_str+".root" );
       return 0;
    }
 

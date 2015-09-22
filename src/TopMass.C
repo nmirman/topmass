@@ -100,7 +100,7 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
    if( pch != NULL ) path = "root://cmseos:1094//eos/uscms/store/user/nmirman/Ntuples/TopMass/20141030/";
    //if( pch == NULL ) path = "/afs/cern.ch/work/n/nmirman/public/Ntuples/TopMass/20150226/";
    if( pch == NULL ) path = "root://osg-se.cac.cornell.edu//xrootd/path/cms/store/user/nmirman/Ntuples/TopMassNtuples/";
-   string date = "20150720";
+   string date = "20150902";
 
    // filenames
    //datasets[ "data" ]      = Dataset( path, "ntuple_data.root" );
@@ -426,7 +426,8 @@ void Fitter::ReadNtuple( Dataset dat, string process, double mcweight,
 
       // global quantities
       evtemp.process = process;
-      evtemp.weight = mcweight * weight_pu * weight_toppt * weight_btag * weight_mu * weight_elec * weight_bfrag;
+      //evtemp.weight = mcweight * weight_pu * weight_toppt * weight_btag * weight_mu * weight_elec * weight_bfrag;
+      evtemp.weight = mcweight * weight_pu;
       evtemp.nvertices = nvert;
 
       // jets, leptons, met
@@ -502,7 +503,7 @@ void Fitter::ReadNtuple( Dataset dat, string process, double mcweight,
       bool jet1_ok = jet1->Pt() > 30 and fabs(jet1->Eta()) < 2.5;
       bool jet2_ok = jet2->Pt() > 30 and fabs(jet2->Eta()) < 2.5;
       bool jetmass_ok = jet1->M() < 40 and jet2->M() < 40;
-      if ( jet1_ok and jet2_ok and jetmass_ok and met_ok )
+      if ( jet1_ok and jet2_ok and /*jetmass_ok and */met_ok )
          eventvec.push_back( evtemp );
 
    }
@@ -553,6 +554,16 @@ void Fitter::GetVariables( vector<Event>& eventvec ){
       ev->mt2_220 = Calc.GetMt2(2,0);
       ev->mt2_210 = Calc.GetMt2(1,0);
       ev->mbls = Calc.GetBlInvariantMasses();
+      /*
+      double mbl1 = (ev->lep1+ev->jet1).M();
+      double mbl2 = (ev->lep2+ev->jet1).M();
+      double mbl3 = (ev->lep1+ev->jet2).M();
+      double mbl4 = (ev->lep2+ev->jet2).M();
+      vector<double> mbltemp;
+      mbltemp.push_back( min(mbl1,mbl3) );
+      mbltemp.push_back( min(mbl2,mbl4) );
+      ev->mbls = mbltemp;
+      */
 
       TLorentzVector up221 = -((ev->jet1)+(ev->jet2)+(ev->lep1)+(ev->lep2)+(ev->met));
       if (sin((ev->jet1).DeltaPhi(up221))*sin((ev->jet2).DeltaPhi(up221)) <= 0){
@@ -696,7 +707,7 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
    if (dists["mbl_gp"].activate){
       gMinuit->SetLimitedVariable(2, "norm", 0.7, 0.1, 0, 1.0);
    } else {
-      gMinuit->SetFixedVariable(2, "norm", 0.70712);
+      gMinuit->SetFixedVariable(2, "norm", 0.7226);
    }
 
    // If we're fitting 220, set 220 background as a limited variable, otherwise set it as a fixed variable
@@ -723,7 +734,7 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
    if (dists["mt2_221_gp"].activate){
       gMinuit->SetLimitedVariable(6, "norm221", 0.7, 0.1, 0, 1.0);
    } else {
-      gMinuit->SetFixedVariable(6, "norm221", 0.70712);
+      gMinuit->SetFixedVariable(6, "norm221", 0.6661);
    }
 
    // set event vector and minimize

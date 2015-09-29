@@ -95,6 +95,7 @@ int main(int argc, char* argv[]){
    int statval_numPE = -1;
    int statval_PE = -1;
    vector<int> evlist;
+   double jtest = 0;
    
    TTree *tree = new TTree("FitResults", "FitResults");
    tree->Branch("runNumber", &run_number);
@@ -127,6 +128,7 @@ int main(int argc, char* argv[]){
    tree->Branch("statval_numPE", &statval_numPE);
    tree->Branch("statval_PE", &statval_PE);
    tree->Branch("evlist", &evlist);
+   tree->Branch("jtest", &jtest );
 
    // option flags
    int c;
@@ -172,12 +174,13 @@ int main(int argc, char* argv[]){
       // maoscuts220 and maoscuts210 set which cuts to use for maos220 and maos 210 respectively.
       // see lines 237-251 for what number to input.
       { "syst",         required_argument,   0,                '9' },
-      { "outdir",      required_argument,   0,                'g' },
+      { "outdir",       required_argument,   0,                'g' },
+      { "jtest",        required_argument,   0,                '3' },
       { "help",         no_argument,         NULL,             'h' },
       { 0, 0, 0, 0 }
    };
 
-   while( (c = getopt_long(argc, argv, "fdexahponbkt21qyzm:c:s:i:9:g:", longopts, NULL)) != -1 ) {
+   while( (c = getopt_long(argc, argv, "fdexahponbkt21qyzm:c:s:i:9:g:3:", longopts, NULL)) != -1 ) {
       switch(c)
       {
          case 'n' :
@@ -267,6 +270,11 @@ int main(int argc, char* argv[]){
 
          case 'q' :
             fitter.fit_jfactor = true;
+            break;
+
+         case '3' :
+            jtest = atof(optarg);
+            run_number_str += "_"+string(optarg);
             break;
 
          case 'h' :
@@ -421,6 +429,9 @@ int main(int argc, char* argv[]){
    
    if( do_fit ){
       fitter.ReadDatasets( datasets, eventvec_test, "test", nsyst, fracevts, statval_numPE, statval_PE );
+      if( jtest != 0 ){
+         fitter.JShift_test( eventvec_test, jtest );
+      }
       fitter.GetVariables( eventvec_test );
       fitter.DeclareHists( hists_test_, hists2d_test_, "test" );
       fitter.FillHists( hists_test_, hists2d_test_, eventvec_test );

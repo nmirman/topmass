@@ -186,6 +186,8 @@ class Fitter{
       void ReadDatasets(map<string, Dataset>&, vector<Event>&, string, string, double, double, double);
       void GetVariables(vector<Event>&);
       void JShift(vector<Event>&, double=1.0);
+      void JShift_test(vector<Event>&, double=1.0);
+      double uncertainty(double=0.0);
       void ReweightMC(vector<Event>&, string);
       vector<int> Resample(vector<Event>&, int, bool);
       void PDFReweight(vector<Event>&, int);

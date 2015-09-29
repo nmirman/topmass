@@ -64,6 +64,8 @@ double Shapes::Ftot(double *px, double *pp){
    double integralsig = pp[4];
    double integralbkg = pp[5];
 
+   if( k != 1 ) cout << "ERROR BKG GP SHAPE" << endl;
+
    double val = norm*(k*Fmbl_gp(x, mt, jfact, "sig")/integralsig
          + (1-k)*Fmbl_gp(x, mt, jfact, "bkg")/integralbkg);
    if( val <= 0 or (x > lbx and x < rbx) ) return 1E-10;
@@ -170,6 +172,10 @@ void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
       // signal shape
       hgp_sig.push_back( (TH1D*)hists_[ijfact][name]["ttbar"+smass+"_signal"]
             ->Clone( ("hgp_sig"+smass).c_str()) );
+      hgp_sig[i]->Add( hists_[ijfact][name]["ttbar"+smass+"_mistag"] );
+      hgp_sig[i]->Add( hists_[ijfact][name]["ttbar"+smass+"_hadronic"] );
+      hgp_sig[i]->Add( hists_[ijfact][name]["ttbar"+smass+"_taus"] );
+      hgp_sig[i]->Add( hists_[ijfact][name]["other"] );
       hgp_sig[i]->Scale( 1.0/hgp_sig[i]->Integral("width") );
 
       // background shape
@@ -269,7 +275,7 @@ void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
       int im = i % ntrain;
       int index = i / ntrain;
       ysig[i] = hgp_sig[index]->GetBinContent( hgp_sig[index]->FindBin(ptrain[im]) );
-      ybkg[i] = hgp_bkg[index]->GetBinContent( hgp_bkg[index]->FindBin(ptrain[im]) );
+      //ybkg[i] = hgp_bkg[index]->GetBinContent( hgp_bkg[index]->FindBin(ptrain[im]) );
    }
 
    // alpha vector

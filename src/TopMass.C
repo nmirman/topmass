@@ -511,6 +511,54 @@ void Fitter::ReadNtuple( Dataset dat, string process, double mcweight,
    return;
 }
 
+double Fitter::uncertainty( double eta ){
+
+   double unc = 0;
+   if( eta > -5.4 and eta <= -5.0 ) unc = 0.0018;
+   if( eta > -5.0 and eta <= -4.4 ) unc = 0.0018;
+   if( eta > -4.4 and eta <= -4.0 ) unc = 0.0018;
+   if( eta > -4.0 and eta <= -3.5 ) unc = 0.0017;
+   if( eta > -3.5 and eta <= -3.0 ) unc = 0.0017;
+   if( eta > -3.0 and eta <= -2.8 ) unc = 0.0016;
+   if( eta > -2.8 and eta <= -2.6 ) unc = 0.0015;
+   if( eta > -2.6 and eta <= -2.4 ) unc = 0.0015;
+   if( eta > -2.4 and eta <= -2.2 ) unc = 0.0014;
+   if( eta > -2.2 and eta <= -2.0 ) unc = 0.0013;
+   if( eta > -2.0 and eta <= -1.8 ) unc = 0.0012;
+   if( eta > -1.8 and eta <= -1.6 ) unc = 0.0010;
+   if( eta > -1.6 and eta <= -1.4 ) unc = 0.0009;
+   if( eta > -1.4 and eta <= -1.2 ) unc = 0.0007;
+   if( eta > -1.2 and eta <= -1.0 ) unc = 0.0005;
+   if( eta > -1.0 and eta <= -0.8 ) unc = 0.0003;
+   if( eta > -0.8 and eta <= -0.6 ) unc = 0.0001;
+   if( eta > -0.6 and eta <= -0.4 ) unc = 0.0000;
+   if( eta > -0.4 and eta <= -0.2 ) unc = 0.0002;
+   if( eta > -0.2 and eta <= -0.0 ) unc = 0.0003;
+
+   if( eta < 5.4 and eta >= 5.0 ) unc = 0.0018;
+   if( eta < 5.0 and eta >= 4.4 ) unc = 0.0018;
+   if( eta < 4.4 and eta >= 4.0 ) unc = 0.0018;
+   if( eta < 4.0 and eta >= 3.5 ) unc = 0.0017;
+   if( eta < 3.5 and eta >= 3.0 ) unc = 0.0017;
+   if( eta < 3.0 and eta >= 2.8 ) unc = 0.0016;
+   if( eta < 2.8 and eta >= 2.6 ) unc = 0.0015;
+   if( eta < 2.6 and eta >= 2.4 ) unc = 0.0015;
+   if( eta < 2.4 and eta >= 2.2 ) unc = 0.0014;
+   if( eta < 2.2 and eta >= 2.0 ) unc = 0.0013;
+   if( eta < 2.0 and eta >= 1.8 ) unc = 0.0012;
+   if( eta < 1.8 and eta >= 1.6 ) unc = 0.0010;
+   if( eta < 1.6 and eta >= 1.4 ) unc = 0.0009;
+   if( eta < 1.4 and eta >= 1.2 ) unc = 0.0007;
+   if( eta < 1.2 and eta >= 1.0 ) unc = 0.0005;
+   if( eta < 1.0 and eta >= 0.8 ) unc = 0.0003;
+   if( eta < 0.8 and eta >= 0.6 ) unc = 0.0001;
+   if( eta < 0.6 and eta >= 0.4 ) unc = 0.0000;
+   if( eta < 0.4 and eta >= 0.2 ) unc = 0.0002;
+   if( eta < 0.2 and eta > 0.0 ) unc = 0.0003;
+
+   return unc;
+}
+
 void Fitter::JShift( vector<Event>& eventvec, double jshift ){
 
    for( vector<Event>::iterator ev = eventvec.begin(); ev < eventvec.end(); ev++){
@@ -531,6 +579,38 @@ void Fitter::JShift( vector<Event>& eventvec, double jshift ){
          jet1 *= jshift;
          jet2 *= jshift;
          met -= (jshift-1)*jets;
+      }
+
+      ev->jet1 = jet1;
+      ev->jet2 = jet2;
+      ev->met = met;
+   }
+
+   return;
+}
+
+void Fitter::JShift_test( vector<Event>& eventvec, double jshift ){
+
+   for( vector<Event>::iterator ev = eventvec.begin(); ev < eventvec.end(); ev++){
+      TLorentzVector jet1 = ev->jet1;
+      TLorentzVector jet2 = ev->jet2;
+      TLorentzVector lep1 = ev->lep1;
+      TLorentzVector lep2 = ev->lep2;
+      TLorentzVector met = ev->met;
+      TLorentzVector met_uncl= ev->met_uncl;
+
+      // met_uncl = met + lep1 + lep2 + jets
+      //TLorentzVector jets = met_uncl - (met + lep1 + lep2);
+      TLorentzVector jets = met_uncl - (met + lep1 + lep2 + jet1 + jet2);
+
+      // met = met_uncl - lep1 - lep2 - jets
+      if( jshift != 0.0 ){
+         met -= (jshift*uncertainty(jet1.Eta()))*jet1;
+         met -= (jshift*uncertainty(jet2.Eta()))*jet2;
+         jet1 *= (1+jshift*uncertainty(jet1.Eta()));
+         jet2 *= (1+jshift*uncertainty(jet2.Eta()));
+         //met -= (jshift-1)*jets;
+         met -= (jshift*uncertainty(2.5))*jets;
       }
 
       ev->jet1 = jet1;
@@ -704,17 +784,19 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
    }
 
    // If we're fitting mbl, set mbl background as a limited variable, otherwise set it as a fixed variable
-   if (dists["mbl_gp"].activate){
+   if (false/*dists["mbl_gp"].activate*/){
       gMinuit->SetLimitedVariable(2, "norm", 0.7, 0.1, 0, 1.0);
    } else {
-      gMinuit->SetFixedVariable(2, "norm", 0.7226);
+      //gMinuit->SetFixedVariable(2, "norm", 0.7226);
+      gMinuit->SetFixedVariable(2, "norm", 1.0);
    }
 
    // If we're fitting 220, set 220 background as a limited variable, otherwise set it as a fixed variable
-   if (dists["mt2_220_gp"].activate){
+   if (false/*dists["mt2_220_gp"].activate*/){
       gMinuit->SetLimitedVariable(3, "norm220", 0.7, 0.1, 0, 1.0);
    } else {
-      gMinuit->SetFixedVariable(3, "norm220", 0.70712);
+      //gMinuit->SetFixedVariable(3, "norm220", 0.70712);
+      gMinuit->SetFixedVariable(3, "norm220", 1.0);
    }
 
    //MAOS 220
@@ -731,10 +813,11 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
       gMinuit->SetFixedVariable(5, "norm_maos210", 0.70712);
    }
 
-   if (dists["mt2_221_gp"].activate){
+   if (false/*dists["mt2_221_gp"].activate*/){
       gMinuit->SetLimitedVariable(6, "norm221", 0.7, 0.1, 0, 1.0);
    } else {
-      gMinuit->SetFixedVariable(6, "norm221", 0.6661);
+      //gMinuit->SetFixedVariable(6, "norm221", 0.6661);
+      gMinuit->SetFixedVariable(6, "norm221", 1.0);
    }
 
    // set event vector and minimize
@@ -779,8 +862,8 @@ double Fitter::Min2LL(const double *x){
          TF1 *fshape_tot = new TF1( ("f"+name+"_tot").c_str(), fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 6);
          fshape_tot->SetParameters( x[0], x[1], 1.0, 1.0, 1.0, 1.0 );
          double integralsig = fshape_tot->Integral(dist->lbnd, dist->rbnd);
-         fshape_tot->SetParameters( x[0], x[1], 0.0, 1.0, 1.0, 1.0 );
-         double integralbkg = fshape_tot->Integral(dist->lbnd, dist->rbnd);
+         //fshape_tot->SetParameters( x[0], x[1], 0.0, 1.0, 1.0, 1.0 );
+         //double integralbkg = fshape_tot->Integral(dist->lbnd, dist->rbnd);
          delete fshape_tot;
          delete fptr;
 
@@ -791,7 +874,7 @@ double Fitter::Min2LL(const double *x){
          shape.aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
          shape.aGPbkg = dist->aGPbkg;
 
-         double pfit [] = {x[0], x[1], x[iparam], 1.0, integralsig, integralbkg};
+         double pfit [] = {x[0], x[1], 1.0/*x[iparam]*/, 1.0, integralsig, 1.0/*integralbkg*/};
 
          // evaluate likelihood
          for( vector<Event>::iterator ev = eventvec_fit->begin(); ev < eventvec_fit->end(); ev++ ){
@@ -936,9 +1019,9 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_, string outf
          ftemplate->SetParameters( xmin[0], xmin[1], 1.0, 1.0, 1.0, 1.0 );
          double integralsig = ftemplate->Integral(dist->lbnd, dist->rbnd);
          ftemplate->SetParameters( xmin[0], xmin[1], 0.0, 1.0, 1.0, 1.0 );
-         double integralbkg = ftemplate->Integral(dist->lbnd, dist->rbnd);
-         ftemplate->SetParameters( xmin[0], xmin[1], xmin[iparam],
-               hdata->Integral("width"), integralsig, integralbkg );
+         //double integralbkg = ftemplate->Integral(dist->lbnd, dist->rbnd);
+         ftemplate->SetParameters( xmin[0], xmin[1], 1.0/*xmin[iparam]*/,
+               hdata->Integral("width"), integralsig, 1.0/*integralbkg*/ );
 
          ftemplate->SetLineWidth(2);
          ftemplate->DrawCopy("same");

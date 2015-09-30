@@ -498,6 +498,10 @@ void Fitter::ReadNtuple( Dataset dat, string process, double mcweight,
 
       //cout << "STRUCT SIZE CHECK: " << sizeof(evtemp) << endl;
 
+      if( jtest != 0 ){
+         JShift_test(evtemp, jtest);
+      }
+
       // push back event
       bool met_ok = evtemp.isemu or (met->Pt() > 40);
       bool jet1_ok = jet1->Pt() > 30 and fabs(jet1->Eta()) < 2.5;
@@ -589,15 +593,15 @@ void Fitter::JShift( vector<Event>& eventvec, double jshift ){
    return;
 }
 
-void Fitter::JShift_test( vector<Event>& eventvec, double jshift ){
+void Fitter::JShift_test( Event& ev, double jshift ){
 
-   for( vector<Event>::iterator ev = eventvec.begin(); ev < eventvec.end(); ev++){
-      TLorentzVector jet1 = ev->jet1;
-      TLorentzVector jet2 = ev->jet2;
-      TLorentzVector lep1 = ev->lep1;
-      TLorentzVector lep2 = ev->lep2;
-      TLorentzVector met = ev->met;
-      TLorentzVector met_uncl= ev->met_uncl;
+   //for( vector<Event>::iterator ev = eventvec.begin(); ev < eventvec.end(); ev++){
+      TLorentzVector jet1 = ev.jet1;
+      TLorentzVector jet2 = ev.jet2;
+      TLorentzVector lep1 = ev.lep1;
+      TLorentzVector lep2 = ev.lep2;
+      TLorentzVector met = ev.met;
+      TLorentzVector met_uncl= ev.met_uncl;
 
       // met_uncl = met + lep1 + lep2 + jets
       //TLorentzVector jets = met_uncl - (met + lep1 + lep2);
@@ -613,10 +617,10 @@ void Fitter::JShift_test( vector<Event>& eventvec, double jshift ){
          met -= (jshift*uncertainty(2.5))*jets;
       }
 
-      ev->jet1 = jet1;
-      ev->jet2 = jet2;
-      ev->met = met;
-   }
+      ev.jet1 = jet1;
+      ev.jet2 = jet2;
+      ev.met = met;
+   //}
 
    return;
 }

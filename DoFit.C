@@ -273,8 +273,9 @@ int main(int argc, char* argv[]){
             break;
 
          case '3' :
-            jtest = atof(optarg);
+            fitter.jtest = atof(optarg);
             run_number_str += "_"+string(optarg);
+            jtest = atof(optarg);
             break;
 
          case 'h' :
@@ -429,9 +430,9 @@ int main(int argc, char* argv[]){
    
    if( do_fit ){
       fitter.ReadDatasets( datasets, eventvec_test, "test", nsyst, fracevts, statval_numPE, statval_PE );
-      if( jtest != 0 ){
-         fitter.JShift_test( eventvec_test, jtest );
-      }
+      //if( jtest != 0 ){
+      //   fitter.JShift_test( eventvec_test, jtest );
+      //}
       fitter.GetVariables( eventvec_test );
       fitter.DeclareHists( hists_test_, hists2d_test_, "test" );
       fitter.FillHists( hists_test_, hists2d_test_, eventvec_test );

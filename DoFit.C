@@ -46,6 +46,7 @@ void print_usage(){
 }
 
 int main(int argc, char* argv[]){
+   int start_s=clock();
 
    freopen ("stderr.txt","w",stderr);
 
@@ -594,8 +595,8 @@ int main(int argc, char* argv[]){
             if( do_bootstrap ){
                evlist = fitter.Resample( eventvec_fit, randseed, statval );
             }else{
-               evlist = fitter.Resample( eventvec_fit, 1+10E6, 0 );
-               cout << "RESAMPLING TO PE #1" << endl;
+               //evlist = fitter.Resample( eventvec_fit, 1+10E6, 0 );
+               //cout << "RESAMPLING TO PE #1" << endl;
             }
 
             // flag events to be fitted
@@ -814,6 +815,9 @@ int main(int argc, char* argv[]){
       file->Write();
       file->Close();
    }
+
+   int stop_s=clock();
+   cout << "EXEC TIME =  " << double(stop_s-start_s)/(double(CLOCKS_PER_SEC)*3600.0) << " HOURS" << endl;
 
    return 0;
 }

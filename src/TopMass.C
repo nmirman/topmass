@@ -100,7 +100,7 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
    if( pch != NULL ) path = "root://cmseos:1094//eos/uscms/store/user/nmirman/Ntuples/TopMass/20141030/";
    //if( pch == NULL ) path = "/afs/cern.ch/work/n/nmirman/public/Ntuples/TopMass/20150226/";
    if( pch == NULL ) path = "root://osg-se.cac.cornell.edu//xrootd/path/cms/store/user/nmirman/Ntuples/TopMassNtuples/";
-   string date = "20150902";
+   string date = "20151020";
 
    // filenames
    //datasets[ "data" ]      = Dataset( path, "ntuple_data.root" );
@@ -426,8 +426,8 @@ void Fitter::ReadNtuple( Dataset dat, string process, double mcweight,
 
       // global quantities
       evtemp.process = process;
-      //evtemp.weight = mcweight * weight_pu * weight_toppt * weight_btag * weight_mu * weight_elec * weight_bfrag;
-      evtemp.weight = mcweight * weight_pu;
+      evtemp.weight = mcweight * weight_pu * weight_toppt * weight_btag * weight_mu * weight_elec * weight_bfrag;
+      //evtemp.weight = mcweight * weight_pu;
       evtemp.nvertices = nvert;
 
       // jets, leptons, met
@@ -503,10 +503,10 @@ void Fitter::ReadNtuple( Dataset dat, string process, double mcweight,
       }
 
       // push back event
-      bool met_ok = evtemp.isemu or (met->Pt() > 40);
-      bool jet1_ok = jet1->Pt() > 30 and fabs(jet1->Eta()) < 2.5;
-      bool jet2_ok = jet2->Pt() > 30 and fabs(jet2->Eta()) < 2.5;
-      bool jetmass_ok = jet1->M() < 40 and jet2->M() < 40;
+      bool met_ok = evtemp.isemu or (evtemp.met.Pt() > 40);
+      bool jet1_ok = evtemp.jet1.Pt() > 30 and fabs(evtemp.jet1.Eta()) < 2.5;
+      bool jet2_ok = evtemp.jet2.Pt() > 30 and fabs(evtemp.jet2.Eta()) < 2.5;
+      bool jetmass_ok = evtemp.jet1.M() < 40 and evtemp.jet2.M() < 40;
       if ( jet1_ok and jet2_ok and /*jetmass_ok and */met_ok )
          eventvec.push_back( evtemp );
 

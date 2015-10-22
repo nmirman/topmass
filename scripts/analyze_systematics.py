@@ -62,8 +62,8 @@ for i in range(3,5):
 
 # jes systematics
 slist_jes = [ 'JESCorrelationGroupMPFInSitu', 'JESCorrelationGroupIntercalibration', 'JESCorrelationGroupUncorrelated',
-      #'JESFlavorTotal' ]
-      'JESFlavorPureGluon', 'JESFlavorPureQuark', 'JESFlavorPureCharm', 'JESFlavorPureBottom' ]
+      'JESFlavorTotal' ]
+      #'JESFlavorPureGluon', 'JESFlavorPureQuark', 'JESFlavorPureCharm', 'JESFlavorPureBottom' ]
 
 # symmetrize jes systematics
 for n in systs:

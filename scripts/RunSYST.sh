@@ -65,4 +65,4 @@ done
 
 ./DoFit --run_number ${JOBNUM} --syst ${syst[$JOBNUM]} --fit --masspnt 172.5 --mt2_221 --mbl --outdir results_mbl221syst_20151020/
 
-#./DoFit --run_number ${JOBNUM} --syst ${syst[$JOBNUM]} --diagnostics --masspnt 172.5 --mt2_221 --mbl --outdir results_mbl221syst_20150902
+#./DoFit --run_number ${JOBNUM} --syst ${syst[$JOBNUM]} --diagnostics --masspnt 172.5 --mt2_221 --mbl --outdir results_mbl221syst_jfactor_20151026

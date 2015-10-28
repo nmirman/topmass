@@ -782,7 +782,7 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
    gMinuit->SetVariable(0, "topMass", 175.0, 0.1);
 
    if( fit_jfactor ){
-      gMinuit->SetLimitedVariable(1, "jesfactor", 1.0, 0.001, 0.95, 1.05);
+      gMinuit->SetLimitedVariable(1, "jesfactor", 1.0, 0.001, 0.99, 1.01);
    }else{
       gMinuit->SetFixedVariable(1, "jesfactor", 1.0);
    }

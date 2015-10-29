@@ -24,6 +24,9 @@
 #include <sstream>
 #include <fstream>
 
+#include <ctime>
+#include <chrono>
+
 #include "Math/Functor.h"
 #include "Minuit2/Minuit2Minimizer.h"
 
@@ -64,6 +67,7 @@ Fitter::~Fitter(){
 
 const double Fitter::masspoints[NMP] = {166.5, 169.5, 171.5, 172.5, 173.5, 175.5, 178.5};
 const double Fitter::jfactpoints[NJP] = {0.98, 1.00, 1.02};
+int Fitter::clocks[100] = {0};
 
 void Fitter::InitializeDists(){
 
@@ -742,7 +746,7 @@ vector<int> Fitter::Resample( vector<Event>& eventvec, int randseed, bool statva
       if( ev->weight > maxweight ) maxweight = ev->weight;
    }
 
-   int numevts_data = 49243;
+   int numevts_data = 49243.0/10;
    vector<int> evlist;
    if( statval ) numevts_data = eventvec.size();
    // resample with replacement, taking into account event weights
@@ -839,6 +843,8 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
 }
 
 double Fitter::Min2LL(const double *x){
+   using namespace std::chrono;
+   high_resolution_clock::time_point start_m2ll = high_resolution_clock::now();
 
    double m2ll = 0;
 
@@ -865,7 +871,13 @@ double Fitter::Min2LL(const double *x){
 
          TF1 *fshape_tot = new TF1( ("f"+name+"_tot").c_str(), fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 6);
          fshape_tot->SetParameters( x[0], x[1], 1.0, 1.0, 1.0, 1.0 );
+
+         high_resolution_clock::time_point start_int = high_resolution_clock::now();
          double integralsig = fshape_tot->Integral(dist->lbnd, dist->rbnd);
+         high_resolution_clock::time_point stop_int = high_resolution_clock::now();
+         duration<double> time_span = duration_cast<duration<double>>(stop_int-start_int);
+         clocks[0] += time_span.count();
+
          //fshape_tot->SetParameters( x[0], x[1], 0.0, 1.0, 1.0, 1.0 );
          //double integralbkg = fshape_tot->Integral(dist->lbnd, dist->rbnd);
          delete fshape_tot;
@@ -881,6 +893,7 @@ double Fitter::Min2LL(const double *x){
          double pfit [] = {x[0], x[1], 1.0/*x[iparam]*/, 1.0, integralsig, 1.0/*integralbkg*/};
 
          // evaluate likelihood
+         high_resolution_clock::time_point start_loop = high_resolution_clock::now();
          for( vector<Event>::iterator ev = eventvec_fit->begin(); ev < eventvec_fit->end(); ev++ ){
             if( !(ev->fit_event) ) continue;
 
@@ -934,8 +947,15 @@ double Fitter::Min2LL(const double *x){
             }
 
          }
+         high_resolution_clock::time_point stop_loop = high_resolution_clock::now();
+         duration<double> time_span_loop = duration_cast<duration<double>>(stop_loop-start_loop);
+         clocks[1] += time_span_loop.count();
       }
    }
+
+   high_resolution_clock::time_point stop_m2ll = high_resolution_clock::now();
+   duration<double> time_span_m2ll = duration_cast<duration<double>>(stop_m2ll-start_m2ll);
+   clocks[2] += time_span_m2ll.count();
 
    cout << m2ll << ": " << x[0] << " " << x[1] << endl;
    return m2ll;

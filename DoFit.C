@@ -11,6 +11,9 @@
 #include <string>
 #include <getopt.h>
 #include <unistd.h>
+#include <ctime>
+#include <chrono>
+#include <ratio>
 
 using namespace std;
 
@@ -46,7 +49,8 @@ void print_usage(){
 }
 
 int main(int argc, char* argv[]){
-   int start_s=clock();
+   using namespace std::chrono;
+   high_resolution_clock::time_point start_s = high_resolution_clock::now();
 
    freopen ("stderr.txt","w",stderr);
 
@@ -341,9 +345,6 @@ int main(int argc, char* argv[]){
 
    fitter.LoadDatasets( datasets );
 
-   // for event counting
-   map<string, int> datacount;
-
    // random number seed for bootstrapping (turns on when nonzero)
    int randseed = 0;
    if( do_bootstrap ) randseed = run_number+1+10E6;
@@ -443,6 +444,7 @@ int main(int argc, char* argv[]){
    // ********************************************************
    // begin fit
    // ********************************************************
+   duration<double> time_span_RunMinimizer;
    if( do_fit ){
 
       vector<Event> eventvec_fit;
@@ -602,17 +604,8 @@ int main(int argc, char* argv[]){
             // flag events to be fitted
             for( vector<Event>::iterator ev = eventvec_fit.begin(); ev < eventvec_fit.end(); ev++){
                ev->fit_event = true;
-               for(map<string, int>::iterator it = datacount.begin(); it != datacount.end(); it++){
-                  if( ev->process.compare(it->first) == 0 ) datacount[it->first]+=1;
-               }
             }
-
-            cout << "Fit event count: " << endl;
-            cout << setiosflags(ios::left);
-            for(map<string, int>::iterator it = datacount.begin(); it != datacount.end(); it++){
-               cout << "... " << setw(25) << it->first << ": " << it->second << " events" << endl;
-            }
-
+             
             fitter.DeclareHists( hists_fit_, hists2d_fit_, "fit" );
             fitter.FillHists( hists_fit_, hists2d_fit_, eventvec_fit, true );
 
@@ -627,9 +620,9 @@ int main(int argc, char* argv[]){
                if( dist->activate ){
                   Shapes * fptr = new Shapes( name, dist->ptrain,
                         dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
-                  cout << "aGP CENTRAL" << endl;
+                  cout << "Training " << name << ":" << endl;
                   fptr->TrainGP( hists_jvec_train_, m2llsig, m2llbkg );
-                  cout << "done" << endl;
+                  cout << endl;
 
                   dist->aGPsig.ResizeTo( fptr->aGPsig.GetNoElements() );
                   dist->aGPsig = fptr->aGPsig;
@@ -683,7 +676,11 @@ int main(int argc, char* argv[]){
             }
 
             // events for fitting, hists for training
+            
+            high_resolution_clock::time_point start_RunMinimizer = high_resolution_clock::now();
             fitter.RunMinimizer( eventvec_fit );
+            high_resolution_clock::time_point stop_RunMinimizer = high_resolution_clock::now();
+            time_span_RunMinimizer = duration_cast<duration<double>>(stop_RunMinimizer-start_RunMinimizer);
             fitter.PlotResults( hists_fit_, outdir+"/plotsFitResults"+run_number_str+".root" ); // plot fitted events
 
             cout << "Fit Chi2 = " << fitter.fitchi2 << endl;
@@ -816,8 +813,16 @@ int main(int argc, char* argv[]){
       file->Close();
    }
 
-   int stop_s=clock();
-   cout << "EXEC TIME =  " << double(stop_s-start_s)/(double(CLOCKS_PER_SEC)*3600.0) << " HOURS" << endl;
+   high_resolution_clock::time_point stop_s = high_resolution_clock::now();
+   duration<double> time_span = duration_cast<duration<double>>(stop_s-start_s);
+   
+   cout << "EXEC TIME =  " << time_span.count() << " SEC" << endl;
+   cout << "RunMinimizer TIME = " << time_span_RunMinimizer.count() << " SEC" << endl;
+   cout << "Min2LL TIME = " << fitter.clocks[2] << " SEC" << endl;
+   cout << "---> shape normalization: " << fitter.clocks[0] << " sec" << endl;
+   cout << "---> event loop: " << fitter.clocks[1] << " sec" << endl;
+   cout << "---- ---> Ftot: " << fitter.clocks[3] << " sec" << endl;
+   cout << "---- ---- ---> Fmbl_gp: " << fitter.clocks[4] << " sec" << endl;
 
    return 0;
 }

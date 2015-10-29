@@ -51,6 +51,9 @@ class Shapes{
       double masspnts [NMP];
       double jfactpnts [NJP];
 
+      unsigned int ptrainsize;
+      double ilx2, ilmass2, iljfact2;
+
    private:
       double GPm2ll(const double*);
       double GPm2llX(const double*);

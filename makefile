@@ -1,4 +1,4 @@
-CXX = $(shell root-config --cxx)
+CXX = $(shell root-config --cxx) -std=c++11
 CPPFLAGS = -isystem$(shell root-config --incdir) -I inc 
 CXXFLAGS = -Wall -Wextra -pedantic -O2 -Wshadow -fPIC $(shell root-config --cflags)
 LD = $(shell root-config --ld)

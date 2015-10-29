@@ -232,6 +232,8 @@ class Fitter{
 
       double jtest;
 
+      static int clocks [100];
+
    private:
 
       double Min2LL(const double*);

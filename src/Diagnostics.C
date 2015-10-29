@@ -670,7 +670,7 @@ vector<bool> Fitter::MaosCut220( vector<Event>::iterator ev, TLorentzVector &nu1
    //Nans
    for (int i=0; i<8; i++){
 
-      if ( isnan( (neuarray[i]).Pz() ) ){ toreturn[i] = 0; }
+      if ( std::isnan( (neuarray[i]).Pz() ) ){ toreturn[i] = 0; }
    }
 
    //Near Endpoint
@@ -686,7 +686,7 @@ vector<bool> Fitter::MaosCut220( vector<Event>::iterator ev, TLorentzVector &nu1
    //Eta 1
    if (etadisamb){
       for (int i=0; i<4; i++){
-         if ( isnan( (neuarray[2*i]).Pz() ) or isnan( (neuarray[2*i+1]).Pz() ) ) continue;
+         if ( std::isnan( (neuarray[2*i]).Pz() ) or std::isnan( (neuarray[2*i+1]).Pz() ) ) continue;
          if ( abs( (neuarray[2*i]).Eta() ) < abs( (neuarray[2*i+1]).Eta() ) ){
             toreturn[2*i+1] = 0;
          } else {
@@ -735,7 +735,7 @@ vector<bool> Fitter::MaosCut210( vector<Event>::iterator ev, TLorentzVector &nu1
 
    //Nans
    for (int i=0; i<4; i++){
-      if ( isnan( (neuarray[i]).Pz() ) ){ toreturn[i] = 0; toreturn[i+4] = 0; }
+      if ( std::isnan( (neuarray[i]).Pz() ) ){ toreturn[i] = 0; toreturn[i+4] = 0; }
    }
 
    //Near Endpoint
@@ -748,7 +748,7 @@ vector<bool> Fitter::MaosCut210( vector<Event>::iterator ev, TLorentzVector &nu1
    //Eta 1
    if (etadisamb){
       for (int i=0; i<2; i++){
-         if ( isnan( (neuarray[2*i]).Pz() ) or isnan( (neuarray[2*i+1]).Pz() ) ) continue;
+         if ( std::isnan( (neuarray[2*i]).Pz() ) or std::isnan( (neuarray[2*i+1]).Pz() ) ) continue;
          if ( abs( (neuarray[2*i]).Eta() ) < abs( (neuarray[2*i+1]).Eta() ) ){
             toreturn[2*i+1] = 0;
             toreturn[2*i+1+4] = 0;

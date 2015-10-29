@@ -6,6 +6,9 @@
 #include "TDecompLU.h"
 #include "TDecompChol.h"
 
+#include <ctime>
+#include <chrono>
+
 #include <cmath>
 #include <iostream>
 #include <iomanip>
@@ -31,12 +34,18 @@ Shapes::Shapes( string var, vector<double>& ptraintmp, double gplength_x, double
    rtrain = rbound;
    //for(int i=0; i < ntrain; i++) ptrain.push_back( ltrain + (i+0.5)*(rtrain-ltrain)/ntrain );
    for(unsigned int i=0; i < ptraintmp.size(); i++) ptrain.push_back( ptraintmp[i] );
+   ptrainsize = ptrain.size();
 
    ljfact = 0.1;
 
    // right and left bounds -- set to zero unless needed
    lbx = 0.0;
    rbx = 0.0;
+
+   // to avoid divisions in GPkern
+   ilx2 = 1.0/(lx*lx);
+   ilmass2 = 1.0/(lmass*lmass);
+   iljfact2 = 1.0/(ljfact*ljfact);
 
    // flag for cross validation two-stage fit
    do_gpvar = false;
@@ -55,6 +64,9 @@ Shapes::~Shapes(){
 //
 
 double Shapes::Ftot(double *px, double *pp){
+   using namespace std::chrono;
+
+   high_resolution_clock::time_point start_s = high_resolution_clock::now();
 
    double x = px[0];
    double mt = pp[0];
@@ -68,6 +80,11 @@ double Shapes::Ftot(double *px, double *pp){
 
    double val = norm*(k*Fmbl_gp(x, mt, jfact, "sig")/integralsig
          + (1-k)*Fmbl_gp(x, mt, jfact, "bkg")/integralbkg);
+
+   high_resolution_clock::time_point stop_s = high_resolution_clock::now();
+   duration<double> time_span = duration_cast<duration<double>>(stop_s-start_s);
+   Fitter::clocks[3] += time_span.count();
+
    if( val <= 0 or (x > lbx and x < rbx) ) return 1E-10;
    else return val;
 }
@@ -93,22 +110,29 @@ double Shapes::Fsig_param(double x, double mt){
 }
 
 double Shapes::Fmbl_gp(double x, double mt, double jfact, string sb){
+   using namespace std::chrono;
+
+   high_resolution_clock::time_point start_s = high_resolution_clock::now();
 
    double fgp = 0;
-   for(unsigned int i=0; i < ptrain.size(); i++){
+   for(unsigned int i=0; i < ptrainsize; i++){
       for(int j=0; j < NMP; j++){
          for(int k=0; k < NJP; k++){
             double agp = 0;
-            if( sb.compare("sig") == 0 ) agp = aGPsig[i+j*ptrain.size()+k*ptrain.size()*NMP];
-            else if( sb.compare("bkg") == 0 ) agp = aGPbkg[i+j*ptrain.size()+k*ptrain.size()*NMP];
+            if( sb.compare("sig") == 0 ) agp = aGPsig[i+j*ptrainsize+k*ptrainsize*NMP];
+            else if( sb.compare("bkg") == 0 ) agp = aGPbkg[i+j*ptrainsize+k*ptrainsize*NMP];
             else{
                cout << "ERROR in GP shape." << endl;
                return -1;
             }
-            fgp += agp*GPkern( x, ptrain[i], lx, mt, masspnts[j], lmass, jfact, jfactpnts[k], ljfact );
+            fgp += agp*GPkern( x, ptrain[i], ilx2, mt, masspnts[j], ilmass2, jfact, jfactpnts[k], iljfact2 );
          }
       }
    }
+
+   high_resolution_clock::time_point stop_s = high_resolution_clock::now();
+   duration<double> time_span = duration_cast<duration<double>>(stop_s-start_s);
+   Fitter::clocks[4] += time_span.count();
 
    return fgp;
 }
@@ -123,12 +147,12 @@ double Shapes::Fmbl_gp_var(double x, double mt, double jfact, string sb){
       int im = i % ntrain;
       int imass = i / ntrain;
       int ijfact = i / (ntrain*NMP);
-      k[i] = GPkern( x, ptrain[im], lx, mt, masspnts[imass], lmass, jfact, jfactpnts[ijfact], ljfact );
+      k[i] = GPkern( x, ptrain[im], ilx2, mt, masspnts[imass], ilmass2, jfact, jfactpnts[ijfact], iljfact2 );
    }
    TVectorD kT = k;
 
    double c1=0, c2=0;
-   c1 = GPkern( x, x, lx, mt, mt, lmass, jfact, jfact, ljfact );
+   c1 = GPkern( x, x, ilx2, mt, mt, ilmass2, jfact, jfact, iljfact2 );
    if( sb.compare("sig") == 0 ) k *= Ainv_sig;
    else if( sb.compare("bkg") == 0 ) k *= Ainv_bkg;
    else{
@@ -140,12 +164,10 @@ double Shapes::Fmbl_gp_var(double x, double mt, double jfact, string sb){
    return (c1-c2);
 }
 
-double Shapes::GPkern(double x1, double x2, double lsx, double m1, double m2, double lsm,
-     double j1, double j2, double lj ){
+double Shapes::GPkern(double x1, double x2, double ilsx2, double m1, double m2, double ilsm2,
+     double j1, double j2, double ilsj2 ){
 
-   double kernel = 1E-06*gnorm2*gnorm1*exp(-0.5*(pow( (x1-x2)/lsx, 2)+pow( (m1-m2)/lsm, 2)
-            +pow( (j1-j2)/lj, 2)));
-   return kernel;
+   return 1E-06*gnorm2*gnorm1*exp( -0.5*( ilsx2*(x1-x2)*(x1-x2) + ils2*(m1-m2)*(m1-m2) + ilsj2*(j1-j2)*(j1-j2) ));
 }
 
 void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
@@ -206,8 +228,8 @@ void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
          iGP( i_index, imass, ijfact );
          iGP( j_index, jmass, jjfact );
 
-         K[i][j] = GPkern( ptrain[im], ptrain[jm], lx, masspnts[imass], masspnts[jmass], lmass,
-              jfactpnts[ijfact], jfactpnts[jjfact], ljfact );
+         K[i][j] = GPkern( ptrain[im], ptrain[jm], ilx2, masspnts[imass], masspnts[jmass], ilmass2,
+              jfactpnts[ijfact], jfactpnts[jjfact], iljfact2 );
      }
    }
    // compute noise matrix
@@ -234,21 +256,21 @@ void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
    // inverse of sum
    TMatrixD Asig = K + Nsig;
    TMatrixD Abkg = K + Nbkg;
-   cout << "Cholsig" << endl;
+   cout << "---> cholesky decomposition of signal matrix... "; fflush(stdout);
    TDecompChol Cholsig(Asig);
-   cout << "done" << endl;
-   cout << "Cholbkg" << endl;
+   cout << "done!" << endl;
+   cout << "---> cholesky decomposition of background matrix... "; fflush(stdout);
    TDecompChol Cholbkg(Abkg);
-   cout << "done" << endl;
+   cout << "done!" << endl;
    TMatrixD AsigU = Cholsig.GetU();
    TMatrixD AbkgU = Cholbkg.GetU();
    bool status = 0;
-   cout << "Cholsig Invert" << endl;
+   cout << "---> invert signal matrix... "; fflush(stdout);
    TMatrixDSym Asinv_sig = Cholsig.Invert(status);
-   cout << "done" << endl;
-   cout << "Cholbkg Invert" << endl;
+   cout << "done!" << endl;
+   cout << "---> invert background matrix... "; fflush(stdout);
    TMatrixDSym Asinv_bkg = Cholbkg.Invert(status);
-   cout << "done" << endl;
+   cout << "done!" << endl;
    Ainv_sig.Clear();
    Ainv_bkg.Clear();
    Ainv_sig.ResizeTo( ntrain*NMP*NJP, ntrain*NMP*NJP );
@@ -258,9 +280,13 @@ void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
 
    TMatrixD Ktmp = K;
    for(int i=0; i < ntrain*NMP*NJP; i++) Ktmp[i][i] += 10E-9;
+   cout << "---> cholesky decomposition of covariance matrix... "; fflush(stdout);
    TDecompChol CholK(Ktmp);
+   cout << "done!" << endl;
    status = 0;
+   cout << "---> invert covariance matrix... "; fflush(stdout);
    TMatrixDSym Ksinv = CholK.Invert(status);
+   cout << "done!" << endl;
    Kinv.Clear();
    Kinv.ResizeTo( ntrain*NMP*NJP, ntrain*NMP*NJP );
    Kinv = (TMatrixD)Ksinv;

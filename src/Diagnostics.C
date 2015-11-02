@@ -862,7 +862,7 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
                hmc->DrawCopy();
 
                Shapes * fptr = new Shapes( name, dist->ptrain,
-                     dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+                     dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
                fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
                fptr->aGPsig = dist->aGPsig;
                fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
@@ -1133,7 +1133,7 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
          // mbl likelihood
 
          Shapes * fptr = new Shapes( name, dist->ptrain,
-               dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+               dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
          fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr->aGPsig = dist->aGPsig;
          fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
@@ -1196,7 +1196,7 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
 
          // likelihood
          Shapes * fptr_jfact = new Shapes( name, dist->ptrain,
-               dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+               dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
          fptr_jfact->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr_jfact->aGPsig = dist->aGPsig;
          fptr_jfact->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );

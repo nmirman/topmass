@@ -149,6 +149,7 @@ struct Distribution {
    double gnorm2;
    double glx;
    double glmt;
+   double gljf;
 
    TMatrixD Ainv_sig;
    TMatrixD Ainv_bkg;
@@ -166,8 +167,8 @@ struct Distribution {
 
    vector<double> ptrain;
 
-   Distribution( string n="", string t="", double n1=1.0, double n2=1.0, double lx=1.0, double lmt=1.0, double lb=0, double rb=300 )
-      : name(n), title(t), gnorm1(n1), gnorm2(n2), glx(lx), glmt(lmt), lbnd(lb), rbnd(rb) {
+   Distribution( string n="", string t="", double n1=1.0, double n2=1.0, double lx=1.0, double lmt=1.0, double ljf=0.1, double lb=0, double rb=300 )
+      : name(n), title(t), gnorm1(n1), gnorm2(n2), glx(lx), glmt(lmt), gljf(ljf), lbnd(lb), rbnd(rb) {
          activate = false;
    }
 
@@ -231,6 +232,7 @@ class Fitter{
       bool fit_jfactor;
 
       double jtest;
+      double gplength_jfact;
 
       static int clocks [100];
 

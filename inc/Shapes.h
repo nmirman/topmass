@@ -18,7 +18,7 @@ class Shapes{
 
    public:
 
-      Shapes( string, vector<double>&, double, double, double, double, double, double );
+      Shapes( string, vector<double>&, double, double, double, double, double, double, double );
       ~Shapes();
 
       double Ftot(double*, double*);
@@ -40,7 +40,7 @@ class Shapes{
       TMatrixD Kinv;
       void SetGPopts();
       void TrainGP( vector< map< string, map<string, TH1D*> > >&, double&, double& );
-      double GPkern(double, double, double, double, double, double, double, double, double);
+      double GPkern(double, double, double, double, double, double);
 
       void LearnGPparams( vector< map< string, map<string, TH1D*> > >& );
 

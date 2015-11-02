@@ -101,6 +101,7 @@ int main(int argc, char* argv[]){
    int statval_PE = -1;
    vector<int> evlist;
    double jtest = 0;
+   double ljf = 0;
    
    TTree *tree = new TTree("FitResults", "FitResults");
    tree->Branch("runNumber", &run_number);
@@ -134,6 +135,7 @@ int main(int argc, char* argv[]){
    tree->Branch("statval_PE", &statval_PE);
    tree->Branch("evlist", &evlist);
    tree->Branch("jtest", &jtest );
+   tree->Branch("ljf", &ljf );
 
    // option flags
    int c;
@@ -181,11 +183,12 @@ int main(int argc, char* argv[]){
       { "syst",         required_argument,   0,                '9' },
       { "outdir",       required_argument,   0,                'g' },
       { "jtest",        required_argument,   0,                '3' },
+      { "ljtest",       required_argument,   0,                '4' },
       { "help",         no_argument,         NULL,             'h' },
       { 0, 0, 0, 0 }
    };
 
-   while( (c = getopt_long(argc, argv, "fdexahponbkt21qyzm:c:s:i:9:g:3:", longopts, NULL)) != -1 ) {
+   while( (c = getopt_long(argc, argv, "fdexahponbkt21qyzm:c:s:i:9:g:3:4:", longopts, NULL)) != -1 ) {
       switch(c)
       {
          case 'n' :
@@ -281,6 +284,11 @@ int main(int argc, char* argv[]){
             fitter.jtest = atof(optarg);
             run_number_str += "_"+string(optarg);
             jtest = atof(optarg);
+            break;
+
+         case '4' :
+            fitter.gplength_jfact = atof(optarg);
+            ljf  = atof(optarg);
             break;
 
          case 'h' :
@@ -619,7 +627,7 @@ int main(int argc, char* argv[]){
 
                if( dist->activate ){
                   Shapes * fptr = new Shapes( name, dist->ptrain,
-                        dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+                        dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
                   cout << "Training " << name << ":" << endl;
                   fptr->TrainGP( hists_jvec_train_, m2llsig, m2llbkg );
                   cout << endl;
@@ -728,7 +736,7 @@ int main(int argc, char* argv[]){
 
                if( dist->activate ){
                   Shapes * fptr = new Shapes( name, dist->ptrain,
-                        dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+                        dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
                   fptr->TrainGP( hists_jvec_train_, m2llsig, m2llbkg );
 
                   dist->aGPsig.ResizeTo( fptr->aGPsig.GetNoElements() );
@@ -764,7 +772,7 @@ int main(int argc, char* argv[]){
          if( dist->activate ){
             cout << "Learning hyperparameters for distribution " << name << "..." << endl;
             Shapes * fptrtmp = new Shapes( name, dist->ptrain,
-                  dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+                  dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
             fptrtmp->LearnGPparams( hists_jvec_train_ );
 
             dist->glx = fptrtmp->lx;
@@ -774,7 +782,7 @@ int main(int argc, char* argv[]){
 
             double m2llsig, m2llbkg;
             Shapes * fptr = new Shapes( name, dist->ptrain,
-                  dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+                  dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
             fptr->TrainGP( hists_jvec_train_, m2llsig, m2llbkg );
 
             dist->aGPsig.ResizeTo( fptr->aGPsig.GetNoElements() );
@@ -821,8 +829,8 @@ int main(int argc, char* argv[]){
    cout << "Min2LL TIME = " << fitter.clocks[2] << " SEC" << endl;
    cout << "---> shape normalization: " << fitter.clocks[0] << " sec" << endl;
    cout << "---> event loop: " << fitter.clocks[1] << " sec" << endl;
-   cout << "---- ---> Ftot: " << fitter.clocks[3] << " sec" << endl;
-   cout << "---- ---- ---> Fmbl_gp: " << fitter.clocks[4] << " sec" << endl;
+   //cout << "---- ---> Ftot: " << fitter.clocks[3] << " sec" << endl;
+   //cout << "---- ---- ---> Fmbl_gp: " << fitter.clocks[4] << " sec" << endl;
 
    return 0;
 }

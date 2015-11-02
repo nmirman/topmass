@@ -58,6 +58,8 @@ Fitter::Fitter(){
 
    fit_jfactor = false;
 
+   gplength_jfact = 5.0;
+
 }
 
 Fitter::~Fitter(){
@@ -70,21 +72,22 @@ const double Fitter::jfactpoints[NJP] = {0.98, 1.00, 1.02};
 int Fitter::clocks[100] = {0};
 
 void Fitter::InitializeDists(){
+   double ljf = gplength_jfact;
 
    // gaussian process length scales
-   // name(n), title(t), gnorm1(n1), gnorm2(n2), glx(lx), glmt(lmt), lbnd(lb), rbnd(rb)
+   // name(n), title(t), gnorm1(n1), gnorm2(n2), glx(lx), glmt(lmt), gljf(lfj), lbnd(lb), rbnd(rb)
    // name(n), title(t), theta1, theta0, theta2, theta3
-   dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}", 0.54, 2.1, 7.2, 8.1, 20, 300 );
-   dists[ "mt2_220_gp" ] = Distribution( "mt2_220_gp", "M_{T2} 220", 0.94, 1.74, 7.1, 1.9, 50, 300 );
-   dists[ "mt2_221_gp" ] = Distribution( "mt2_221_gp", "M_{T2} 221", 0.94, 1.74, 7.1, 1.9, 90, 250 );
-   dists[ "maos210_gp" ] = Distribution( "maos210_gp","blv mass from Maos neutrinos from M_{T2} 210", 0.42, 1.82, 9.92, 24.2, 100, 500 );
-   dists[ "maos220_gp" ] = Distribution( "maos220_gp","blv mass from Maos neutrinos from M_{T2} 220", 1.6, 6.4, 19.2, 19.2, 100, 500 );
+   dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}", 0.54, 2.1, 7.2, 8.1, ljf, 20, 300 );
+   dists[ "mt2_220_gp" ] = Distribution( "mt2_220_gp", "M_{T2} 220", 0.94, 1.74, 7.1, 1.9, ljf, 50, 300 );
+   dists[ "mt2_221_gp" ] = Distribution( "mt2_221_gp", "M_{T2} 221", 0.94, 1.74, 7.1, 1.9, ljf, 90, 250 );
+   dists[ "maos210_gp" ] = Distribution( "maos210_gp","blv mass from Maos neutrinos from M_{T2} 210", 0.42, 1.82, 9.92, 24.2, ljf, 100, 500 );
+   dists[ "maos220_gp" ] = Distribution( "maos220_gp","blv mass from Maos neutrinos from M_{T2} 220", 1.6, 6.4, 19.2, 19.2, ljf, 100, 500 );
 
-
-   dists[ "maos220blv" ] = Distribution( "maos220blv","blv mass from Maos neutrinos from M_{T2} 220", 1.6, 6.4, 19.2, 19.2, 0, 500 );
-   dists[ "mbl" ] = Distribution( "mbl", "M_{bl}", 0.54, 2.1, 7.2, 8.1, 0, 300 );
-   dists[ "mt2_220_nomatchmbl" ] = Distribution( "mt2_220_nomatchmbl", "M_{T2} 220", 0.94, 1.74, 7.1, 1.9, 0, 300 );
-   dists[ "maos210blv" ] = Distribution( "maos210blv","blv mass from Maos neutrinos from M_{T2} 210", 0.42, 1.82, 9.92, 24.2, 0, 500 );
+ 
+   dists[ "maos220blv" ] = Distribution( "maos220blv","blv mass from Maos neutrinos from M_{T2} 220", 1.6, 6.4, 19.2, 19.2, ljf, 0, 500 );
+   dists[ "mbl" ] = Distribution( "mbl", "M_{bl}", 0.54, 2.1, 7.2, 8.1, ljf, 0, 300 );
+   dists[ "mt2_220_nomatchmbl" ] = Distribution( "mt2_220_nomatchmbl", "M_{T2} 220", 0.94, 1.74, 7.1, 1.9, ljf, 0, 300 );
+   dists[ "maos210blv" ] = Distribution( "maos210blv","blv mass from Maos neutrinos from M_{T2} 210", 0.42, 1.82, 9.92, 24.2, ljf, 0, 500 );
 }
 
 //
@@ -511,7 +514,7 @@ void Fitter::ReadNtuple( Dataset dat, string process, double mcweight,
       bool jet1_ok = evtemp.jet1.Pt() > 30 and fabs(evtemp.jet1.Eta()) < 2.5;
       bool jet2_ok = evtemp.jet2.Pt() > 30 and fabs(evtemp.jet2.Eta()) < 2.5;
       bool jetmass_ok = evtemp.jet1.M() < 40 and evtemp.jet2.M() < 40;
-      if ( jet1_ok and jet2_ok and /*jetmass_ok and */met_ok )
+      if ( jet1_ok and jet2_ok and jetmass_ok and met_ok )
          eventvec.push_back( evtemp );
 
    }
@@ -746,7 +749,7 @@ vector<int> Fitter::Resample( vector<Event>& eventvec, int randseed, bool statva
       if( ev->weight > maxweight ) maxweight = ev->weight;
    }
 
-   int numevts_data = 49243.0/10;
+   int numevts_data = 49243;
    vector<int> evlist;
    if( statval ) numevts_data = eventvec.size();
    // resample with replacement, taking into account event weights
@@ -786,7 +789,8 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
    gMinuit->SetVariable(0, "topMass", 175.0, 0.1);
 
    if( fit_jfactor ){
-      gMinuit->SetLimitedVariable(1, "jesfactor", 1.0, 0.001, 0.99, 1.01);
+      //gMinuit->SetLimitedVariable(1, "jesfactor", 1.0, 0.001, 0.98, 1.02);
+      gMinuit->SetVariable(1, "jesfactor", 1.0, 0.001);
    }else{
       gMinuit->SetFixedVariable(1, "jesfactor", 1.0);
    }
@@ -863,7 +867,7 @@ double Fitter::Min2LL(const double *x){
 
          // normalization inside likelihood function (temp)
          Shapes * fptr = new Shapes( name, dist->ptrain, 
-               dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+               dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
          fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr->aGPsig = dist->aGPsig;
          fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
@@ -884,7 +888,7 @@ double Fitter::Min2LL(const double *x){
          delete fptr;
 
          Shapes shape( name, dist->ptrain, 
-               dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+               dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
          shape.aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          shape.aGPsig = dist->aGPsig;
          shape.aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
@@ -991,7 +995,7 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_, string outf
 
          // normalization inside likelihood function (temp)
          Shapes * fptr = new Shapes( name, dist->ptrain,
-               dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+               dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
          fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr->aGPsig = dist->aGPsig;
          fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );

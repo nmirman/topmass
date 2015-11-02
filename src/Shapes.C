@@ -6,9 +6,6 @@
 #include "TDecompLU.h"
 #include "TDecompChol.h"
 
-#include <ctime>
-#include <chrono>
-
 #include <cmath>
 #include <iostream>
 #include <iomanip>
@@ -21,7 +18,7 @@ using namespace std;
 // constructor and destructor
 //
 
-Shapes::Shapes( string var, vector<double>& ptraintmp, double gplength_x, double gplength_mt, double norm1, double norm2, double lbound, double rbound ){
+Shapes::Shapes( string var, vector<double>& ptraintmp, double gplength_x, double gplength_mt, double gplength_jfact, double norm1, double norm2, double lbound, double rbound ){
 
    name = var;
    // GP options
@@ -36,7 +33,7 @@ Shapes::Shapes( string var, vector<double>& ptraintmp, double gplength_x, double
    for(unsigned int i=0; i < ptraintmp.size(); i++) ptrain.push_back( ptraintmp[i] );
    ptrainsize = ptrain.size();
 
-   ljfact = 0.1;
+   ljfact = gplength_jfact;
 
    // right and left bounds -- set to zero unless needed
    lbx = 0.0;
@@ -64,9 +61,6 @@ Shapes::~Shapes(){
 //
 
 double Shapes::Ftot(double *px, double *pp){
-   using namespace std::chrono;
-
-   high_resolution_clock::time_point start_s = high_resolution_clock::now();
 
    double x = px[0];
    double mt = pp[0];
@@ -79,11 +73,7 @@ double Shapes::Ftot(double *px, double *pp){
    if( k != 1 ) cout << "ERROR BKG GP SHAPE" << endl;
 
    double val = norm*(k*Fmbl_gp(x, mt, jfact, "sig")/integralsig
-         + (1-k)*Fmbl_gp(x, mt, jfact, "bkg")/integralbkg);
-
-   high_resolution_clock::time_point stop_s = high_resolution_clock::now();
-   duration<double> time_span = duration_cast<duration<double>>(stop_s-start_s);
-   Fitter::clocks[3] += time_span.count();
+         /*+ (1-k)*Fmbl_gp(x, mt, jfact, "bkg")/integralbkg*/);
 
    if( val <= 0 or (x > lbx and x < rbx) ) return 1E-10;
    else return val;
@@ -110,14 +100,12 @@ double Shapes::Fsig_param(double x, double mt){
 }
 
 double Shapes::Fmbl_gp(double x, double mt, double jfact, string sb){
-   using namespace std::chrono;
-
-   high_resolution_clock::time_point start_s = high_resolution_clock::now();
 
    double fgp = 0;
    for(unsigned int i=0; i < ptrainsize; i++){
       for(int j=0; j < NMP; j++){
          for(int k=0; k < NJP; k++){
+            /*
             double agp = 0;
             if( sb.compare("sig") == 0 ) agp = aGPsig[i+j*ptrainsize+k*ptrainsize*NMP];
             else if( sb.compare("bkg") == 0 ) agp = aGPbkg[i+j*ptrainsize+k*ptrainsize*NMP];
@@ -125,14 +113,12 @@ double Shapes::Fmbl_gp(double x, double mt, double jfact, string sb){
                cout << "ERROR in GP shape." << endl;
                return -1;
             }
-            fgp += agp*GPkern( x, ptrain[i], ilx2, mt, masspnts[j], ilmass2, jfact, jfactpnts[k], iljfact2 );
+            */
+            fgp += aGPsig[i+j*ptrainsize+k*ptrainsize*NMP]
+               * GPkern( x, ptrain[i], mt, masspnts[j], jfact, jfactpnts[k] );
          }
       }
    }
-
-   high_resolution_clock::time_point stop_s = high_resolution_clock::now();
-   duration<double> time_span = duration_cast<duration<double>>(stop_s-start_s);
-   Fitter::clocks[4] += time_span.count();
 
    return fgp;
 }
@@ -147,12 +133,12 @@ double Shapes::Fmbl_gp_var(double x, double mt, double jfact, string sb){
       int im = i % ntrain;
       int imass = i / ntrain;
       int ijfact = i / (ntrain*NMP);
-      k[i] = GPkern( x, ptrain[im], ilx2, mt, masspnts[imass], ilmass2, jfact, jfactpnts[ijfact], iljfact2 );
+      k[i] = GPkern( x, ptrain[im], mt, masspnts[imass], jfact, jfactpnts[ijfact] );
    }
    TVectorD kT = k;
 
    double c1=0, c2=0;
-   c1 = GPkern( x, x, ilx2, mt, mt, ilmass2, jfact, jfact, iljfact2 );
+   c1 = GPkern( x, x, mt, mt, jfact, jfact );
    if( sb.compare("sig") == 0 ) k *= Ainv_sig;
    else if( sb.compare("bkg") == 0 ) k *= Ainv_bkg;
    else{
@@ -164,10 +150,9 @@ double Shapes::Fmbl_gp_var(double x, double mt, double jfact, string sb){
    return (c1-c2);
 }
 
-double Shapes::GPkern(double x1, double x2, double ilsx2, double m1, double m2, double ilsm2,
-     double j1, double j2, double ilsj2 ){
+double Shapes::GPkern(double x1, double x2, double m1, double m2, double j1, double j2){
 
-   return 1E-06*gnorm2*gnorm1*exp( -0.5*( ilsx2*(x1-x2)*(x1-x2) + ils2*(m1-m2)*(m1-m2) + ilsj2*(j1-j2)*(j1-j2) ));
+   return 1E-06*gnorm2*gnorm1*exp( -0.5*( ilx2*(x1-x2)*(x1-x2) + ilmass2*(m1-m2)*(m1-m2) + iljfact2*(j1-j2)*(j1-j2) ));
 }
 
 void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
@@ -228,8 +213,7 @@ void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
          iGP( i_index, imass, ijfact );
          iGP( j_index, jmass, jjfact );
 
-         K[i][j] = GPkern( ptrain[im], ptrain[jm], ilx2, masspnts[imass], masspnts[jmass], ilmass2,
-              jfactpnts[ijfact], jfactpnts[jjfact], iljfact2 );
+         K[i][j] = GPkern( ptrain[im], ptrain[jm], masspnts[imass], masspnts[jmass], jfactpnts[ijfact], jfactpnts[jjfact] );
      }
    }
    // compute noise matrix

@@ -58,7 +58,7 @@ Fitter::Fitter(){
 
    fit_jfactor = false;
 
-   gplength_jfact = 5.0;
+   gplength_jfact = 0.1;
 
 }
 
@@ -77,9 +77,9 @@ void Fitter::InitializeDists(){
    // gaussian process length scales
    // name(n), title(t), gnorm1(n1), gnorm2(n2), glx(lx), glmt(lmt), gljf(lfj), lbnd(lb), rbnd(rb)
    // name(n), title(t), theta1, theta0, theta2, theta3
-   dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}", 0.54, 2.1, 7.2, 8.1, ljf, 20, 300 );
+   dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}", 0.54, 2.1, 8.2, 8.1, 0.45, 20, 300 );
    dists[ "mt2_220_gp" ] = Distribution( "mt2_220_gp", "M_{T2} 220", 0.94, 1.74, 7.1, 1.9, ljf, 50, 300 );
-   dists[ "mt2_221_gp" ] = Distribution( "mt2_221_gp", "M_{T2} 221", 0.94, 1.74, 7.1, 1.9, ljf, 90, 250 );
+   dists[ "mt2_221_gp" ] = Distribution( "mt2_221_gp", "M_{T2} 221", 0.94, 1.74, 19.5, 1.9, 0.30, 90, 250 );
    dists[ "maos210_gp" ] = Distribution( "maos210_gp","blv mass from Maos neutrinos from M_{T2} 210", 0.42, 1.82, 9.92, 24.2, ljf, 100, 500 );
    dists[ "maos220_gp" ] = Distribution( "maos220_gp","blv mass from Maos neutrinos from M_{T2} 220", 1.6, 6.4, 19.2, 19.2, ljf, 100, 500 );
 
@@ -434,7 +434,6 @@ void Fitter::ReadNtuple( Dataset dat, string process, double mcweight,
       // global quantities
       evtemp.process = process;
       evtemp.weight = mcweight * weight_pu * weight_toppt * weight_btag * weight_mu * weight_elec * weight_bfrag;
-      //evtemp.weight = mcweight * weight_pu;
       evtemp.nvertices = nvert;
 
       // jets, leptons, met
@@ -450,20 +449,6 @@ void Fitter::ReadNtuple( Dataset dat, string process, double mcweight,
       evtemp.isemu = nmuons==1 and nelectrons==1;
 
       evtemp.pdf_weights = *pdf_weights;
-
-      // jes systematics
-      /*
-      if( jsyst.find("JES") != string::npos ){
-         for(int i=0; i < nameJESUnc->size(); i++){
-            if( jsyst == nameJESUnc->at(i) ){
-               evtemp.jet1 *= jet1JESUnc->at(i);
-               evtemp.jet2 *= jet2JESUnc->at(i);
-               TLorentzVector dmet( metpxJESUnc->at(i), metpyJESUnc->at(i), metpzJESUnc->at(i), meteJESUnc->at(i) );
-               evtemp.met += dmet;
-            }
-         }
-      }
-      */
 
       //
       // classify events
@@ -514,7 +499,7 @@ void Fitter::ReadNtuple( Dataset dat, string process, double mcweight,
       bool jet1_ok = evtemp.jet1.Pt() > 30 and fabs(evtemp.jet1.Eta()) < 2.5;
       bool jet2_ok = evtemp.jet2.Pt() > 30 and fabs(evtemp.jet2.Eta()) < 2.5;
       bool jetmass_ok = evtemp.jet1.M() < 40 and evtemp.jet2.M() < 40;
-      if ( jet1_ok and jet2_ok and jetmass_ok and met_ok )
+      if ( jet1_ok and jet2_ok /*and jetmass_ok*/ and met_ok )
          eventvec.push_back( evtemp );
 
    }
@@ -602,32 +587,30 @@ void Fitter::JShift( vector<Event>& eventvec, double jshift ){
 
 void Fitter::JShift_test( Event& ev, double jshift ){
 
-   //for( vector<Event>::iterator ev = eventvec.begin(); ev < eventvec.end(); ev++){
-      TLorentzVector jet1 = ev.jet1;
-      TLorentzVector jet2 = ev.jet2;
-      TLorentzVector lep1 = ev.lep1;
-      TLorentzVector lep2 = ev.lep2;
-      TLorentzVector met = ev.met;
-      TLorentzVector met_uncl= ev.met_uncl;
+   TLorentzVector jet1 = ev.jet1;
+   TLorentzVector jet2 = ev.jet2;
+   TLorentzVector lep1 = ev.lep1;
+   TLorentzVector lep2 = ev.lep2;
+   TLorentzVector met = ev.met;
+   TLorentzVector met_uncl= ev.met_uncl;
 
-      // met_uncl = met + lep1 + lep2 + jets
-      //TLorentzVector jets = met_uncl - (met + lep1 + lep2);
-      TLorentzVector jets = met_uncl - (met + lep1 + lep2 + jet1 + jet2);
+   // met_uncl = met + lep1 + lep2 + jets
+   //TLorentzVector jets = met_uncl - (met + lep1 + lep2);
+   TLorentzVector jets = met_uncl - (met + lep1 + lep2 + jet1 + jet2);
 
-      // met = met_uncl - lep1 - lep2 - jets
-      if( jshift != 0.0 ){
-         met -= (jshift*uncertainty(jet1.Eta()))*jet1;
-         met -= (jshift*uncertainty(jet2.Eta()))*jet2;
-         jet1 *= (1+jshift*uncertainty(jet1.Eta()));
-         jet2 *= (1+jshift*uncertainty(jet2.Eta()));
-         //met -= (jshift-1)*jets;
-         met -= (jshift*uncertainty(2.5))*jets;
-      }
+   // met = met_uncl - lep1 - lep2 - jets
+   if( jshift != 0.0 ){
+      met -= (jshift*uncertainty(jet1.Eta()))*jet1;
+      met -= (jshift*uncertainty(jet2.Eta()))*jet2;
+      jet1 *= (1+jshift*uncertainty(jet1.Eta()));
+      jet2 *= (1+jshift*uncertainty(jet2.Eta()));
+      //met -= (jshift-1)*jets;
+      met -= (jshift*uncertainty(2.5))*jets;
+   }
 
-      ev.jet1 = jet1;
-      ev.jet2 = jet2;
-      ev.met = met;
-   //}
+   ev.jet1 = jet1;
+   ev.jet2 = jet2;
+   ev.met = met;
 
    return;
 }
@@ -789,7 +772,7 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
    gMinuit->SetVariable(0, "topMass", 175.0, 0.1);
 
    if( fit_jfactor ){
-      //gMinuit->SetLimitedVariable(1, "jesfactor", 1.0, 0.001, 0.98, 1.02);
+      //gMinuit->SetLimitedVariable(1, "jesfactor", 1.0, 0.01, 0.985, 1.015);
       gMinuit->SetVariable(1, "jesfactor", 1.0, 0.001);
    }else{
       gMinuit->SetFixedVariable(1, "jesfactor", 1.0);

@@ -51,6 +51,8 @@ for i in range( tree.GetEntries() ):
    if tree.fitStatus != 0:
       print 'Fit Status ', tree.fitStatus, ' in PE ', i, ', masspoint ', tree.mcmass
       continue
+   if abs(tree.jesfactor-1) > 0.01:
+      continue
 
    countmt[iter] += 1
    meanmt[iter] += tree.mt
@@ -104,6 +106,18 @@ for i in range( tree.GetEntries() ):
 
 #cpull = TCanvas('cpull','cpull',800,800)
 #hpull.Draw()
+
+#temp
+"""
+devts = 49000
+varmt[0] /= 280000.0/devts
+varmt[1] /= 390000.0/devts
+varmt[2] /= 260000.0/devts
+varmt[3] /= 640000.0/devts
+varmt[4] /= 290000.0/devts
+varmt[5] /= 440000.0/devts
+varmt[6] /= 270000.0/devts
+"""
 
 gresults = TGraphErrors()
 chi2=0

@@ -839,6 +839,10 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
                TH1D *hmc;
                if( sb[k] == "sig" ){
                   hmc = (TH1D*)hists_[1][name]["ttbar"+smass+"_signal"]->Clone("hmc");
+                  hmc->Add( hists_[1][name]["ttbar"+smass+"_mistag"] );
+                  hmc->Add( hists_[1][name]["ttbar"+smass+"_taus"] );
+                  hmc->Add( hists_[1][name]["ttbar"+smass+"_hadronic"] );
+                  hmc->Add( hists_[1][name]["other"] );
                }else{
                   hmc = (TH1D*)hists_[1][name]["ttbar"+smass+"_mistag"]->Clone("hmc");
                   hmc->Add( hists_[1][name]["ttbar"+smass+"_taus"] );
@@ -1112,8 +1116,20 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
 
          // mass points
          TH1D* mbl166 = (TH1D*)hists_[1][name]["ttbar166_signal"]->Clone("mbl166");
+         mbl166->Add( hists_[1][name]["ttbar166_mistag"] );
+         mbl166->Add( hists_[1][name]["ttbar166_taus"] );
+         mbl166->Add( hists_[1][name]["ttbar166_hadronic"] );
+         mbl166->Add( hists_[1][name]["other"] );
          TH1D* mbl172 = (TH1D*)hists_[1][name]["ttbar172_signal"]->Clone("mbl172");
+         mbl172->Add( hists_[1][name]["ttbar172_mistag"] );
+         mbl172->Add( hists_[1][name]["ttbar172_taus"] );
+         mbl172->Add( hists_[1][name]["ttbar172_hadronic"] );
+         mbl172->Add( hists_[1][name]["other"] );
          TH1D* mbl178 = (TH1D*)hists_[1][name]["ttbar178_signal"]->Clone("mbl178");
+         mbl178->Add( hists_[1][name]["ttbar178_mistag"] );
+         mbl178->Add( hists_[1][name]["ttbar178_taus"] );
+         mbl178->Add( hists_[1][name]["ttbar178_hadronic"] );
+         mbl178->Add( hists_[1][name]["other"] );
 
          mbl166->Scale( 1.0/mbl166->Integral("width") );
          mbl172->Scale( 1.0/mbl172->Integral("width") );
@@ -1176,8 +1192,20 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
 
          // jfactor points
          TH1D* mblDN = (TH1D*)hists_[0][name]["ttbar172_signal"]->Clone("mblDN");
+         mblDN->Add( hists_[1][name]["ttbar172_mistag"] );
+         mblDN->Add( hists_[1][name]["ttbar172_taus"] );
+         mblDN->Add( hists_[1][name]["ttbar172_hadronic"] );
+         mblDN->Add( hists_[1][name]["other"] );
          TH1D* mblCENT = (TH1D*)hists_[1][name]["ttbar172_signal"]->Clone("mblCENT");
+         mblCENT->Add( hists_[1][name]["ttbar172_mistag"] );
+         mblCENT->Add( hists_[1][name]["ttbar172_taus"] );
+         mblCENT->Add( hists_[1][name]["ttbar172_hadronic"] );
+         mblCENT->Add( hists_[1][name]["other"] );
          TH1D* mblUP = (TH1D*)hists_[2][name]["ttbar172_signal"]->Clone("mblUP");
+         mblUP->Add( hists_[1][name]["ttbar172_mistag"] );
+         mblUP->Add( hists_[1][name]["ttbar172_taus"] );
+         mblUP->Add( hists_[1][name]["ttbar172_hadronic"] );
+         mblUP->Add( hists_[1][name]["other"] );
 
          mblDN->Scale( 1.0/mblDN->Integral("width") );
          mblCENT->Scale( 1.0/mblCENT->Integral("width") );

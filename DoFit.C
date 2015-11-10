@@ -58,19 +58,12 @@ int main(int argc, char* argv[]){
    Fitter fitter;
    map<string, Dataset> datasets;
    vector<Event> eventvec_datamc;
-   //vector<Event> eventvec_train;
-   //vector<Event> eventvec_trainUP;
-   //vector<Event> eventvec_trainDN;
    vector<Event> eventvec_test;
    map< string, map<string, TH1D*> > hists_all_;
    map< string, map<string, TH1D*> > hists_train_;
-   //map< string, map<string, TH1D*> > hists_trainUP_;
-   //map< string, map<string, TH1D*> > hists_trainDN_;
    map< string, map<string, TH1D*> > hists_test_;
    map< string, map<string, TH2D*> > hists2d_all_;
    map< string, map<string, TH2D*> > hists2d_train_;
-   //map< string, map<string, TH2D*> > hists2d_trainUP_;
-   //map< string, map<string, TH2D*> > hists2d_trainDN_;
    map< string, map<string, TH2D*> > hists2d_test_;
 
    vector<map< string, map<string, TH1D*> > > hists_jvec_train_;
@@ -373,37 +366,13 @@ int main(int argc, char* argv[]){
    // events for GP training
    // ********************************************************
    
-   //cout << "\nLoading datasets: training" << endl;
-   //fitter.ReadDatasets( datasets, eventvec_train, "train", nsyst, fracevts, statval_numPE, statval_PE );
-
-   // pdf systematics
-   /*
-   int pdfvar = -1;
-   if( nsyst.find("PDFvar") != string::npos ){
-         string nametemp = nsyst;
-         nametemp.erase(0,6);
-         pdfvar = atoi( nametemp.c_str() );
-         fitter.PDFReweight( eventvec_train, pdfvar );
-   }
-
-   fitter.GetVariables( eventvec_train );
-   fitter.DeclareHists( hists_train_, hists2d_train_, "train" );
-   fitter.FillHists( hists_train_, hists2d_train_, eventvec_train );
-   fitter.FindPTrain( hists_train_ );
-   */
-
    hists_jvec_train_.resize(3);
    hists2d_jvec_train_.resize(3);
 
-   string systs [] = {"JESTotalDN", "Central", "JESTotalUP"};
    for(int i=0; i < 3; i++){
       cout << "\nLoading datasets: training " << i << endl;
       vector<Event> eventvec_temp;
 
-      //for(vector<Event>::iterator ev = eventvec_temp.begin(); ev != eventvec_temp.end(); ev++){
-      //   eventvec_temp.push_back( *ev );
-      //}
-      //fitter.ReadDatasets( datasets, eventvec_temp, "train", systs[i], fracevts, statval_numPE, statval_PE );
       fitter.ReadDatasets( datasets, eventvec_temp, "train", nsyst, fracevts, statval_numPE, statval_PE );
 
       int pdfvar = -1;
@@ -428,10 +397,6 @@ int main(int argc, char* argv[]){
    }
 
    fitter.FindPTrain( hists_jvec_train_[1] );
-
-
-   // release memory in eventvec_train
-   //vector<Event>().swap( eventvec_train );
 
 
    // ********************************************************
@@ -829,8 +794,6 @@ int main(int argc, char* argv[]){
    cout << "Min2LL TIME = " << fitter.clocks[2] << " SEC" << endl;
    cout << "---> shape normalization: " << fitter.clocks[0] << " sec" << endl;
    cout << "---> event loop: " << fitter.clocks[1] << " sec" << endl;
-   //cout << "---- ---> Ftot: " << fitter.clocks[3] << " sec" << endl;
-   //cout << "---- ---- ---> Fmbl_gp: " << fitter.clocks[4] << " sec" << endl;
 
    return 0;
 }

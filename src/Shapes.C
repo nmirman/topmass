@@ -39,10 +39,15 @@ Shapes::Shapes( string var, vector<double>& ptraintmp, double gplength_x, double
    lbx = 0.0;
    rbx = 0.0;
 
+   double rho = 0.0;
+   if( name == "mbl_gp" ) rho = 0.86;
+   else if( name == "mt2_221_gp" ) rho = 0.087;
+   else cout << "ERROR IN GP CORR: DIST NOT FOUND" << endl;
    // to avoid divisions in GPkern
    ilx2 = 1.0/(lx*lx);
    ilmass2 = 1.0/(lmass*lmass);
    iljfact2 = 1.0/(ljfact*ljfact);
+   imjfcorr = rho/(lmass*ljfact);
 
    // flag for cross validation two-stage fit
    do_gpvar = false;
@@ -70,7 +75,7 @@ double Shapes::Ftot(double *px, double *pp){
    double integralsig = pp[4];
    double integralbkg = pp[5];
 
-   if( k != 1 ) cout << "ERROR BKG GP SHAPE" << endl;
+   //if( k != 1 ) cout << "ERROR BKG GP SHAPE" << endl;
 
    double val = norm*(k*Fmbl_gp(x, mt, jfact, "sig")/integralsig
          /*+ (1-k)*Fmbl_gp(x, mt, jfact, "bkg")/integralbkg*/);
@@ -152,7 +157,7 @@ double Shapes::Fmbl_gp_var(double x, double mt, double jfact, string sb){
 
 double Shapes::GPkern(double x1, double x2, double m1, double m2, double j1, double j2){
 
-   return 1E-06*gnorm2*gnorm1*exp( -0.5*( ilx2*(x1-x2)*(x1-x2) + ilmass2*(m1-m2)*(m1-m2) + iljfact2*(j1-j2)*(j1-j2) ));
+   return 1E-06*gnorm2*gnorm1*exp( -0.5*( ilx2*(x1-x2)*(x1-x2) + ilmass2*(m1-m2)*(m1-m2) + iljfact2*(j1-j2)*(j1-j2) - 2*imjfcorr*(x1-x2)*(j1-j2) ));
 }
 
 void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
@@ -243,24 +248,24 @@ void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
    cout << "---> cholesky decomposition of signal matrix... "; fflush(stdout);
    TDecompChol Cholsig(Asig);
    cout << "done!" << endl;
-   cout << "---> cholesky decomposition of background matrix... "; fflush(stdout);
-   TDecompChol Cholbkg(Abkg);
-   cout << "done!" << endl;
+   //cout << "---> cholesky decomposition of background matrix... "; fflush(stdout);
+   //TDecompChol Cholbkg(Abkg);
+   //cout << "done!" << endl;
    TMatrixD AsigU = Cholsig.GetU();
-   TMatrixD AbkgU = Cholbkg.GetU();
+   //TMatrixD AbkgU = Cholbkg.GetU();
    bool status = 0;
    cout << "---> invert signal matrix... "; fflush(stdout);
    TMatrixDSym Asinv_sig = Cholsig.Invert(status);
    cout << "done!" << endl;
-   cout << "---> invert background matrix... "; fflush(stdout);
-   TMatrixDSym Asinv_bkg = Cholbkg.Invert(status);
-   cout << "done!" << endl;
+   //cout << "---> invert background matrix... "; fflush(stdout);
+   //TMatrixDSym Asinv_bkg = Cholbkg.Invert(status);
+   //cout << "done!" << endl;
    Ainv_sig.Clear();
    Ainv_bkg.Clear();
    Ainv_sig.ResizeTo( ntrain*NMP*NJP, ntrain*NMP*NJP );
    Ainv_bkg.ResizeTo( ntrain*NMP*NJP, ntrain*NMP*NJP );
    Ainv_sig = (TMatrixD)Asinv_sig;
-   Ainv_bkg = (TMatrixD)Asinv_bkg;
+   //Ainv_bkg = (TMatrixD)Asinv_bkg;
 
    TMatrixD Ktmp = K;
    for(int i=0; i < ntrain*NMP*NJP; i++) Ktmp[i][i] += 10E-9;
@@ -276,7 +281,7 @@ void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
    Kinv = (TMatrixD)Ksinv;
 
    TMatrixD Ainv_sigtemp = Ainv_sig;
-   TMatrixD Ainv_bkgtemp = Ainv_bkg;
+   //TMatrixD Ainv_bkgtemp = Ainv_bkg;
 
    // vector of training points
    TVectorD ysig(ntrain*NMP*NJP);
@@ -296,7 +301,7 @@ void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
    aGPsig = Ainv_sigtemp*ysig;
 
    aGPbkg.ResizeTo( ntrain*NMP*NJP );
-   aGPbkg = Ainv_bkgtemp*ybkg;
+   //aGPbkg = Ainv_bkgtemp*ybkg;
 
    // compute marginal likelihood
    //TDecompLU lusig(Asig);
@@ -308,19 +313,19 @@ void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
    double ldetbkg = 0.0;
    for(int i=0; i < Cholsig.GetNrows(); i++){
       ldetsig += 2*log(AsigU[i][i]);
-      ldetbkg += 2*log(AbkgU[i][i]);
+      //ldetbkg += 2*log(AbkgU[i][i]);
    }
 
    double term1sig = -0.5*ysig*aGPsig;
    double term2sig = -0.5*ldetsig;
    double term3sig = -0.5*ntrain*log(2*TMath::Pi());
 
-   double term1bkg = -0.5*ybkg*aGPbkg;
-   double term2bkg = -0.5*ldetbkg;
-   double term3bkg = -0.5*ntrain*log(2*TMath::Pi());
+   //double term1bkg = -0.5*ybkg*aGPbkg;
+   //double term2bkg = -0.5*ldetbkg;
+   //double term3bkg = -0.5*ntrain*log(2*TMath::Pi());
 
    m2llsig = -2.0*(term1sig+term2sig+term3sig);
-   m2llbkg = -2.0*(term1bkg+term2bkg+term3bkg);
+   //m2llbkg = -2.0*(term1bkg+term2bkg+term3bkg);
 
    return;
 }
@@ -333,8 +338,8 @@ void Shapes::LearnGPparams( vector< map< string, map<string, TH1D*> > >& hists_ 
    // set training hist
    hists_train_ = &hists_;
 
-   fFunc = new ROOT::Math::Functor ( this, &Shapes::GPm2llX, 4 );
-   //fFunc = new ROOT::Math::Functor ( this, &Shapes::GPm2llLOOCV, 4 );
+   //fFunc = new ROOT::Math::Functor ( this, &Shapes::GPm2llX, 5 );
+   fFunc = new ROOT::Math::Functor ( this, &Shapes::GPm2llLOOCV, 6 );
    gMinuit->SetFunction( *fFunc );
 
    /*
@@ -353,6 +358,7 @@ void Shapes::LearnGPparams( vector< map< string, map<string, TH1D*> > >& hists_ 
    lx = xs[2];
    lmass = xs[3];
    */
+   /*
    do_gpvar = false;
    // stage 1
    gMinuit->SetFixedVariable(0, "gpnorm1", 1);
@@ -383,13 +389,35 @@ void Shapes::LearnGPparams( vector< map< string, map<string, TH1D*> > >& hists_ 
    gnorm2 = xs2[1];
    lx = xs2[2];
    lmass = xs2[3];
+   */
+
+   // name(n), title(t), gnorm1(n1), gnorm2(n2), glx(lx), glmt(lmt), gljf(lfj), lbnd(lb), rbnd(rb)
+   // name(n), title(t), theta1, theta0, theta2, theta3
+   //dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}", 0.54, 2.1, 7.2, 8.1, ljf, 20, 300 );
+
+   do_gpvar = false;
+   gMinuit->SetFixedVariable(0, "gpnorm1", gnorm1);
+   gMinuit->SetFixedVariable(1, "gpnorm2", gnorm2);
+   gMinuit->SetFixedVariable(2, "lx", lx);
+   gMinuit->SetFixedVariable(3, "lmass", lmass);
+   gMinuit->SetFixedVariable(4, "ljf", ljfact);
+   gMinuit->SetLimitedVariable(5, "mjfcorr", 0.0, 0.1, -1, 1);
+
+   gMinuit->Minimize();
+   const double *xs2 = gMinuit->X();
+   gnorm1 = xs2[0];
+   gnorm2 = xs2[1];
+   ilx2 = 1.0/(xs2[2]*xs2[2]);
+   ilmass2 = 1.0/(xs2[3]*xs2[3]);
+   iljfact2 = 1.0/(xs2[4]*xs2[4]);
+   imjfcorr = xs2[5];
 
    return;
 }
 
 double Shapes::GPm2ll( const double *x ){
    cout << "gnorm: " << x[0] << ", " << x[1] << endl;
-   cout << "lx, lmt: " << x[1] << ", " << x[2] << endl;
+   cout << "lx, lmt, ljf: " << x[1] << ", " << x[2] << ", " << x[3] << endl;
 
    gnorm1 = x[0];
    gnorm2 = x[1];
@@ -403,12 +431,13 @@ double Shapes::GPm2ll( const double *x ){
 
 double Shapes::GPm2llX( const double *x ){
    cout << "gnorm: " << x[0] << ", " << x[1] << endl;
-   cout << "lx, lmt: " << x[2] << ", " << x[3] << endl;
+   cout << "lx, lmt, ljf: " << x[2] << ", " << x[3] << ", " << x[4] << endl;
 
    gnorm1 = x[0];
    gnorm2 = x[1];
    lx = x[2];
    lmass = x[3];
+   ljfact = x[4];
 
    // histograms
    vector<TH1D*> hgp_sig;
@@ -421,6 +450,10 @@ double Shapes::GPm2llX( const double *x ){
       // signal shape
       hgp_sig.push_back( (TH1D*)(*hists_train_)[1][name]["ttbar"+smass+"_signal"]
             ->Clone( ("hgp_sigx"+smass).c_str()) );
+      hgp_sig[j]->Add( (*hists_train_)[1][name]["ttbar"+smass+"_mistag"] );
+      hgp_sig[j]->Add( (*hists_train_)[1][name]["ttbar"+smass+"_hadronic"] );
+      hgp_sig[j]->Add( (*hists_train_)[1][name]["ttbar"+smass+"_taus"] );
+      hgp_sig[j]->Add( (*hists_train_)[1][name]["other"] );
       hgp_sig[j]->Scale( 1.0/hgp_sig[j]->Integral("width") );
 
    }
@@ -477,27 +510,40 @@ double Shapes::GPm2llX( const double *x ){
 
 double Shapes::GPm2llLOOCV( const double *x ){
    cout << "gnorm: " << x[0] << ", " << x[1] << endl;
-   cout << "lx, lmt: " << x[2] << ", " << x[3] << endl;
+   cout << "lx, lmt, ljf, corr: " << x[2] << ", " << x[3] << ", " << x[4] << ", " << x[5] << endl;
 
    gnorm1 = x[0];
    gnorm2 = x[1];
-   lx = x[2];
-   lmass = x[3];
+   ilx2 = 1.0/(x[2]*x[2]);
+   ilmass2 = 1.0/(x[3]*x[3]);
+   iljfact2 = 1.0/(x[4]*x[4]);
+   imjfcorr = sqrt(iljfact2*ilmass2)*x[5];
 
-   int ntrain = 100;
+   int ntrain = ptrain.size();
 
    // histograms
    vector<TH1D*> hgp_sig;
-   for(int j=0; j < NMP; j++){
+   for(int i=0; i < NMP*NJP; i++){
+
+      int im, ijfact;
+      iGP(i,im,ijfact);
 
       stringstream ssmass;
-      ssmass << floor(masspnts[j]);
+      ssmass << floor(masspnts[im]);
       string smass = ssmass.str();
 
+      stringstream sjfact;
+      sjfact << jfactpnts[ijfact];
+      string jfact = sjfact.str();
+
       // signal shape
-      hgp_sig.push_back( (TH1D*)(*hists_train_)[1][name]["ttbar"+smass+"_signal"]
+      hgp_sig.push_back( (TH1D*)(*hists_train_)[ijfact][name]["ttbar"+smass+"_signal"]
             ->Clone( ("hgp_sigx"+smass).c_str()) );
-      hgp_sig[j]->Scale( 1.0/hgp_sig[j]->Integral("width") );
+      hgp_sig[i]->Add( (*hists_train_)[ijfact][name]["ttbar"+smass+"_mistag"] );
+      hgp_sig[i]->Add( (*hists_train_)[ijfact][name]["ttbar"+smass+"_hadronic"] );
+      hgp_sig[i]->Add( (*hists_train_)[ijfact][name]["ttbar"+smass+"_taus"] );
+      hgp_sig[i]->Add( (*hists_train_)[ijfact][name]["other"] );
+      hgp_sig[i]->Scale( 1.0/hgp_sig[i]->Integral("width") );
 
    }
 
@@ -506,30 +552,36 @@ double Shapes::GPm2llLOOCV( const double *x ){
    TrainGP( *hists_train_, m2llsig, m2llbkg );
 
    // vector of training points
-   TVectorD ysig(ntrain*NMP);
-   for(int i=0; i < ntrain*NMP; i++){
+   TVectorD ysig(ntrain*NMP*NJP);
+   for(int i=0; i < ntrain*NMP*NJP; i++){
       int im = i % ntrain;
-      int imass = i / ntrain;
-      ysig[i] = hgp_sig[imass]->GetBinContent( hgp_sig[imass]->FindBin(ptrain[im]) );
+      int index = i / ntrain;
+      ysig[i] = hgp_sig[index]->GetBinContent( hgp_sig[index]->FindBin(ptrain[im]) );
    }
 
    TVectorD Ky = Kinv*ysig;
 
    double m2ll = 0;
-   for(int i=0; i < ntrain*NMP; i++){
+   for(int i=0; i < ntrain*NMP*NJP; i++){
       if( ysig[i] == 0 ) continue;
       int im = i % ntrain;
-      int imass = i / ntrain;
+      int index = i / ntrain;
 
       double ui = ysig[i] - Ky[i]/Kinv[i][i];
-      double vi1 = 1/Kinv[i][i];
-      double vi2 = pow(hgp_sig[imass]->GetBinContent( hgp_sig[imass]->FindBin(ptrain[im]) ),2);
+      double vi1 = 1.0/Kinv[i][i];
+      double vi2 = pow(hgp_sig[index]->GetBinContent( hgp_sig[index]->FindBin(ptrain[im]) ),2);
 
       double vi = do_gpvar ? vi1 : vi2;
 
       m2ll += log(vi) + pow(ui-ysig[i],2)/vi + log(2*TMath::Pi());
-
+      int imass, ijf;
+      iGP(index, imass , ijf);
+      //if( i < 100 ){
+      //   cout << i << ", " << masspnts[imass] << ", " << jfactpnts[ijf] << ": " << ui << " - " <<  ysig[i] << " = " << ui-ysig[i] 
+      //      << " / " << vi << endl;
+      //}
    }
+   cout << "m2ll = " << m2ll << endl;
 
    return m2ll;
 

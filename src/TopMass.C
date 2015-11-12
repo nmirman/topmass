@@ -77,9 +77,9 @@ void Fitter::InitializeDists(){
    // gaussian process length scales
    // name(n), title(t), gnorm1(n1), gnorm2(n2), glx(lx), glmt(lmt), gljf(lfj), lbnd(lb), rbnd(rb)
    // name(n), title(t), theta1, theta0, theta2, theta3
-   dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}", 0.54, 2.1, 8.2, 8.1, 0.45, 20, 300 );
+   dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}", 0.54, 2.1, 8.2, 8.1, 0.635, 20, 300 );
    dists[ "mt2_220_gp" ] = Distribution( "mt2_220_gp", "M_{T2} 220", 0.94, 1.74, 7.1, 1.9, ljf, 50, 300 );
-   dists[ "mt2_221_gp" ] = Distribution( "mt2_221_gp", "M_{T2} 221", 0.94, 1.74, 19.5, 1.9, 0.30, 90, 250 );
+   dists[ "mt2_221_gp" ] = Distribution( "mt2_221_gp", "M_{T2} 221", 0.94, 1.74, 19.5, 1.9, 0.175, 90, 250 );
    dists[ "maos210_gp" ] = Distribution( "maos210_gp","blv mass from Maos neutrinos from M_{T2} 210", 0.42, 1.82, 9.92, 24.2, ljf, 100, 500 );
    dists[ "maos220_gp" ] = Distribution( "maos220_gp","blv mass from Maos neutrinos from M_{T2} 220", 1.6, 6.4, 19.2, 19.2, ljf, 100, 500 );
 
@@ -257,7 +257,7 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
 }
 
 void Fitter::ReadDatasets(map<string, Dataset>& datasets, vector<Event>& events, string type, string nsyst,
-      double fracevts, double statval_numPE, double statval_PE){
+      double fracevts, double statval_numPE, double statval_PE, double jshift){
 
    for(map<string, Dataset>::iterator it = datasets.begin(); it != datasets.end(); it++){
       string name = it->first;
@@ -309,7 +309,7 @@ void Fitter::ReadDatasets(map<string, Dataset>& datasets, vector<Event>& events,
 
       if( type == "diagnostics" ){
          ReadNtuple( *dat, nametmp, dat->mc_xsec/dat->mc_nevts,
-               tsyst.c_str(), events, 0, -1, -1, -1 );
+               tsyst.c_str(), events, 0, -1, -1, -1, jshift );
       }
 
       string test_syst = "Central";
@@ -321,11 +321,11 @@ void Fitter::ReadDatasets(map<string, Dataset>& datasets, vector<Event>& events,
       if( name.compare("data") != 0 ){
          if( type == "train" ){
             ReadNtuple( *dat, nametmp, dat->mc_xsec/dat->mc_nevts,
-                  tsyst.c_str(), events, 0, fracevts, -1, -1 );
+                  tsyst.c_str(), events, 0, fracevts, -1, -1, jshift );
          }
          if( type == "test" ){
             ReadNtuple( *dat, nametmp, dat->mc_xsec/dat->mc_nevts,
-                  test_syst.c_str(), events, 0, fracevts, statval_numPE, statval_PE );
+                  test_syst.c_str(), events, 0, fracevts, statval_numPE, statval_PE, jshift );
          }
       }
 
@@ -336,7 +336,7 @@ void Fitter::ReadDatasets(map<string, Dataset>& datasets, vector<Event>& events,
 
 void Fitter::ReadNtuple( Dataset dat, string process, double mcweight, 
       string selection, vector<Event>& eventvec, int opt, double fracevts,
-      int statval_numPE, int statval_PE ){
+      int statval_numPE, int statval_PE, double jshift ){
    
    // declare variables
    TLorentzVector *jet1 = new TLorentzVector();
@@ -488,10 +488,8 @@ void Fitter::ReadNtuple( Dataset dat, string process, double mcweight,
          break;
       }
 
-      //cout << "STRUCT SIZE CHECK: " << sizeof(evtemp) << endl;
-
-      if( jtest != 0 ){
-         JShift_test(evtemp, jtest);
+      if( jshift != 0 ){
+         JShift(evtemp, jshift);
       }
 
       // push back event
@@ -555,32 +553,30 @@ double Fitter::uncertainty( double eta ){
    return unc;
 }
 
-void Fitter::JShift( vector<Event>& eventvec, double jshift ){
+void Fitter::JShift( Event& ev, double jshift ){
 
-   for( vector<Event>::iterator ev = eventvec.begin(); ev < eventvec.end(); ev++){
-      TLorentzVector jet1 = ev->jet1;
-      TLorentzVector jet2 = ev->jet2;
-      TLorentzVector lep1 = ev->lep1;
-      TLorentzVector lep2 = ev->lep2;
-      TLorentzVector met = ev->met;
-      TLorentzVector met_uncl= ev->met_uncl;
+   TLorentzVector jet1 = ev.jet1;
+   TLorentzVector jet2 = ev.jet2;
+   TLorentzVector lep1 = ev.lep1;
+   TLorentzVector lep2 = ev.lep2;
+   TLorentzVector met = ev.met;
+   TLorentzVector met_uncl= ev.met_uncl;
 
-      // met_uncl = met + lep1 + lep2 + jets
-      TLorentzVector jets = met_uncl - (met + lep1 + lep2);
+   // met_uncl = met + lep1 + lep2 + jets
+   TLorentzVector jets = met_uncl - (met + lep1 + lep2);
 
-      // met = met_uncl - lep1 - lep2 - jets
-      if( jshift != 1.0 ){
-         //met -= (jshift-1)*jet1;
-         //met -= (jshift-1)*jet2;
-         jet1 *= jshift;
-         jet2 *= jshift;
-         met -= (jshift-1)*jets;
-      }
-
-      ev->jet1 = jet1;
-      ev->jet2 = jet2;
-      ev->met = met;
+   // met = met_uncl - lep1 - lep2 - jets
+   if( jshift != 1.0 ){
+      //met -= (jshift-1)*jet1;
+      //met -= (jshift-1)*jet2;
+      jet1 *= jshift;
+      jet2 *= jshift;
+      met -= (jshift-1)*jets;
    }
+
+   ev.jet1 = jet1;
+   ev.jet2 = jet2;
+   ev.met = met;
 
    return;
 }
@@ -628,16 +624,6 @@ void Fitter::GetVariables( vector<Event>& eventvec ){
       ev->mt2_220 = Calc.GetMt2(2,0);
       ev->mt2_210 = Calc.GetMt2(1,0);
       ev->mbls = Calc.GetBlInvariantMasses();
-      /*
-      double mbl1 = (ev->lep1+ev->jet1).M();
-      double mbl2 = (ev->lep2+ev->jet1).M();
-      double mbl3 = (ev->lep1+ev->jet2).M();
-      double mbl4 = (ev->lep2+ev->jet2).M();
-      vector<double> mbltemp;
-      mbltemp.push_back( min(mbl1,mbl3) );
-      mbltemp.push_back( min(mbl2,mbl4) );
-      ev->mbls = mbltemp;
-      */
 
       TLorentzVector up221 = -((ev->jet1)+(ev->jet2)+(ev->lep1)+(ev->lep2)+(ev->met));
       if (sin((ev->jet1).DeltaPhi(up221))*sin((ev->jet2).DeltaPhi(up221)) <= 0){
@@ -1220,23 +1206,71 @@ void Fitter::PDFReweight( vector<Event>& eventvec, int evalue ){
 
 }
 
-void Fitter::FindPTrain( map< string, map<string, TH1D*> >& hists_ ){
+void Fitter::FindPTrain( map< string, map<string, TH1D*> >& hists_, vector<Event>& eventvec, int ijshift ){
 
    for( map<string, Distribution>::iterator it = dists.begin(); it != dists.end(); it++ ){
       
       string name = it->first;
       Distribution *dist = &(it->second);
 
-      cout << name << " bin centers: ";
+      cout << name << " bin centers @ 172.5, JF=1: ";
 
+      double lowedge [NTP] = {0};
       TH1D* hist = (TH1D*)hists_[name]["ttbar172_signal"];
-      for(int i=1; i <= hist->GetNbinsX(); i++){
-         dist->ptrain.push_back( hist->GetBinCenter(i) );
-         cout << hist->GetBinCenter(i) << " ";
+      hist->GetLowEdge( lowedge );
+      double bwidth = hist->GetBinWidth(10);
+
+      // loop over masspoints
+      for(int im=0; im < NMP; im++){
+
+         stringstream ssmass;
+         ssmass << floor(masspoints[im]);
+         string smass = ssmass.str();
+
+         double num [NTP] = {0};
+         double denom [NTP] = {0};
+
+         for( vector<Event>::iterator ev = eventvec.begin(); ev < eventvec.end(); ev++){
+            if( ev->type.find("ttbar"+smass) != string::npos or ev->type == "other" ){
+               if( name == "mbl_gp" ){
+                  for( unsigned int m=0; m < ev->mbls.size(); m++ ){
+                     for(int i=0; i < NTP; i++){
+                        if( ev->mbls[m] >= lowedge[i] and ev->mbls[m] < lowedge[i]+bwidth ){
+                           num[i] += ev->weight*ev->mbls[m];
+                           denom[i] += ev->weight;
+                           break;
+                        }
+                     }
+                  }
+               }
+               if( name == "mt2_221_gp" ){
+                  for(int i=0; i < NTP; i++){
+                     if( ev->mt2_221 >= lowedge[i] and ev->mt2_221 < lowedge[i]+bwidth ){
+                        num[i] += ev->weight*ev->mt2_221;
+                        denom[i] += ev->weight;
+                        break;
+                     }
+                  }
+               }
+            }
+         }
+
+         for(int i=0; i < NTP; i++){
+            dist->ptrain[i][im][ijshift] = denom[i] != 0 ? num[i]/denom[i] : hist->GetBinCenter(i+1);
+         }
+
+      } // mass loop
+
+      if( name != "mt2_221_gp" and name != "mbl_gp" ){
+         for(int im=0; im < NMP; im++){
+            for(int i=0; i < NTP; i++){
+               dist->ptrain[i][im][ijshift] = hist->GetBinCenter(i+1);
+            }
+         }
       }
 
+      for(int i=0; i < NTP; i++) cout << dist->ptrain[i][3][ijshift] << " ";
       cout << endl;
-
    }
 
    return;

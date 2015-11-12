@@ -18,7 +18,7 @@ using namespace std;
 // constructor and destructor
 //
 
-Shapes::Shapes( string var, vector<double>& ptraintmp, double gplength_x, double gplength_mt, double gplength_jfact, double norm1, double norm2, double lbound, double rbound ){
+Shapes::Shapes( string var, double ptraintmp[NTP][NMP][NJP], double gplength_x, double gplength_mt, double gplength_jfact, double norm1, double norm2, double lbound, double rbound ){
 
    name = var;
    // GP options
@@ -30,8 +30,15 @@ Shapes::Shapes( string var, vector<double>& ptraintmp, double gplength_x, double
    ltrain = lbound;
    rtrain = rbound;
    //for(int i=0; i < ntrain; i++) ptrain.push_back( ltrain + (i+0.5)*(rtrain-ltrain)/ntrain );
-   for(unsigned int i=0; i < ptraintmp.size(); i++) ptrain.push_back( ptraintmp[i] );
-   ptrainsize = ptrain.size();
+   //for(unsigned int i=0; i < ptraintmp.size(); i++) ptrain.push_back( ptraintmp[i] );
+   for(int i=0; i < NTP; i++){
+      for(int j=0; j < NMP; j++){
+         for(int k=0; k < NJP; k++){
+            ptrain[i][j][k] = ptraintmp[i][j][k];
+         }
+      }
+   }
+   ptrainsize = NTP;
 
    ljfact = gplength_jfact;
 
@@ -40,14 +47,15 @@ Shapes::Shapes( string var, vector<double>& ptraintmp, double gplength_x, double
    rbx = 0.0;
 
    double rho = 0.0;
-   if( name == "mbl_gp" ) rho = 0.86;
-   else if( name == "mt2_221_gp" ) rho = 0.087;
+   if( name == "mbl_gp" ) rho = 0.37;
+   else if( name == "mt2_221_gp" ) rho = 0.062;
    else cout << "ERROR IN GP CORR: DIST NOT FOUND" << endl;
    // to avoid divisions in GPkern
-   ilx2 = 1.0/(lx*lx);
-   ilmass2 = 1.0/(lmass*lmass);
-   iljfact2 = 1.0/(ljfact*ljfact);
+   double irho2 = 1.0/(1-rho*rho);
    imjfcorr = rho/(lmass*ljfact);
+   ilx2 = irho2/(lx*lx);
+   ilmass2 = irho2/(lmass*lmass);
+   iljfact2 = irho2/(ljfact*ljfact);
 
    // flag for cross validation two-stage fit
    do_gpvar = false;
@@ -120,7 +128,7 @@ double Shapes::Fmbl_gp(double x, double mt, double jfact, string sb){
             }
             */
             fgp += aGPsig[i+j*ptrainsize+k*ptrainsize*NMP]
-               * GPkern( x, ptrain[i], mt, masspnts[j], jfact, jfactpnts[k] );
+               * GPkern( x, ptrain[i][j][k], mt, masspnts[j], jfact, jfactpnts[k] );
          }
       }
    }
@@ -130,7 +138,7 @@ double Shapes::Fmbl_gp(double x, double mt, double jfact, string sb){
 
 double Shapes::Fmbl_gp_var(double x, double mt, double jfact, string sb){
 
-   int ntrain = ptrain.size();
+   int ntrain = ptrainsize;
 
    // vector of covariances
    TVectorD k(ntrain*NMP);
@@ -138,7 +146,7 @@ double Shapes::Fmbl_gp_var(double x, double mt, double jfact, string sb){
       int im = i % ntrain;
       int imass = i / ntrain;
       int ijfact = i / (ntrain*NMP);
-      k[i] = GPkern( x, ptrain[im], mt, masspnts[imass], jfact, jfactpnts[ijfact] );
+      k[i] = GPkern( x, ptrain[im][imass][ijfact], mt, masspnts[imass], jfact, jfactpnts[ijfact] );
    }
    TVectorD kT = k;
 
@@ -163,7 +171,7 @@ double Shapes::GPkern(double x1, double x2, double m1, double m2, double j1, dou
 void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
      double &m2llsig, double &m2llbkg ){
 
-   int ntrain = ptrain.size();
+   int ntrain = ptrainsize;
 
    // histograms
    vector<TH1D*> hgp_sig;
@@ -218,7 +226,8 @@ void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
          iGP( i_index, imass, ijfact );
          iGP( j_index, jmass, jjfact );
 
-         K[i][j] = GPkern( ptrain[im], ptrain[jm], masspnts[imass], masspnts[jmass], jfactpnts[ijfact], jfactpnts[jjfact] );
+         K[i][j] = GPkern( ptrain[im][imass][ijfact], ptrain[jm][jmass][jjfact],
+               masspnts[imass], masspnts[jmass], jfactpnts[ijfact], jfactpnts[jjfact] );
      }
    }
    // compute noise matrix
@@ -227,8 +236,10 @@ void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
    for(int i=0; i < ntrain*NMP*NJP; i++){
       int im = i % ntrain;
       int index = i / ntrain;
-      double binerr_sig = hgp_sig[index]->GetBinError( hgp_sig[index]->FindBin(ptrain[im]) );
-      double binerr_bkg = hgp_bkg[index]->GetBinError( hgp_bkg[index]->FindBin(ptrain[im]) );
+      int imass, ijfact;
+      iGP( index, imass, ijfact );
+      double binerr_sig = hgp_sig[index]->GetBinError( hgp_sig[index]->FindBin(ptrain[im][imass][ijfact]) );
+      double binerr_bkg = hgp_bkg[index]->GetBinError( hgp_bkg[index]->FindBin(ptrain[im][imass][ijfact]) );
       binerr_sig *= sqrt(gnorm2);
       binerr_bkg *= sqrt(gnorm2);
       for(int j=0; j < ntrain*NMP*NJP; j++){
@@ -289,7 +300,9 @@ void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
    for(int i=0; i < ntrain*NMP*NJP; i++){
       int im = i % ntrain;
       int index = i / ntrain;
-      ysig[i] = hgp_sig[index]->GetBinContent( hgp_sig[index]->FindBin(ptrain[im]) );
+      int imass, ijfact;
+      iGP( index, imass, ijfact );
+      ysig[i] = hgp_sig[index]->GetBinContent( hgp_sig[index]->FindBin(ptrain[im][imass][ijfact]) );
       //ybkg[i] = hgp_bkg[index]->GetBinContent( hgp_bkg[index]->FindBin(ptrain[im]) );
    }
 
@@ -400,17 +413,19 @@ void Shapes::LearnGPparams( vector< map< string, map<string, TH1D*> > >& hists_ 
    gMinuit->SetFixedVariable(1, "gpnorm2", gnorm2);
    gMinuit->SetFixedVariable(2, "lx", lx);
    gMinuit->SetFixedVariable(3, "lmass", lmass);
-   gMinuit->SetFixedVariable(4, "ljf", ljfact);
+   gMinuit->SetVariable(4, "ljf", ljfact, 0.1);
    gMinuit->SetLimitedVariable(5, "mjfcorr", 0.0, 0.1, -1, 1);
 
    gMinuit->Minimize();
    const double *xs2 = gMinuit->X();
    gnorm1 = xs2[0];
    gnorm2 = xs2[1];
-   ilx2 = 1.0/(xs2[2]*xs2[2]);
-   ilmass2 = 1.0/(xs2[3]*xs2[3]);
-   iljfact2 = 1.0/(xs2[4]*xs2[4]);
-   imjfcorr = xs2[5];
+   double rho = xs2[5];
+   double irho2 = 1.0/(1-rho*rho);
+   ilx2 = irho2/(xs2[2]*xs2[2]);
+   ilmass2 = irho2/(xs2[3]*xs2[3]);
+   iljfact2 = irho2/(xs2[4]*xs2[4]);
+   imjfcorr = sqrt(iljfact2*ilmass2)*rho;
 
    return;
 }
@@ -430,6 +445,7 @@ double Shapes::GPm2ll( const double *x ){
 }
 
 double Shapes::GPm2llX( const double *x ){
+   /*
    cout << "gnorm: " << x[0] << ", " << x[1] << endl;
    cout << "lx, lmt, ljf: " << x[2] << ", " << x[3] << ", " << x[4] << endl;
 
@@ -506,20 +522,23 @@ double Shapes::GPm2llX( const double *x ){
 
    return m2ll_tot;
 
+   */
 }
 
 double Shapes::GPm2llLOOCV( const double *x ){
    cout << "gnorm: " << x[0] << ", " << x[1] << endl;
    cout << "lx, lmt, ljf, corr: " << x[2] << ", " << x[3] << ", " << x[4] << ", " << x[5] << endl;
 
+   double rho = x[5];
+   double irho2 = 1.0/(1-rho*rho);
    gnorm1 = x[0];
    gnorm2 = x[1];
-   ilx2 = 1.0/(x[2]*x[2]);
-   ilmass2 = 1.0/(x[3]*x[3]);
-   iljfact2 = 1.0/(x[4]*x[4]);
-   imjfcorr = sqrt(iljfact2*ilmass2)*x[5];
+   ilx2 = irho2/(x[2]*x[2]);
+   ilmass2 = irho2/(x[3]*x[3]);
+   iljfact2 = irho2/(x[4]*x[4]);
+   imjfcorr = sqrt(iljfact2*ilmass2)*rho;
 
-   int ntrain = ptrain.size();
+   int ntrain = ptrainsize;
 
    // histograms
    vector<TH1D*> hgp_sig;
@@ -556,7 +575,9 @@ double Shapes::GPm2llLOOCV( const double *x ){
    for(int i=0; i < ntrain*NMP*NJP; i++){
       int im = i % ntrain;
       int index = i / ntrain;
-      ysig[i] = hgp_sig[index]->GetBinContent( hgp_sig[index]->FindBin(ptrain[im]) );
+      int imass, ijfact;
+      iGP( index, imass, ijfact );
+      ysig[i] = hgp_sig[index]->GetBinContent( hgp_sig[index]->FindBin(ptrain[im][imass][ijfact]) );
    }
 
    TVectorD Ky = Kinv*ysig;
@@ -566,20 +587,16 @@ double Shapes::GPm2llLOOCV( const double *x ){
       if( ysig[i] == 0 ) continue;
       int im = i % ntrain;
       int index = i / ntrain;
+      int imass, ijfact;
+      iGP( index, imass, ijfact );
 
       double ui = ysig[i] - Ky[i]/Kinv[i][i];
       double vi1 = 1.0/Kinv[i][i];
-      double vi2 = pow(hgp_sig[index]->GetBinContent( hgp_sig[index]->FindBin(ptrain[im]) ),2);
+      double vi2 = pow(hgp_sig[index]->GetBinContent( hgp_sig[index]->FindBin(ptrain[im][imass][ijfact]) ),2);
 
       double vi = do_gpvar ? vi1 : vi2;
 
       m2ll += log(vi) + pow(ui-ysig[i],2)/vi + log(2*TMath::Pi());
-      int imass, ijf;
-      iGP(index, imass , ijf);
-      //if( i < 100 ){
-      //   cout << i << ", " << masspnts[imass] << ", " << jfactpnts[ijf] << ": " << ui << " - " <<  ysig[i] << " = " << ui-ysig[i] 
-      //      << " / " << vi << endl;
-      //}
    }
    cout << "m2ll = " << m2ll << endl;
 

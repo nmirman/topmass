@@ -18,6 +18,7 @@ using namespace std;
 
 #define NMP 7
 #define NJP 3
+#define NTP 100
 
 struct Dataset {
 
@@ -165,7 +166,7 @@ struct Distribution {
    double lbnd;
    double rbnd;
 
-   vector<double> ptrain;
+   double ptrain [NTP][NMP][NJP];
 
    Distribution( string n="", string t="", double n1=1.0, double n2=1.0, double lx=1.0, double lmt=1.0, double ljf=0.1, double lb=0, double rb=300 )
       : name(n), title(t), gnorm1(n1), gnorm2(n2), glx(lx), glmt(lmt), gljf(ljf), lbnd(lb), rbnd(rb) {
@@ -182,11 +183,11 @@ class Fitter{
       ~Fitter();
 
       void InitializeDists();
-      void ReadNtuple(Dataset, string, double, string, vector<Event>&, int, double, int, int);
+      void ReadNtuple(Dataset, string, double, string, vector<Event>&, int, double, int, int, double);
       void LoadDatasets(map<string, Dataset>&);
-      void ReadDatasets(map<string, Dataset>&, vector<Event>&, string, string, double, double, double);
+      void ReadDatasets(map<string, Dataset>&, vector<Event>&, string, string, double, double, double, double);
       void GetVariables(vector<Event>&);
-      void JShift(vector<Event>&, double=1.0);
+      void JShift(Event&, double=1.0);
       void JShift_test(Event&, double=1.0);
       double uncertainty(double=0.0);
       void ReweightMC(vector<Event>&, string);
@@ -208,7 +209,7 @@ class Fitter{
       vector<bool> MaosCut220( vector<Event>::iterator ev, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector&, TLorentzVector& );
       void PlotTemplates( vector< map< string, map<string, TH1D*> > >& );
 
-      void FindPTrain( map< string, map<string, TH1D*> >& );
+      void FindPTrain( map< string, map<string, TH1D*> >&, vector<Event>&, int );
 
       double linapprox( double, double, double, double );
 

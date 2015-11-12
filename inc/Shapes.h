@@ -8,6 +8,7 @@
 #ifndef SHAPES_H
 #define SHAPES_H
 
+#define NTP 100
 #define NMP 7
 #define NJP 3
 #define NGLB = NMP * NJP
@@ -18,7 +19,7 @@ class Shapes{
 
    public:
 
-      Shapes( string, vector<double>&, double, double, double, double, double, double, double );
+      Shapes( string, double[NTP][NMP][NJP] , double, double, double, double, double, double, double );
       ~Shapes();
 
       double Ftot(double*, double*);
@@ -32,7 +33,8 @@ class Shapes{
       double ltrain;
       double rtrain;
 
-      vector<double> ptrain;
+      //vector<double> ptrain;
+      double ptrain [NTP][NMP][NJP];
       TMatrixD Ainv_sig;
       TMatrixD Ainv_bkg;
       TVectorD aGPsig;

@@ -354,7 +354,7 @@ int main(int argc, char* argv[]){
    // events for diagnostics
    // ********************************************************
    if( do_diagnostics ){
-      fitter.ReadDatasets( datasets, eventvec_datamc, "diagnostics", nsyst, fracevts, statval_numPE, statval_PE );
+      fitter.ReadDatasets( datasets, eventvec_datamc, "diagnostics", nsyst, fracevts, statval_numPE, statval_PE, 0 );
       fitter.GetVariables( eventvec_datamc );
       fitter.DeclareHists( hists_all_, hists2d_all_, "all" );
       fitter.FillHists( hists_all_, hists2d_all_, eventvec_datamc );
@@ -373,7 +373,8 @@ int main(int argc, char* argv[]){
       cout << "\nLoading datasets: training " << i << endl;
       vector<Event> eventvec_temp;
 
-      fitter.ReadDatasets( datasets, eventvec_temp, "train", nsyst, fracevts, statval_numPE, statval_PE );
+      double jshift = fitter.jfactpoints[i];
+      fitter.ReadDatasets( datasets, eventvec_temp, "train", nsyst, fracevts, statval_numPE, statval_PE, jshift );
 
       int pdfvar = -1;
       if( nsyst.find("PDFvar") != string::npos ){
@@ -386,17 +387,17 @@ int main(int argc, char* argv[]){
       ostringstream jstring;
       jstring << 100*fitter.jfactpoints[i];
 
-      fitter.JShift( eventvec_temp, fitter.jfactpoints[i] );
+      //fitter.JShift( eventvec_temp, fitter.jfactpoints[i] );
       fitter.GetVariables( eventvec_temp );
       fitter.DeclareHists( hists_jvec_train_[i], hists2d_jvec_train_[i], "train"+jstring.str() );
       fitter.FillHists( hists_jvec_train_[i], hists2d_jvec_train_[i], eventvec_temp );
+
+      fitter.FindPTrain( hists_jvec_train_[i], eventvec_temp, i );
 
       // release memory in eventvec_temp
       vector<Event>().swap( eventvec_temp );
 
    }
-
-   fitter.FindPTrain( hists_jvec_train_[1] );
 
 
    // ********************************************************
@@ -404,7 +405,7 @@ int main(int argc, char* argv[]){
    // ********************************************************
    
    if( do_fit ){
-      fitter.ReadDatasets( datasets, eventvec_test, "test", nsyst, fracevts, statval_numPE, statval_PE );
+      fitter.ReadDatasets( datasets, eventvec_test, "test", nsyst, fracevts, statval_numPE, statval_PE, 0 );
       //if( jtest != 0 ){
       //   fitter.JShift_test( eventvec_test, jtest );
       //}
@@ -604,35 +605,6 @@ int main(int argc, char* argv[]){
 
                   delete fptr;
 
-                  /*
-                  if( fitter.fit_jfactor ){
-                     Shapes * fptr2 = new Shapes( name, dist->ptrain,
-                           dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
-                     cout << "aGP UP" << endl;
-                     fptr2->TrainGP( hists_trainUP_, m2llsig, m2llbkg );
-                     cout << "done" << endl;
-
-                     dist->aGPsigUP.ResizeTo( fptr2->aGPsig.GetNoElements() );
-                     dist->aGPsigUP = fptr2->aGPsig;
-                     dist->aGPbkgUP.ResizeTo( fptr2->aGPbkg.GetNoElements() );
-                     dist->aGPbkgUP = fptr2->aGPbkg;
-
-                     delete fptr2;
-
-                     Shapes * fptr3 = new Shapes( name, dist->ptrain,
-                           dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
-                     cout << "aGP DN" << endl;
-                     fptr3->TrainGP( hists_trainDN_, m2llsig, m2llbkg );
-                     cout << "done" << endl;
-
-                     dist->aGPsigDN.ResizeTo( fptr3->aGPsig.GetNoElements() );
-                     dist->aGPsigDN = fptr3->aGPsig;
-                     dist->aGPbkgDN.ResizeTo( fptr3->aGPbkg.GetNoElements() );
-                     dist->aGPbkgDN = fptr3->aGPbkg;
-
-                     delete fptr3;
-                  }
-                  */
                }
 
             }

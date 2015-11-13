@@ -47,15 +47,17 @@ Shapes::Shapes( string var, double ptraintmp[NTP][NMP][NJP], double gplength_x, 
    rbx = 0.0;
 
    double rho = 0.0;
-   if( name == "mbl_gp" ) rho = 0.37;
-   else if( name == "mt2_221_gp" ) rho = 0.062;
+   //if( name == "mbl_gp" ) rho = 0.905;
+   //else if( name == "mt2_221_gp" ) rho = 0.0596;
+   if( name == "mbl_gp" ) rho = 0.697;
+   else if( name == "mt2_221_gp" ) rho = 0.0538;
    else cout << "ERROR IN GP CORR: DIST NOT FOUND" << endl;
    // to avoid divisions in GPkern
-   double irho2 = 1.0/(1-rho*rho);
-   imjfcorr = rho/(lmass*ljfact);
-   ilx2 = irho2/(lx*lx);
-   ilmass2 = irho2/(lmass*lmass);
-   iljfact2 = irho2/(ljfact*ljfact);
+   irho2 = 1.0/(1-rho*rho);
+   mjfcorr = rho/(lmass*ljfact);
+   ilx2 = 1.0/(lx*lx);
+   ilmass2 = 1.0/(lmass*lmass);
+   iljfact2 = 1.0/(ljfact*ljfact);
 
    // flag for cross validation two-stage fit
    do_gpvar = false;
@@ -165,7 +167,8 @@ double Shapes::Fmbl_gp_var(double x, double mt, double jfact, string sb){
 
 double Shapes::GPkern(double x1, double x2, double m1, double m2, double j1, double j2){
 
-   return 1E-06*gnorm2*gnorm1*exp( -0.5*( ilx2*(x1-x2)*(x1-x2) + ilmass2*(m1-m2)*(m1-m2) + iljfact2*(j1-j2)*(j1-j2) - 2*imjfcorr*(x1-x2)*(j1-j2) ));
+   return 1E-06*gnorm2*gnorm1*exp( -0.5*( ilx2*(x1-x2)*(x1-x2) + ilmass2*irho2*(m1-m2)*(m1-m2)
+            + iljfact2*irho2*(j1-j2)*(j1-j2) - 2*mjfcorr*irho2*(x1-x2)*(j1-j2) ));
 }
 
 void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
@@ -411,21 +414,41 @@ void Shapes::LearnGPparams( vector< map< string, map<string, TH1D*> > >& hists_ 
    do_gpvar = false;
    gMinuit->SetFixedVariable(0, "gpnorm1", gnorm1);
    gMinuit->SetFixedVariable(1, "gpnorm2", gnorm2);
-   gMinuit->SetFixedVariable(2, "lx", lx);
-   gMinuit->SetFixedVariable(3, "lmass", lmass);
-   gMinuit->SetVariable(4, "ljf", ljfact, 0.1);
-   gMinuit->SetLimitedVariable(5, "mjfcorr", 0.0, 0.1, -1, 1);
+   gMinuit->SetFixedVariable(2, "lx", sqrt(1.0/ilx2));
+   gMinuit->SetFixedVariable(3, "lmass", sqrt(1.0/ilmass2));
+   gMinuit->SetVariable(4, "ljf", sqrt(1.0/iljfact2), 0.1);
+   gMinuit->SetLimitedVariable(5, "rho", mjfcorr/sqrt(iljfact2*ilmass2), 0.1, -1 , 1);
 
+   cout << "############ STAGE 1 FIT ###########" << endl;
+   gMinuit->Minimize();
+   const double *xs = gMinuit->X();
+   gnorm1 = xs[0];
+   gnorm2 = xs[1];
+   double rho = xs[5];
+   irho2 = 1.0/(1-rho*rho);
+   ilx2 = 1.0/(xs[2]*xs[2]);
+   ilmass2 = 1.0/(xs[3]*xs[3]);
+   iljfact2 = 1.0/(xs[4]*xs[4]);
+   mjfcorr = sqrt(iljfact2*ilmass2)*rho;
+
+   gMinuit->SetFixedVariable(0, "gpnorm1", gnorm1);
+   gMinuit->SetFixedVariable(1, "gpnorm2", gnorm2);
+   gMinuit->SetVariable(2, "lx", sqrt(1.0/ilx2), 1.0);
+   gMinuit->SetVariable(3, "lmass", sqrt(1.0/ilmass2), 1.0);
+   gMinuit->SetFixedVariable(4, "ljf", sqrt(1.0/iljfact2));
+   gMinuit->SetFixedVariable(5, "rho", mjfcorr/sqrt(iljfact2*ilmass2));
+
+   cout << "############ STAGE 2 FIT ###########" << endl;
    gMinuit->Minimize();
    const double *xs2 = gMinuit->X();
    gnorm1 = xs2[0];
    gnorm2 = xs2[1];
-   double rho = xs2[5];
-   double irho2 = 1.0/(1-rho*rho);
-   ilx2 = irho2/(xs2[2]*xs2[2]);
-   ilmass2 = irho2/(xs2[3]*xs2[3]);
-   iljfact2 = irho2/(xs2[4]*xs2[4]);
-   imjfcorr = sqrt(iljfact2*ilmass2)*rho;
+   rho = xs2[5];
+   irho2 = 1.0/(1-rho*rho);
+   ilx2 = 1.0/(xs2[2]*xs2[2]);
+   ilmass2 = 1.0/(xs2[3]*xs2[3]);
+   iljfact2 = 1.0/(xs2[4]*xs2[4]);
+   mjfcorr = sqrt(iljfact2*ilmass2)*rho;
 
    return;
 }
@@ -530,13 +553,13 @@ double Shapes::GPm2llLOOCV( const double *x ){
    cout << "lx, lmt, ljf, corr: " << x[2] << ", " << x[3] << ", " << x[4] << ", " << x[5] << endl;
 
    double rho = x[5];
-   double irho2 = 1.0/(1-rho*rho);
+   irho2 = 1.0/(1-rho*rho);
    gnorm1 = x[0];
    gnorm2 = x[1];
-   ilx2 = irho2/(x[2]*x[2]);
-   ilmass2 = irho2/(x[3]*x[3]);
-   iljfact2 = irho2/(x[4]*x[4]);
-   imjfcorr = sqrt(iljfact2*ilmass2)*rho;
+   ilx2 = 1.0/(x[2]*x[2]);
+   ilmass2 = 1.0/(x[3]*x[3]);
+   iljfact2 = 1.0/(x[4]*x[4]);
+   mjfcorr = sqrt(iljfact2*ilmass2)*rho;
 
    int ntrain = ptrainsize;
 

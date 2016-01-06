@@ -8,9 +8,9 @@
 #ifndef SHAPES_H
 #define SHAPES_H
 
-#define NTP 100
 #define NMP 7
-#define NJP 3
+#define NJP 5
+#define NTP 75
 #define NGLB = NMP * NJP
 
 using namespace std;
@@ -39,7 +39,7 @@ class Shapes{
       TMatrixD Ainv_bkg;
       TVectorD aGPsig;
       TVectorD aGPbkg;
-      TMatrixD Kinv;
+      //TMatrixD Kinv;
       void SetGPopts();
       void TrainGP( vector< map< string, map<string, TH1D*> > >&, double&, double& );
       double GPkern(double, double, double, double, double, double);

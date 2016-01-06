@@ -51,11 +51,11 @@ void Fitter::DeclareHists( map< string, map<string, TH1D*> >& hists_, map< strin
       // variables
       //
       hists_["mbl_gp"][name] = new TH1D( ("hmbl_gp_"+namel).c_str(),
-            "M_{bl};M_{bl} (GeV);Events", 100, dists["mbl_gp"].lbnd, dists["mbl_gp"].rbnd );
+            "M_{bl};M_{bl} (GeV);Events", 75, dists["mbl_gp"].lbnd, dists["mbl_gp"].rbnd );
       hists_["mt2_220_gp"][name] = new TH1D( ("hmt2_220_gp_"+namel).c_str(),
             "M_{T2} 220;M_{T2} 220 (GeV);Events", 100, dists["mt2_220_gp"].lbnd, dists["mt2_220_gp"].rbnd );
       hists_["mt2_221_gp"][name] = new TH1D( ("hmt2_221_gp_"+namel).c_str(),
-            "M_{T2} 221;M_{T2} 221 (GeV);Events", 100, dists["mt2_221_gp"].lbnd, dists["mt2_221_gp"].rbnd );
+            "M_{T2} 221;M_{T2} 221 (GeV);Events", 75, dists["mt2_221_gp"].lbnd, dists["mt2_221_gp"].rbnd );
       hists_["maos220_gp"][name] = new TH1D( ("hmaos220_gp_"+namel).c_str(),
             "MAOS from M_{T2} 220;blv mass(GeV);Events", 100, dists["maos220_gp"].lbnd, dists["maos220_gp"].rbnd );
       hists_["maos210_gp"][name] = new TH1D( ("hmaos210_gp_"+namel).c_str(),
@@ -382,140 +382,146 @@ void Fitter::PrintHists( map< string, map<string, TH1D*> >& hists_, map< string,
       
 
    // data/mc stack plots w/ mt = 172.5
-   for(hmap::iterator h = hists_.begin(); h != hists_.end(); h++){
+   for(int i=0; i < NMP; i++){
+      for(hmap::iterator h = hists_.begin(); h != hists_.end(); h++){
 
-      string name = h->first;
-      tmap hist = h->second;
-      TH1D* hdata = (TH1D*)hist["data"]->Clone("data_cl");
+         stringstream dstr;
+         dstr << floor(masspoints[i]);
+         string dname = "ttbar"+dstr.str();
 
-      // formatting
-      TH1D* httbar_signal = (TH1D*)hist["ttbar172_signal"]->Clone("ttbar172_signal_cl");
-      TH1D* httbar_mistag = (TH1D*)hist["ttbar172_mistag"]->Clone("ttbar172_mistag_cl");
-      TH1D* httbar_taus = (TH1D*)hist["ttbar172_taus"]->Clone("ttbar172_taus_cl");
-      TH1D* httbar_hadronic = (TH1D*)hist["ttbar172_hadronic"]->Clone("ttbar172_hadronic_cl");
-      TH1D* hother = (TH1D*)hist["other"]->Clone("other_cl");
+         string name = h->first;
+         tmap hist = h->second;
+         TH1D* hdata = (TH1D*)hist["data"]->Clone("data_cl");
 
-      httbar_signal->SetFillColor( kAzure-9 );
-      httbar_mistag->SetFillColor( kYellow-9 );
-      httbar_taus->SetFillColor( kRed-10 );
-      httbar_hadronic->SetFillColor( kCyan-10 );
-      hother->SetFillColor( kGreen-10 );
+         // formatting
+         TH1D* httbar_signal = (TH1D*)hist[dname+"_signal"]->Clone((dname+"_signal_cl").c_str());
+         TH1D* httbar_mistag = (TH1D*)hist[dname+"_mistag"]->Clone((dname+"_mistag_cl").c_str());
+         TH1D* httbar_taus = (TH1D*)hist[dname+"_taus"]->Clone((dname+"_taus_cl").c_str());
+         TH1D* httbar_hadronic = (TH1D*)hist[dname+"_hadronic"]->Clone((dname+"_hadronic_cl").c_str());
+         TH1D* hother = (TH1D*)hist["other"]->Clone((dname+"_other_cl").c_str());
 
-      TH1D* hallmc = (TH1D*)httbar_signal->Clone("hallmc");
-      hallmc->Add( httbar_mistag );
-      hallmc->Add( httbar_taus );
-      hallmc->Add( httbar_hadronic );
-      hallmc->Add( hother );
+         httbar_signal->SetFillColor( kAzure-9 );
+         httbar_mistag->SetFillColor( kYellow-9 );
+         httbar_taus->SetFillColor( kRed-10 );
+         httbar_hadronic->SetFillColor( kCyan-10 );
+         hother->SetFillColor( kGreen-10 );
 
-      double norm = 1.0;//hdata->Integral("width") / hallmc->Integral("width");
+         TH1D* hallmc = (TH1D*)httbar_signal->Clone(("hallmc"+dname).c_str());
+         hallmc->Add( httbar_mistag );
+         hallmc->Add( httbar_taus );
+         hallmc->Add( httbar_hadronic );
+         hallmc->Add( hother );
 
-      // renormalize distribution in mc for all processes
-      httbar_signal->Scale( norm );
-      httbar_mistag->Scale( norm );
-      httbar_taus->Scale( norm );
-      httbar_hadronic->Scale( norm );
-      hother->Scale( norm );
-      hallmc->Scale( norm );
+         double norm = 1.0;//hdata->Integral("width") / hallmc->Integral("width");
 
-      TCanvas * canvas = new TCanvas( ("c"+name).c_str(), ("c"+name).c_str(), 800, 800 );
-      canvas->SetFillColor(0);
-      TPad *pad1 = new TPad("pad1","pad1",0,0.33,1,1);
-      TPad *pad2 = new TPad("pad2","pad2",0,0,1,0.33);
-      pad1->SetTopMargin(0.1);
-      pad1->SetBottomMargin(0.01);
-      pad1->SetRightMargin(0.1);
-      pad1->SetFillColor(0);
-      pad2->SetTopMargin(0.01);
-      pad2->SetBottomMargin(0.3);
-      pad2->SetRightMargin(0.1);
-      pad2->SetFillColor(0);
-      pad1->Draw();
-      pad2->Draw();
+         // renormalize distribution in mc for all processes
+         httbar_signal->Scale( norm );
+         httbar_mistag->Scale( norm );
+         httbar_taus->Scale( norm );
+         httbar_hadronic->Scale( norm );
+         hother->Scale( norm );
+         hallmc->Scale( norm );
 
-      pad1->cd();
+         TCanvas * canvas = new TCanvas( ("c"+name+dname).c_str(), ("c"+name+dname).c_str(), 800, 800 );
+         canvas->SetFillColor(0);
+         TPad *pad1 = new TPad("pad1","pad1",0,0.33,1,1);
+         TPad *pad2 = new TPad("pad2","pad2",0,0,1,0.33);
+         pad1->SetTopMargin(0.1);
+         pad1->SetBottomMargin(0.01);
+         pad1->SetRightMargin(0.1);
+         pad1->SetFillColor(0);
+         pad2->SetTopMargin(0.01);
+         pad2->SetBottomMargin(0.3);
+         pad2->SetRightMargin(0.1);
+         pad2->SetFillColor(0);
+         pad1->Draw();
+         pad2->Draw();
 
-      THStack * hstack = new THStack( ("hs"+name).c_str(), ("hs"+name).c_str() );
-      hstack->Add( hother );
-      hstack->Add( httbar_hadronic );
-      hstack->Add( httbar_taus );
-      hstack->Add( httbar_mistag );
-      hstack->Add( httbar_signal );
+         pad1->cd();
 
-      hstack->Draw("HIST");
+         THStack * hstack = new THStack( ("hs"+name+dname).c_str(), ("hs"+name+dname).c_str() );
+         hstack->Add( hother );
+         hstack->Add( httbar_hadronic );
+         hstack->Add( httbar_taus );
+         hstack->Add( httbar_mistag );
+         hstack->Add( httbar_signal );
 
-      hstack->GetYaxis()->SetTitle( hdata->GetYaxis()->GetTitle() );
-      //hstack->SetMinimum( 0.5 );
-      hstack->GetXaxis()->SetTitleSize(0.00);
-      hstack->GetYaxis()->SetLabelSize(0.07);
-      hstack->GetYaxis()->SetTitleSize(0.08);
-      hstack->GetYaxis()->SetTitleOffset(1.0);
-      hstack->GetXaxis()->SetLabelFont(42);
-      hstack->GetYaxis()->SetLabelFont(42);
-      hstack->GetXaxis()->SetTitleFont(42);
-      hstack->GetYaxis()->SetTitleFont(42);
+         hstack->Draw("HIST");
 
-      //hdata->SetMarkerStyle(20);
-      //hdata->Draw( "same EP" );
+         hstack->GetYaxis()->SetTitle( hdata->GetYaxis()->GetTitle() );
+         //hstack->SetMinimum( 0.5 );
+         hstack->GetXaxis()->SetTitleSize(0.00);
+         hstack->GetYaxis()->SetLabelSize(0.07);
+         hstack->GetYaxis()->SetTitleSize(0.08);
+         hstack->GetYaxis()->SetTitleOffset(1.0);
+         hstack->GetXaxis()->SetLabelFont(42);
+         hstack->GetYaxis()->SetLabelFont(42);
+         hstack->GetXaxis()->SetTitleFont(42);
+         hstack->GetYaxis()->SetTitleFont(42);
 
-      TLegend * legend = new TLegend(0.717,0.650,0.874,0.870);
-      //legend->AddEntry( hdata, "data" );
-      legend->AddEntry( httbar_signal, "signal", "f" );
-      legend->AddEntry( httbar_mistag, "mistag bkg", "f" );
-      legend->AddEntry( httbar_taus, "tau decays", "f" );
-      legend->AddEntry( httbar_hadronic, "hadronic decays", "f" );
-      legend->AddEntry( hother, "non-ttbar bkg", "f" );
+         //hdata->SetMarkerStyle(20);
+         //hdata->Draw( "same EP" );
 
-      legend->SetFillStyle(0);
-      legend->SetBorderSize(0);
-      legend->Draw( "same" );
+         TLegend * legend = new TLegend(0.717,0.650,0.874,0.870);
+         //legend->AddEntry( hdata, "data" );
+         legend->AddEntry( httbar_signal, "signal", "f" );
+         legend->AddEntry( httbar_mistag, "mistag bkg", "f" );
+         legend->AddEntry( httbar_taus, "tau decays", "f" );
+         legend->AddEntry( httbar_hadronic, "hadronic decays", "f" );
+         legend->AddEntry( hother, "non-ttbar bkg", "f" );
 
-      pad2->cd();
+         legend->SetFillStyle(0);
+         legend->SetBorderSize(0);
+         legend->Draw( "same" );
 
-      TH1D *hratio = (TH1D*)hdata->Clone("hratio");
-      hratio->Divide( hallmc );
-      hratio->SetTitle(";"+TString(hdata->GetXaxis()->GetTitle())+";data/mc");
-      hratio->GetYaxis()->CenterTitle();
-      hratio->SetStats(0);
+         pad2->cd();
 
-      hratio->GetXaxis()->SetTitleSize(0.14);
-      hratio->GetXaxis()->SetLabelSize(0.14);
-      hratio->GetYaxis()->SetLabelSize(0.11);
-      hratio->GetYaxis()->SetTitleSize(0.14);
-      hratio->GetYaxis()->SetTitleOffset(0.28);
-      hratio->GetXaxis()->SetLabelFont(42);
-      hratio->GetYaxis()->SetLabelFont(42);
-      hratio->GetXaxis()->SetTitleFont(42);
-      hratio->GetYaxis()->SetTitleFont(42);
-      hratio->SetMaximum( 1.6 );
-      hratio->SetMinimum( 0.4 );
-      hratio->GetYaxis()->SetNdivisions(505);
-      hratio->Draw("EP");
+         TH1D *hratio = (TH1D*)hdata->Clone("hratio");
+         hratio->Divide( hallmc );
+         hratio->SetTitle(";"+TString(hdata->GetXaxis()->GetTitle())+";data/mc");
+         hratio->GetYaxis()->CenterTitle();
+         hratio->SetStats(0);
 
-      TF1 *func = new TF1("func","[0]",-10E6,10E6);
-      func->SetParameter(0,1.0);
-      func->SetLineWidth(1);
-      func->SetLineStyle(7);
-      func->SetLineColor(1);
-      func->Draw("same");
+         hratio->GetXaxis()->SetTitleSize(0.14);
+         hratio->GetXaxis()->SetLabelSize(0.14);
+         hratio->GetYaxis()->SetLabelSize(0.11);
+         hratio->GetYaxis()->SetTitleSize(0.14);
+         hratio->GetYaxis()->SetTitleOffset(0.28);
+         hratio->GetXaxis()->SetLabelFont(42);
+         hratio->GetYaxis()->SetLabelFont(42);
+         hratio->GetXaxis()->SetTitleFont(42);
+         hratio->GetYaxis()->SetTitleFont(42);
+         hratio->SetMaximum( 1.6 );
+         hratio->SetMinimum( 0.4 );
+         hratio->GetYaxis()->SetNdivisions(505);
+         hratio->Draw("EP");
 
-      fileout->cd();
-      if( name.find("220")==string::npos and name.find("221")==string::npos
-            and name.find("mbl")==string::npos and name.find("210")==string::npos  ){
-         dkin->cd();
+         TF1 *func = new TF1("func","[0]",-10E6,10E6);
+         func->SetParameter(0,1.0);
+         func->SetLineWidth(1);
+         func->SetLineStyle(7);
+         func->SetLineColor(1);
+         func->Draw("same");
+
+         fileout->cd();
+         if( name.find("220")==string::npos and name.find("221")==string::npos
+               and name.find("mbl")==string::npos and name.find("210")==string::npos  ){
+            dkin->cd();
+         }
+         canvas->Write();
+
+         pad1->cd();
+         TLatex *text = new TLatex();
+         text->SetTextSize(0.05);
+         text->SetNDC();
+         text->DrawLatex(0.4, 0.9, hdata->GetTitle() );
+         canvas->Print( ("results/plots/stack_"+name+".pdf").c_str() );
+
+         delete canvas;
+         delete legend;
+         delete func;
+         delete text;
       }
-      canvas->Write();
-
-      pad1->cd();
-      TLatex *text = new TLatex();
-      text->SetTextSize(0.05);
-      text->SetNDC();
-      text->DrawLatex(0.4, 0.9, hdata->GetTitle() );
-      canvas->Print( ("results/plots/stack_"+name+".pdf").c_str() );
-
-      delete canvas;
-      delete legend;
-      delete func;
-      delete text;
    }
 
    TCanvas *c220_mblstack = new TCanvas("c220_mblstack","c220_mblstack",700,700);
@@ -791,6 +797,7 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
    // templates for all masses
    string sb[] = {"sig","bkg"};
 
+   /*
    for( map<string, Distribution>::iterator it = dists.begin(); it != dists.end(); it++ ){
 
       string name = it->first;
@@ -838,16 +845,16 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
 
                TH1D *hmc;
                if( sb[k] == "sig" ){
-                  hmc = (TH1D*)hists_[1][name]["ttbar"+smass+"_signal"]->Clone("hmc");
-                  hmc->Add( hists_[1][name]["ttbar"+smass+"_mistag"] );
-                  hmc->Add( hists_[1][name]["ttbar"+smass+"_taus"] );
-                  hmc->Add( hists_[1][name]["ttbar"+smass+"_hadronic"] );
-                  hmc->Add( hists_[1][name]["other"] );
+                  hmc = (TH1D*)hists_[NJP/2][name]["ttbar"+smass+"_signal"]->Clone("hmc");
+                  hmc->Add( hists_[NJP/2][name]["ttbar"+smass+"_mistag"] );
+                  hmc->Add( hists_[NJP/2][name]["ttbar"+smass+"_taus"] );
+                  hmc->Add( hists_[NJP/2][name]["ttbar"+smass+"_hadronic"] );
+                  hmc->Add( hists_[NJP/2][name]["other"] );
                }else{
-                  hmc = (TH1D*)hists_[1][name]["ttbar"+smass+"_mistag"]->Clone("hmc");
-                  hmc->Add( hists_[1][name]["ttbar"+smass+"_taus"] );
-                  hmc->Add( hists_[1][name]["ttbar"+smass+"_hadronic"] );
-                  hmc->Add( hists_[1][name]["other"] );
+                  hmc = (TH1D*)hists_[NJP/2][name]["ttbar"+smass+"_mistag"]->Clone("hmc");
+                  hmc->Add( hists_[NJP/2][name]["ttbar"+smass+"_taus"] );
+                  hmc->Add( hists_[NJP/2][name]["ttbar"+smass+"_hadronic"] );
+                  hmc->Add( hists_[NJP/2][name]["other"] );
                }
 
                hmc->SetTitle( hmc->GetTitle()+TString(" "+sb[k]+" shape @ "+smass+".5") );
@@ -938,8 +945,7 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
       }
    }
    fileout->cd();
-
-   /*
+*/
    // plot template as a function of top mass
    for( map<string, Distribution>::iterator it = dists.begin(); it != dists.end(); it++ ){
 
@@ -951,156 +957,183 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
          TDirectory *dir = fileout->mkdir( ("mtshape_"+name).c_str() );
          dir->cd();
 
-         for(unsigned int k=0; k < sizeof(sb)/sizeof(sb[0]); k++){ // sig,bkg
-            for(double x=0; x <= dist->range; x+=10){ // bin of mbl
+         //for(unsigned int k=0; k < sizeof(sb)/sizeof(sb[0]); k++){ // sig,bkg
+         int k=0;
+         //for(double x=dist->lbnd; x <= dist->rbnd; x+=10){ // bin of mbl
+         for(int i=0; i < NTP ; i++){ // bin of mbl
+            double x = dist->ptrain[i][NMP/2][NJP/2];
 
-               stringstream ssx;
-               ssx << x;
-               string sx = ssx.str();
+            stringstream ssx;
+            ssx << x;
+            string sx = ssx.str();
 
-               TCanvas *canvas = new TCanvas( ("c"+sb[k]+"_"+name+sx).c_str(),
-                     ("c"+sb[k]+"_"+name+sx).c_str(), 800, 800);
-               canvas->SetFillColor(0);
-               canvas->cd();
+            TCanvas *canvas = new TCanvas( ("c"+sb[k]+"_"+name+sx).c_str(),
+                  ("c"+sb[k]+"_"+name+sx).c_str(), 800, 800);
+            canvas->SetFillColor(0);
+            canvas->cd();
 
-               // graph with template value at mbl = x
-               TGraph *gtemplate = new TGraph();
-               Shapes * fptr = new Shapes( name, dist->glx, dist->glmt, dist->gnorm1, dist->gnorm2, dist->range );
-               fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
-               fptr->aGPsig = dist->aGPsig;
-               fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
-               fptr->aGPbkg = dist->aGPbkg;
-               TF1 *ftemplate = new TF1("ftemplate", fptr, &Shapes::Ftot, 0, dist->range, 5);
-               int count=0;
-               for(double m=160.0; m <= 183.0; m+=0.5){ // value of mt
-                  // normalization inside likelihood function (temp)
-                  ftemplate->SetParameters( m, 1-k, 1.0, 1.0, 1.0 );
-                  double integralsig = (sb[k] == "sig") ? ftemplate->Integral(0,dist->range) : 1.0;
-                  double integralbkg = (sb[k] == "bkg") ? ftemplate->Integral(0,dist->range) : 1.0;
-                  ftemplate->SetParameters( m, 1-k, 1.0, integralsig, integralbkg );
+            // graph with template value at mbl = x
+            TGraph *gtemplate = new TGraph();
+            Shapes * fptr = new Shapes( name, dist->ptrain, dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+            fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
+            fptr->aGPsig = dist->aGPsig;
+            fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
+            fptr->aGPbkg = dist->aGPbkg;
+            TF1 *ftemplate = new TF1("ftemplate", fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 6);
+            int count=0;
+            for(double m=160.0; m <= 183.0; m+=0.5){ // value of mt
+               // normalization inside likelihood function (temp)
+               ftemplate->SetParameters( m, 1.0, 1-k, 1.0, 1.0, 1.0 );
+               double integralsig = (sb[k] == "sig") ? ftemplate->Integral(dist->lbnd,dist->rbnd) : 1.0;
+               double integralbkg = 1.0;//(sb[k] == "bkg") ? ftemplate->Integral(0,dist->range) : 1.0;
+               ftemplate->SetParameters( m, 1.0, 1-k, 1.0, integralsig, integralbkg );
 
-                  gtemplate->SetPoint(count, m, ftemplate->Eval(x));
-                  count++;
-               }
-               gtemplate->SetTitle( hists_[name]["ttbar172_signal"]->GetTitle()
-                     + TString(" "+sb[k]+" shape @ "+dist->title+" = "+sx) );
-               gtemplate->SetLineColor(2);
-               gtemplate->SetLineWidth(2);
-
-               // now do the same at mc masspoints
-               TGraphErrors *gmc = new TGraphErrors();
-               count=0;
-               for(int j=0; j < NMP; j++){
-                  stringstream ssmass;
-                  ssmass << floor(masspoints[j]);
-                  string smass = ssmass.str();
-
-                  TH1D *hmc;
-                  if( sb[k] == "sig" ){
-                     hmc = (TH1D*)hists_[name]["ttbar"+smass+"_signal"]->Clone("hmc");
-                  }else{
-                     hmc = (TH1D*)hists_[name]["ttbar"+smass+"_mistag"]->Clone("hmc");
-                     hmc->Add( hists_[name]["ttbar"+smass+"_taus"] );
-                     hmc->Add( hists_[name]["ttbar"+smass+"_hadronic"] );
-                     hmc->Add( hists_[name]["other"] );
-                  }
-                  hmc->Scale( 1.0/hmc->Integral("width") );
-
-                  gmc->SetPoint(count, masspoints[j], hmc->GetBinContent(hmc->FindBin(x)) );
-                  gmc->SetPointError(count, 0.0, hmc->GetBinError(hmc->FindBin(x)) );
-                  count++;
-               }
-
-               gmc->SetMarkerStyle(20);
-
-               gmc->SetMinimum( min(gtemplate->GetMinimum(),gmc->GetMinimum()) );
-               gmc->SetMaximum( max(gtemplate->GetMaximum(),gmc->GetMaximum()) );
-               gmc->Draw("AEP");
-               gtemplate->Draw("same C");
-               gmc->Draw("EP");
-
-               canvas->Write();
-
-               delete canvas;
-               delete ftemplate;
-               delete fptr;
+               gtemplate->SetPoint(count, m, ftemplate->Eval(x));
+               count++;
             }
+            gtemplate->SetTitle( hists_[NJP/2][name]["ttbar172_signal"]->GetTitle()
+                  + TString(" "+sb[k]+" shape @ "+dist->title+" = "+sx) );
+            gtemplate->SetLineColor(2);
+            gtemplate->SetLineWidth(2);
+
+            // now do the same at mc masspoints
+            TGraphErrors *gmc = new TGraphErrors();
+            count=0;
+            for(int j=0; j < NMP; j++){
+               stringstream ssmass;
+               ssmass << floor(masspoints[j]);
+               string smass = ssmass.str();
+
+               TH1D *hmc;
+               if( sb[k] == "sig" ){
+                  hmc = (TH1D*)hists_[NJP/2][name]["ttbar"+smass+"_signal"]->Clone("hmc");
+                  hmc->Add( hists_[NJP/2][name]["ttbar"+smass+"_mistag"] );
+                  hmc->Add( hists_[NJP/2][name]["ttbar"+smass+"_taus"] );
+                  hmc->Add( hists_[NJP/2][name]["ttbar"+smass+"_hadronic"] );
+                  hmc->Add( hists_[NJP/2][name]["other"] );
+               }else{
+                  hmc = (TH1D*)hists_[NJP/2][name]["ttbar"+smass+"_mistag"]->Clone("hmc");
+                  hmc->Add( hists_[NJP/2][name]["ttbar"+smass+"_taus"] );
+                  hmc->Add( hists_[NJP/2][name]["ttbar"+smass+"_hadronic"] );
+                  hmc->Add( hists_[NJP/2][name]["other"] );
+               }
+               hmc->Scale( 1.0/hmc->Integral("width") );
+
+               gmc->SetPoint(count, masspoints[j], hmc->GetBinContent(hmc->FindBin(x)) );
+               gmc->SetPointError(count, 0.0, hmc->GetBinError(hmc->FindBin(x)) );
+               count++;
+            }
+
+            gmc->SetMarkerStyle(20);
+
+            gmc->SetMinimum( min(gtemplate->GetMinimum(),gmc->GetMinimum()) );
+            gmc->SetMaximum( max(gtemplate->GetMaximum(),gmc->GetMaximum()) );
+            gmc->Draw("AEP");
+            gtemplate->Draw("same C");
+            gmc->Draw("EP");
+
+            canvas->Write();
+
+            delete canvas;
+            delete ftemplate;
+            delete fptr;
+         }
+         //}
+      }
+   }
+
+      /*
+   // plot template as a function of jes
+   for( map<string, Distribution>::iterator it = dists.begin(); it != dists.end(); it++ ){
+
+      string name = it->first;
+      Distribution *dist = &(it->second);
+
+      if( dist->activate ){// only do this if we're fitting the variable in question
+
+         TDirectory *dir = fileout->mkdir( ("jesshape_"+name).c_str() );
+         dir->cd();
+
+         int k=0;
+         //for(double x=dist->lbnd; x <= dist->rbnd; x+=10){ // bin of mbl
+         for(int i=0; i < NTP ; i++){ // bin of mbl
+            double x = dist->ptrain[i][NMP/2][NJP/2];
+
+            stringstream ssx;
+            ssx << x;
+            string sx = ssx.str();
+
+            TCanvas *canvas2 = new TCanvas( ("c"+sb[k]+"_"+name+sx+"2").c_str(),
+                  ("c"+sb[k]+"_"+name+sx).c_str(), 800, 800);
+            canvas2->SetFillColor(0);
+            canvas2->cd();
+
+            // graph with template value at mbl = x
+            TGraph *gtemplate2 = new TGraph();
+            Shapes * fptr2 = new Shapes( name, dist->ptrain, dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+            fptr2->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
+            fptr2->aGPsig = dist->aGPsig;
+            fptr2->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
+            fptr2->aGPbkg = dist->aGPbkg;
+            TF1 *ftemplate2 = new TF1("ftemplate2", fptr2, &Shapes::Ftot, dist->lbnd, dist->rbnd, 6);
+            int count=0;
+            for(double j=0.95; j <= 1.05; j+=0.001){ // value of jes
+               // normalization inside likelihood function (temp)
+               ftemplate2->SetParameters( 172.5, j, 1-k, 1.0, 1.0, 1.0 );
+               double integralsig = (sb[k] == "sig") ? ftemplate2->Integral(dist->lbnd,dist->rbnd) : 1.0;
+               double integralbkg = 1.0;//(sb[k] == "bkg") ? ftemplate2->Integral(0,dist->range) : 1.0;
+               ftemplate2->SetParameters( 172.5, j, 1-k, 1.0, integralsig, integralbkg );
+
+               gtemplate2->SetPoint(count, j, ftemplate2->Eval(x));
+               count++;
+            }
+            gtemplate2->SetTitle( hists_[NJP/2][name]["ttbar172_signal"]->GetTitle()
+                  + TString(" "+sb[k]+" shape @ "+dist->title+" = "+sx) );
+            gtemplate2->SetLineColor(2);
+            gtemplate2->SetLineWidth(2);
+
+            // now do the same at mc jespoints
+            TGraphErrors *gmc2 = new TGraphErrors();
+            count=0;
+            for(int j=0; j < NJP; j++){
+
+               TH1D *hmc2;
+               if( sb[k] == "sig" ){
+                  hmc2 = (TH1D*)hists_[j][name]["ttbar172_signal"]->Clone("hmc2");
+                  hmc2->Add( hists_[j][name]["ttbar172_mistag"] );
+                  hmc2->Add( hists_[j][name]["ttbar172_taus"] );
+                  hmc2->Add( hists_[j][name]["ttbar172_hadronic"] );
+                  hmc2->Add( hists_[j][name]["other"] );
+               }else{
+                  hmc2 = (TH1D*)hists_[j][name]["ttbar172_mistag"]->Clone("hmc2");
+                  hmc2->Add( hists_[j][name]["ttbar172_taus"] );
+                  hmc2->Add( hists_[j][name]["ttbar172_hadronic"] );
+                  hmc2->Add( hists_[j][name]["other"] );
+               }
+               hmc2->Scale( 1.0/hmc2->Integral("width") );
+
+               gmc2->SetPoint(count, jfactpoints[j], hmc2->GetBinContent(hmc2->FindBin(x)) );
+               gmc2->SetPointError(count, 0.0, hmc2->GetBinError(hmc2->FindBin(x)) );
+               count++;
+            }
+
+            gmc2->SetMarkerStyle(20);
+
+            gmc2->SetMinimum( min(gtemplate2->GetMinimum(),gmc2->GetMinimum()) );
+            gmc2->SetMaximum( max(gtemplate2->GetMaximum(),gmc2->GetMaximum()) );
+            gmc2->Draw("AEP");
+            gtemplate2->Draw("same C");
+            gmc2->Draw("EP");
+
+            canvas2->Write();
+
+            delete canvas2;
+            delete ftemplate2;
+            delete fptr2;
          }
       }
    }
-   */
-
-   // TODO
-   // need to figure out variance band for this plot
-   /*
-      TDirectory *dir = fileout->mkdir( "mtshape" );
-      dir->cd();
-      for(unsigned int k=0; k < sizeof(sb)/sizeof(sb[0]); k++){ // sig,bkg
-      for(double x=0; x <= rangembl; x+=10){ // bin of mbl
-      cout << "mbl: " << x << endl;
-
-      stringstream ssx;
-      ssx << x;
-      string sx = ssx.str();
-
-      TCanvas *canvas = new TCanvas( ("c"+sb[k]+"_mbl"+sx).c_str(),
-      ("c"+sb[k]+"_mbl"+sx).c_str(), 800, 800);
-      canvas->SetFillColor(0);
-      canvas->cd();
-
-   // graph with template value at mbl = x
-   TGraphErrors *gtemplate = new TGraphErrors();
-   Shapes * fptr = new Shapes( gplength_mbl, gplength_mt, lbnd, rbnd, gnorm1, gnorm2 );
-   fptr->aGPsig.ResizeTo( aGPsig.GetNoElements() );
-   fptr->aGPsig = aGPsig;
-   fptr->aGPbkg.ResizeTo( aGPbkg.GetNoElements() );
-   fptr->aGPbkg = aGPbkg;
-
-   fptr->Ainv_sig.ResizeTo( aGPsig.GetNoElements(), aGPsig.GetNoElements() );
-   fptr->Ainv_sig = Ainv_sig;
-   fptr->Ainv_bkg.ResizeTo( aGPbkg.GetNoElements(), aGPbkg.GetNoElements() );
-   fptr->Ainv_bkg = Ainv_bkg;
-
-   TF1 *ftemplate = new TF1("ftemplate", fptr, &Shapes::Fmbl_tot, 0, rangembl, 5);
-   int count=0;
-   for(double m=160.0; m <= 183.0; m+=0.5){ // value of mt
-   // normalization inside likelihood function (temp)
-   ftemplate->SetParameters( m, 1-k, 1.0, 1.0, 1.0 );
-   double integralsig = (sb[k] == "sig") ? ftemplate->Integral(0,rangembl) : 1.0;
-   double integralbkg = (sb[k] == "bkg") ? ftemplate->Integral(0,rangembl) : 1.0;
-   ftemplate->SetParameters( m, 1-k, 1.0, integralsig, integralbkg );
-
-   gtemplate->SetPoint(count, m, ftemplate->Eval(x));
-   gtemplate->SetPointError(count, 0, sqrt(fptr->Fmbl_gp_var(x,m,sb[k])));
-   count++;
-   }
-   gtemplate->SetTitle( TString("M_{bl} "+sb[k]+" shape @ mbl = "+sx) );
-   gtemplate->SetLineColor(2);
-   gtemplate->SetLineWidth(2);
-   gtemplate->SetFillStyle(3004);
-   gtemplate->SetFillColor(4);
-
-   // now do the same at mc masspoints
-   TGraphErrors *gmc = new TGraphErrors();
-   count=0;
-   for(int j=0; j < NMP; j++){
-   stringstream ssmass;
-   ssmass << floor(masspoints[j]);
-   string smass = ssmass.str();
-
-   TH1D *hmc;
-   if( sb[k] == "sig" ){
-   hmc = (TH1D*)hists_["mbl"]["ttbar"+smass+"_signal"]->Clone("hmc");
-   }else{
-   hmc = (TH1D*)hists_["mbl"]["ttbar"+smass+"_mistag"]->Clone("hmc");
-   hmc->Add( hists_["mbl"]["ttbar"+smass+"_taus"] );
-   hmc->Add( hists_["mbl"]["ttbar"+smass+"_hadronic"] );
-   hmc->Add( hists_["mbl"]["other"] );
-   }
-   }
-   }
-   }
-   */
+*/
 
    for( map<string, Distribution>::iterator it = dists.begin(); it != dists.end(); it++ ){
 
@@ -1110,26 +1143,31 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
       if( dist->activate ){// only do this if we're fitting the variable in question
          fileout->cd();
 
-         TCanvas *cmbl_signal = new TCanvas( ("c_"+name+"_signal").c_str(),
+         for(int j=0; j < NJP; j++){
+            std::ostringstream str;
+            str << jfactpoints[j]*1000;
+            std::string jstr = str.str();
+
+         TCanvas *cmbl_signal = new TCanvas( ("c_"+name+"_signal_"+"JSF"+jstr).c_str(),
                (dist->title+" Template").c_str(), 800, 800);
          cmbl_signal->cd();
 
          // mass points
-         TH1D* mbl166 = (TH1D*)hists_[1][name]["ttbar166_signal"]->Clone("mbl166");
-         mbl166->Add( hists_[1][name]["ttbar166_mistag"] );
-         mbl166->Add( hists_[1][name]["ttbar166_taus"] );
-         mbl166->Add( hists_[1][name]["ttbar166_hadronic"] );
-         mbl166->Add( hists_[1][name]["other"] );
-         TH1D* mbl172 = (TH1D*)hists_[1][name]["ttbar172_signal"]->Clone("mbl172");
-         mbl172->Add( hists_[1][name]["ttbar172_mistag"] );
-         mbl172->Add( hists_[1][name]["ttbar172_taus"] );
-         mbl172->Add( hists_[1][name]["ttbar172_hadronic"] );
-         mbl172->Add( hists_[1][name]["other"] );
-         TH1D* mbl178 = (TH1D*)hists_[1][name]["ttbar178_signal"]->Clone("mbl178");
-         mbl178->Add( hists_[1][name]["ttbar178_mistag"] );
-         mbl178->Add( hists_[1][name]["ttbar178_taus"] );
-         mbl178->Add( hists_[1][name]["ttbar178_hadronic"] );
-         mbl178->Add( hists_[1][name]["other"] );
+         TH1D* mbl166 = (TH1D*)hists_[j][name]["ttbar166_signal"]->Clone("mbl166");
+         mbl166->Add( hists_[j][name]["ttbar166_mistag"] );
+         mbl166->Add( hists_[j][name]["ttbar166_taus"] );
+         mbl166->Add( hists_[j][name]["ttbar166_hadronic"] );
+         mbl166->Add( hists_[j][name]["other"] );
+         TH1D* mbl172 = (TH1D*)hists_[j][name]["ttbar172_signal"]->Clone("mbl172");
+         mbl172->Add( hists_[j][name]["ttbar172_mistag"] );
+         mbl172->Add( hists_[j][name]["ttbar172_taus"] );
+         mbl172->Add( hists_[j][name]["ttbar172_hadronic"] );
+         mbl172->Add( hists_[j][name]["other"] );
+         TH1D* mbl178 = (TH1D*)hists_[j][name]["ttbar178_signal"]->Clone("mbl178");
+         mbl178->Add( hists_[j][name]["ttbar178_mistag"] );
+         mbl178->Add( hists_[j][name]["ttbar178_taus"] );
+         mbl178->Add( hists_[j][name]["ttbar178_hadronic"] );
+         mbl178->Add( hists_[j][name]["other"] );
 
          mbl166->Scale( 1.0/mbl166->Integral("width") );
          mbl172->Scale( 1.0/mbl172->Integral("width") );
@@ -1156,18 +1194,18 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
          fptr->aGPbkg = dist->aGPbkg;
          TF1 *fmbl_tot = new TF1( ("f"+name+"_tot").c_str(), fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 6);
 
-         fmbl_tot->SetParameters( 166.5, 1.0, 1.0, 1.0, 1.0, 1.0 );
-         fmbl_tot->SetParameters( 166.5, 1.0, 1.0, 1.0, fmbl_tot->Integral(dist->lbnd, dist->rbnd), 1.0 );
+         fmbl_tot->SetParameters( 166.5, jfactpoints[j], 1.0, 1.0, 1.0, 1.0 );
+         fmbl_tot->SetParameters( 166.5, jfactpoints[j], 1.0, 1.0, fmbl_tot->Integral(dist->lbnd, dist->rbnd), 1.0 );
          fmbl_tot->SetLineColor(2);
          fmbl_tot->DrawCopy("same");
 
-         fmbl_tot->SetParameters( 172.5, 1.0, 1.0, 1.0, 1.0, 1.0 );
-         fmbl_tot->SetParameters( 172.5, 1.0, 1.0, 1.0, fmbl_tot->Integral(dist->lbnd, dist->rbnd), 1.0 );
+         fmbl_tot->SetParameters( 172.5, jfactpoints[j], 1.0, 1.0, 1.0, 1.0 );
+         fmbl_tot->SetParameters( 172.5, jfactpoints[j], 1.0, 1.0, fmbl_tot->Integral(dist->lbnd, dist->rbnd), 1.0 );
          fmbl_tot->SetLineColor(1);
          fmbl_tot->DrawCopy("same");
 
-         fmbl_tot->SetParameters( 178.5, 1.0, 1.0, 1.0, 1.0, 1.0 );
-         fmbl_tot->SetParameters( 178.5, 1.0, 1.0, 1.0, fmbl_tot->Integral(dist->lbnd, dist->rbnd), 1.0 );
+         fmbl_tot->SetParameters( 178.5, jfactpoints[j], 1.0, 1.0, 1.0, 1.0 );
+         fmbl_tot->SetParameters( 178.5, jfactpoints[j], 1.0, 1.0, fmbl_tot->Integral(dist->lbnd, dist->rbnd), 1.0 );
          fmbl_tot->SetLineColor(3);
          fmbl_tot->DrawCopy("same");
 
@@ -1185,6 +1223,7 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
          delete cmbl_signal;
          delete fmbl_tot;
          delete lm;
+         }
 
          TCanvas *cmbl_signal_jfact = new TCanvas( ("c_"+name+"_signal_jfact").c_str(),
                (dist->title+" Template").c_str(), 800, 800);
@@ -1192,20 +1231,20 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
 
          // jfactor points
          TH1D* mblDN = (TH1D*)hists_[0][name]["ttbar172_signal"]->Clone("mblDN");
-         mblDN->Add( hists_[1][name]["ttbar172_mistag"] );
-         mblDN->Add( hists_[1][name]["ttbar172_taus"] );
-         mblDN->Add( hists_[1][name]["ttbar172_hadronic"] );
-         mblDN->Add( hists_[1][name]["other"] );
-         TH1D* mblCENT = (TH1D*)hists_[1][name]["ttbar172_signal"]->Clone("mblCENT");
-         mblCENT->Add( hists_[1][name]["ttbar172_mistag"] );
-         mblCENT->Add( hists_[1][name]["ttbar172_taus"] );
-         mblCENT->Add( hists_[1][name]["ttbar172_hadronic"] );
-         mblCENT->Add( hists_[1][name]["other"] );
-         TH1D* mblUP = (TH1D*)hists_[2][name]["ttbar172_signal"]->Clone("mblUP");
-         mblUP->Add( hists_[1][name]["ttbar172_mistag"] );
-         mblUP->Add( hists_[1][name]["ttbar172_taus"] );
-         mblUP->Add( hists_[1][name]["ttbar172_hadronic"] );
-         mblUP->Add( hists_[1][name]["other"] );
+         mblDN->Add( hists_[0][name]["ttbar172_mistag"] );
+         mblDN->Add( hists_[0][name]["ttbar172_taus"] );
+         mblDN->Add( hists_[0][name]["ttbar172_hadronic"] );
+         mblDN->Add( hists_[0][name]["other"] );
+         TH1D* mblCENT = (TH1D*)hists_[NJP/2][name]["ttbar172_signal"]->Clone("mblCENT");
+         mblCENT->Add( hists_[NJP/2][name]["ttbar172_mistag"] );
+         mblCENT->Add( hists_[NJP/2][name]["ttbar172_taus"] );
+         mblCENT->Add( hists_[NJP/2][name]["ttbar172_hadronic"] );
+         mblCENT->Add( hists_[NJP/2][name]["other"] );
+         TH1D* mblUP = (TH1D*)hists_[NJP-1][name]["ttbar172_signal"]->Clone("mblUP");
+         mblUP->Add( hists_[NJP-1][name]["ttbar172_mistag"] );
+         mblUP->Add( hists_[NJP-1][name]["ttbar172_taus"] );
+         mblUP->Add( hists_[NJP-1][name]["ttbar172_hadronic"] );
+         mblUP->Add( hists_[NJP-1][name]["other"] );
 
          mblDN->Scale( 1.0/mblDN->Integral("width") );
          mblCENT->Scale( 1.0/mblCENT->Integral("width") );
@@ -1236,13 +1275,13 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
          fmbl_tot_jfact->SetLineColor(2);
          fmbl_tot_jfact->DrawCopy("same");
 
-         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[1], 1.0, 1.0, 1.0, 1.0 );
-         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[1], 1.0, 1.0, fmbl_tot_jfact->Integral(dist->lbnd, dist->rbnd), 1.0 );
+         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[NJP/2], 1.0, 1.0, 1.0, 1.0 );
+         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[NJP/2], 1.0, 1.0, fmbl_tot_jfact->Integral(dist->lbnd, dist->rbnd), 1.0 );
          fmbl_tot_jfact->SetLineColor(1);
          fmbl_tot_jfact->DrawCopy("same");
 
-         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[2], 1.0, 1.0, 1.0, 1.0 );
-         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[2], 1.0, 1.0, fmbl_tot_jfact->Integral(dist->lbnd, dist->rbnd), 1.0 );
+         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[NJP-1], 1.0, 1.0, 1.0, 1.0 );
+         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[NJP-1], 1.0, 1.0, fmbl_tot_jfact->Integral(dist->lbnd, dist->rbnd), 1.0 );
          fmbl_tot_jfact->SetLineColor(3);
          fmbl_tot_jfact->DrawCopy("same");
 
@@ -1260,6 +1299,48 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
          delete cmbl_signal_jfact;
          delete fmbl_tot_jfact;
          delete lm_jfact;
+
+         // plot the shapes in the vicinity of the maximum
+         /*
+         Shapes * fptr = new Shapes( name, dist->ptrain,
+               dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+         fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
+         fptr->aGPsig = dist->aGPsig;
+         fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
+         fptr->aGPbkg = dist->aGPbkg;
+         TF1 *fmbl_tot = new TF1( ("f"+name+"_tot").c_str(), fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 6);
+
+         vector<double> mbl_val = {30, 50, 70, 90, 110, 130, 150, 170, 190, 210, 230};
+         vector<double> mt2_val = {90, 100, 110, 130, 140, 150, 170, 180, 190, 210, 230};
+         for(int i=0; i < 11; i++){
+            double var=0;
+            if( name == "mbl_gp" ) var = mbl_val[i];
+            if( name == "mt2_221_gp" ) var = mt2_val[i];
+            std::ostringstream str;
+            str << var;
+            std::string vstr = str.str();
+            //TH2D* hshape_2d = new TH2D(("h"+name+vstr+"_2d").c_str(), ("h"+name+vstr+"_2d").c_str(), 21, 0.9945, 1.0055, 21, 171.875, 172.925);
+            TH2D* hshape_2d = new TH2D(("h"+name+vstr+"_2d").c_str(), ("h"+name+vstr+"_2d").c_str(), 21, 0.9845, 1.0255, 21, 170.875, 173.925);
+            cout << " ---> filling 2D hist near maximum: " << name << " = " << mbl_val[i] << endl;
+            for( int bin=1; bin < hshape_2d->GetSize()-1; bin++){ 
+               int bx=0, by=0, bz=0;
+               hshape_2d->GetBinXYZ(bin, bx, by, bz);
+               double jsf = hshape_2d->GetXaxis()->GetBinCenter( bx );
+               double mt = hshape_2d->GetYaxis()->GetBinCenter( by );
+               fmbl_tot->SetParameters( mt, jsf, 1.0, 1.0, 1.0, 1.0 );
+               fmbl_tot->SetParameters( mt, jsf, 1.0, 1.0, fmbl_tot->Integral(dist->lbnd, dist->rbnd), 1.0 );
+               //int bin = hshape_2d->FindBin(jsf, mt);
+               hshape_2d->SetBinContent(bin, fmbl_tot->Eval(var));
+            }
+            hshape_2d->Write();
+
+            delete hshape_2d;
+
+         }
+
+         delete fptr;
+         delete fmbl_tot;
+         */
 
       }
    }

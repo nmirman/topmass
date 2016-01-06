@@ -60,6 +60,8 @@ Fitter::Fitter(){
 
    gplength_jfact = 0.1;
 
+   mt_fix = 0;
+
 }
 
 Fitter::~Fitter(){
@@ -68,7 +70,8 @@ Fitter::~Fitter(){
 }
 
 const double Fitter::masspoints[NMP] = {166.5, 169.5, 171.5, 172.5, 173.5, 175.5, 178.5};
-const double Fitter::jfactpoints[NJP] = {0.98, 1.00, 1.02};
+const double Fitter::jfactpoints[NJP] = {0.970, 0.985, 1.000, 1.015, 1.030};
+//const double Fitter::jfactpoints[NJP] = {0.960, 0.980, 1.000, 1.020, 1.040};
 int Fitter::clocks[100] = {0};
 
 void Fitter::InitializeDists(){
@@ -79,8 +82,20 @@ void Fitter::InitializeDists(){
    // name(n), title(t), theta1, theta0, theta2, theta3
    //dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}", 0.54, 2.1, 6.82, 6.71, 0.086, 20, 300 );
    //dists[ "mt2_221_gp" ] = Distribution( "mt2_221_gp", "M_{T2} 221", 0.94, 1.74, 19.0, 1.65, 0.176, 90, 250 );
-   dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}", 0.54, 2.1, 5.79, 5.68, 0.0823, 20, 300 );
-   dists[ "mt2_221_gp" ] = Distribution( "mt2_221_gp", "M_{T2} 221", 0.94, 1.74, 19.03, 1.635, 0.180, 90, 250 );
+   //dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}", 0.54, 2.1, 5.79, 5.68, 0.0823, 20, 250 );
+   //dists[ "mt2_221_gp" ] = Distribution( "mt2_221_gp", "M_{T2} 221", 0.94, 1.74, 19.03, 1.635, 0.180, 90, 250 );
+   //dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}", 0.54, 2.1, 5.79, 5.68, 0.0823, 20, 230 );
+   //dists[ "mt2_221_gp" ] = Distribution( "mt2_221_gp", "M_{T2} 221", 0.94, 1.74, 19.03, 1.635, 0.180, 90, 230 );
+
+   // 5 point JES
+   //dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}",             0.54, 2.1, 4.75, 4.66, 0.109, 20, 230 ); //[-3,3]
+   //dists[ "mt2_221_gp" ] = Distribution( "mt2_221_gp", "M_{T2} 221", 0.94, 1.74, 8.08, 8.06, 0.138, 90, 230 ); //[-3,3]
+   dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}",             0.54, 2.1, 10, 20, 0.214, 20, 230 ); //[-3,3]
+   dists[ "mt2_221_gp" ] = Distribution( "mt2_221_gp", "M_{T2} 221", 0.94, 1.74, 10, 20, 0.215, 90, 230 ); //[-3,3]
+   //dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}",             0.54, 2.1, 4.49, 4.40, 0.0731, 20, 230 ); //[-4,4]
+   //dists[ "mt2_221_gp" ] = Distribution( "mt2_221_gp", "M_{T2} 221", 0.94, 1.74, 11.15, 11.82, 0.171, 90, 230 ); //[-4,4]
+
+   // test
 
    dists[ "mt2_220_gp" ] = Distribution( "mt2_220_gp", "M_{T2} 220", 0.94, 1.74, 7.1, 1.9, ljf, 50, 300 );
    dists[ "maos210_gp" ] = Distribution( "maos210_gp","blv mass from Maos neutrinos from M_{T2} 210", 0.42, 1.82, 9.92, 24.2, ljf, 100, 500 );
@@ -92,10 +107,6 @@ void Fitter::InitializeDists(){
    dists[ "mt2_220_nomatchmbl" ] = Distribution( "mt2_220_nomatchmbl", "M_{T2} 220", 0.94, 1.74, 7.1, 1.9, ljf, 0, 300 );
    dists[ "maos210blv" ] = Distribution( "maos210blv","blv mass from Maos neutrinos from M_{T2} 210", 0.42, 1.82, 9.92, 24.2, ljf, 0, 500 );
 }
-
-//
-// member definitions
-//
 
 void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
 
@@ -759,13 +770,17 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
    fFunc = new ROOT::Math::Functor ( this, &Fitter::Min2LL, 7 );
    gMinuit->SetFunction( *fFunc );
    gMinuit->SetVariable(0, "topMass", 175.0, 0.1);
+   gMinuit->SetFixedVariable(1, "jesfactor", 1.0);
 
+   /*
    if( fit_jfactor ){
       //gMinuit->SetLimitedVariable(1, "jesfactor", 1.0, 0.01, 0.985, 1.015);
-      gMinuit->SetVariable(1, "jesfactor", 1.0, 0.001);
+      //gMinuit->SetVariable(1, "jesfactor", 1.0, 0.001);
+      gMinuit->SetFixedVariable(1, "jesfactor", 1.0);
    }else{
       gMinuit->SetFixedVariable(1, "jesfactor", 1.0);
    }
+   */
 
    // If we're fitting mbl, set mbl background as a limited variable, otherwise set it as a fixed variable
    if (false/*dists["mbl_gp"].activate*/){
@@ -814,6 +829,14 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
    //double emtLow=0, emtUp=0;
    //gMinuit->GetMinosError(0,emtLow,emtUp);
    //cout << "MINOS ERROR: -" << emtLow << " +" << emtUp << endl;
+   const double *par = gMinuit->X();
+   mt_fix = par[0];
+   if( fit_jfactor ){
+      cout << "BEGIN FIT STAGE 2" << endl;
+      gMinuit->SetVariable(0, "topMass", par[0], 0.1);
+      gMinuit->SetVariable(1, "jesfactor", 1.0, 0.001);
+      gMinuit->Minimize();
+   }
 
    return;
 }

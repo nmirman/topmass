@@ -7,12 +7,14 @@ from operator import itemgetter, attrgetter, methodcaller
 file = TFile( sys.argv[1] )
 tree = file.Get('FitResults')
 
+print '\n'
 systs = { 'Central': [0 for i in range(5)] }
 for i in range( tree.GetEntries() ):
    tree.GetEntry(i)
 
    if( tree.fitStatus != 0 ):
-      continue
+      print '!!!', str(tree.syst), 'FIT STATUS = ', tree.fitStatus, '!!!'
+      #continue
 
    name = str(tree.syst)
 

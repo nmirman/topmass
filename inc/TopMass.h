@@ -17,8 +17,8 @@
 using namespace std;
 
 #define NMP 7
-#define NJP 3
-#define NTP 100
+#define NJP 5
+#define NTP 75
 
 struct Dataset {
 
@@ -234,6 +234,8 @@ class Fitter{
 
       double jtest;
       double gplength_jfact;
+
+      double mt_fix;
 
       static int clocks [100];
 

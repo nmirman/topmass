@@ -51,7 +51,9 @@ for i in range( tree.GetEntries() ):
    if tree.fitStatus != 0:
       print 'Fit Status ', tree.fitStatus, ' in PE ', i, ', masspoint ', tree.mcmass
       continue
-   if abs(tree.jesfactor-1) > 0.01:
+   #if abs(tree.jesfactor-1) > 0.02:
+   #   continue
+   if tree.fitStatus != 0:
       continue
 
    countmt[iter] += 1
@@ -92,8 +94,8 @@ for i in range(7):
    topgaus[i].paramOn(fTop[i],RooFit.Parameters(plotShow),
              RooFit.Layout(0.17, 0.48, 0.94),
                  RooFit.Format("NU",RooFit.AutoPrecision(1)))
-   if i == 3:
-      fTop[i].Draw()
+   #if i == 3:
+   #   fTop[i].Draw()
 
 #cTop.Print('results/bootstrap_mt.pdf')
 

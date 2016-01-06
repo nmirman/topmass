@@ -49,8 +49,13 @@ Shapes::Shapes( string var, double ptraintmp[NTP][NMP][NJP], double gplength_x, 
    double rho = 0.0;
    //if( name == "mbl_gp" ) rho = 0.905;
    //else if( name == "mt2_221_gp" ) rho = 0.0596;
-   if( name == "mbl_gp" ) rho = 0.697;
-   else if( name == "mt2_221_gp" ) rho = 0.0538;
+   //if( name == "mbl_gp" ) rho = 0.697;
+   //else if( name == "mt2_221_gp" ) rho = 0.0538;
+   // JES 5 point
+   //if( name == "mbl_gp" ) rho = 0.698;
+   //else if( name == "mt2_221_gp" ) rho = 0.690;
+   if( name == "mbl_gp" ) rho = 0.892;
+   else if( name == "mt2_221_gp" ) rho = 0.884;
    else cout << "ERROR IN GP CORR: DIST NOT FOUND" << endl;
    // to avoid divisions in GPkern
    irho2 = 1.0/(1-rho*rho);
@@ -281,6 +286,7 @@ void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
    Ainv_sig = (TMatrixD)Asinv_sig;
    //Ainv_bkg = (TMatrixD)Asinv_bkg;
 
+   /*
    TMatrixD Ktmp = K;
    for(int i=0; i < ntrain*NMP*NJP; i++) Ktmp[i][i] += 10E-9;
    cout << "---> cholesky decomposition of covariance matrix... "; fflush(stdout);
@@ -293,6 +299,7 @@ void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
    Kinv.Clear();
    Kinv.ResizeTo( ntrain*NMP*NJP, ntrain*NMP*NJP );
    Kinv = (TMatrixD)Ksinv;
+   */
 
    TMatrixD Ainv_sigtemp = Ainv_sig;
    //TMatrixD Ainv_bkgtemp = Ainv_bkg;
@@ -434,7 +441,8 @@ void Shapes::LearnGPparams( vector< map< string, map<string, TH1D*> > >& hists_ 
    gMinuit->SetFixedVariable(0, "gpnorm1", gnorm1);
    gMinuit->SetFixedVariable(1, "gpnorm2", gnorm2);
    gMinuit->SetVariable(2, "lx", sqrt(1.0/ilx2), 1.0);
-   gMinuit->SetVariable(3, "lmass", sqrt(1.0/ilmass2), 1.0);
+   //gMinuit->SetVariable(3, "lmass", sqrt(1.0/ilmass2), 1.0);
+   gMinuit->SetFixedVariable(3, "lmass", sqrt(1.0/ilmass2));
    gMinuit->SetFixedVariable(4, "ljf", sqrt(1.0/iljfact2));
    gMinuit->SetFixedVariable(5, "rho", mjfcorr/sqrt(iljfact2*ilmass2));
 
@@ -603,7 +611,7 @@ double Shapes::GPm2llLOOCV( const double *x ){
       ysig[i] = hgp_sig[index]->GetBinContent( hgp_sig[index]->FindBin(ptrain[im][imass][ijfact]) );
    }
 
-   TVectorD Ky = Kinv*ysig;
+   TVectorD Ky = Ainv_sig*ysig;
 
    double m2ll = 0;
    for(int i=0; i < ntrain*NMP*NJP; i++){
@@ -613,8 +621,8 @@ double Shapes::GPm2llLOOCV( const double *x ){
       int imass, ijfact;
       iGP( index, imass, ijfact );
 
-      double ui = ysig[i] - Ky[i]/Kinv[i][i];
-      double vi1 = 1.0/Kinv[i][i];
+      double ui = ysig[i] - Ky[i]/Ainv_sig[i][i];
+      double vi1 = 1.0/Ainv_sig[i][i];
       double vi2 = pow(hgp_sig[index]->GetBinContent( hgp_sig[index]->FindBin(ptrain[im][imass][ijfact]) ),2);
 
       double vi = do_gpvar ? vi1 : vi2;

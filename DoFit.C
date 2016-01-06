@@ -73,6 +73,7 @@ int main(int argc, char* argv[]){
    int run_number=-1;
    int fitstatus=-1;
    double mt=0, mt_err=0;
+   double mt_fix=0;
    double kmbl=0, kmbl_err=0;
    double k220=0, k220_err=0;
    double k221=0, k221_err=0;
@@ -101,6 +102,7 @@ int main(int argc, char* argv[]){
    tree->Branch("fitStatus", &fitstatus);
    tree->Branch("mt", &mt);
    tree->Branch("mt_err", &mt_err);
+   tree->Branch("mt_fix", &mt_fix);
    tree->Branch("kmbl", &kmbl);
    tree->Branch("kbml_err", &kmbl_err);
    tree->Branch("k220", &k220);
@@ -338,7 +340,7 @@ int main(int argc, char* argv[]){
 
    // Check that at least one kinematic variable's lengthscale has been entered.
    // Any additional distributions need to be added here
-   if (!(fitter.dists["mbl_gp"].activate) and !(fitter.dists["mt2_220_gp"].activate) and !(fitter.dists["maos220_gp"].activate) and !(fitter.dists["maos210_gp"].activate) and (do_fit == 1 or do_templates == 1) ){
+   if (!(fitter.dists["mbl_gp"].activate) and !(fitter.dists["mt2_221_gp"].activate) and !(fitter.dists["mt2_220_gp"].activate) and !(fitter.dists["maos220_gp"].activate) and !(fitter.dists["maos210_gp"].activate) and (do_fit == 1 or do_templates == 1) ){
       std::cout << "At least one variable needed to do fit.  Input at least one lengthscale." << std::endl;
       print_usage();
       return -1;
@@ -348,7 +350,7 @@ int main(int argc, char* argv[]){
 
    // random number seed for bootstrapping (turns on when nonzero)
    int randseed = 0;
-   if( do_bootstrap ) randseed = run_number+1+10E6;
+   if( do_bootstrap ) randseed = run_number+1+10E6+1000;
 
    // ********************************************************
    // events for diagnostics
@@ -366,10 +368,10 @@ int main(int argc, char* argv[]){
    // events for GP training
    // ********************************************************
    
-   hists_jvec_train_.resize(3);
-   hists2d_jvec_train_.resize(3);
+   hists_jvec_train_.resize(NJP);
+   hists2d_jvec_train_.resize(NJP);
 
-   for(int i=0; i < 3; i++){
+   for(int i=0; i < NJP; i++){
       cout << "\nLoading datasets: training " << i << endl;
       vector<Event> eventvec_temp;
 
@@ -405,10 +407,8 @@ int main(int argc, char* argv[]){
    // ********************************************************
    
    if( do_fit ){
-      fitter.ReadDatasets( datasets, eventvec_test, "test", nsyst, fracevts, statval_numPE, statval_PE, 0 );
-      //if( jtest != 0 ){
-      //   fitter.JShift_test( eventvec_test, jtest );
-      //}
+      //fitter.ReadDatasets( datasets, eventvec_test, "test", nsyst, fracevts, statval_numPE, statval_PE, 0 );
+      fitter.ReadDatasets( datasets, eventvec_test, "test", nsyst, fracevts, statval_numPE, statval_PE, jtest );
       fitter.GetVariables( eventvec_test );
       fitter.DeclareHists( hists_test_, hists2d_test_, "test" );
       fitter.FillHists( hists_test_, hists2d_test_, eventvec_test );
@@ -639,6 +639,7 @@ int main(int argc, char* argv[]){
             const double *par_err = fitter.gMinuit->Errors();
             mt = par[0];
             mt_err = par_err[0];
+            mt_fix = fitter.mt_fix;
             jesfactor = par[1];
             jesfactor_err = par_err[1];
             kmbl = par[2];

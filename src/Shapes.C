@@ -230,7 +230,7 @@ void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
    // alpha vector
    aGPsig.Clear();
 
-   aGPsig.ResizeTo( ntrain*NMP );
+   aGPsig.ResizeTo( ntrain*NMP*NJP );
    aGPsig = Ainv_sigtemp*ysig;
 
    // compute marginal likelihood

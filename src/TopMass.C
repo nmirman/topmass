@@ -853,7 +853,6 @@ double Fitter::Min2LL(const double *x){
       Distribution *dist = &(it->second);
 
       if( dist->activate ){// only do this if we're fitting the variable in question
-         cout << __LINE__ << endl;
 
          // normalization inside likelihood function (temp)
          Shapes * fptr = new Shapes( name, dist->ptrain, 
@@ -861,35 +860,29 @@ double Fitter::Min2LL(const double *x){
          fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr->aGPsig = dist->aGPsig;
 
-         cout << __LINE__ << endl;
          TF1 *fshape_tot = new TF1( ("f"+name+"_tot").c_str(), fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 4);
          fshape_tot->SetParameters( x[0], x[1], 1.0, 1.0 );
 
-         cout << __LINE__ << endl;
          high_resolution_clock::time_point start_int = high_resolution_clock::now();
          double test = fshape_tot->Eval(100);
          double integralsig = fshape_tot->Integral(dist->lbnd, dist->rbnd);
          high_resolution_clock::time_point stop_int = high_resolution_clock::now();
          duration<double> time_span = duration_cast<duration<double>>(stop_int-start_int);
          clocks[0] += time_span.count();
-         cout << __LINE__ << endl;
 
          delete fshape_tot;
          delete fptr;
 
-         cout << __LINE__ << endl;
          Shapes shape( name, dist->ptrain, 
                dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
          shape.aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          shape.aGPsig = dist->aGPsig;
-         cout << __LINE__ << endl;
 
          double pfit [] = {x[0], x[1], 1.0, integralsig};
 
          // evaluate likelihood
          high_resolution_clock::time_point start_loop = high_resolution_clock::now();
          for( vector<Event>::iterator ev = eventvec_fit->begin(); ev < eventvec_fit->end(); ev++ ){
-         cout << ev-eventvec_fit->begin() << endl;
             if( !(ev->fit_event) ) continue;
 
             if ( name.compare("mbl_gp") == 0 ){ // for mbl

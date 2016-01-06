@@ -795,8 +795,6 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
 
 
    // templates for all masses
-   string sb[] = {"sig","bkg"};
-
    /*
    for( map<string, Distribution>::iterator it = dists.begin(); it != dists.end(); it++ ){
 
@@ -884,15 +882,14 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
                fptr->Ainv_bkg.ResizeTo( dist->aGPbkg.GetNoElements(), dist->aGPbkg.GetNoElements() );
                fptr->Ainv_bkg = dist->Ainv_bkg;
 
-               TF1 *ftemplate = new TF1("ftemplate", fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 6);
+               TF1 *ftemplate = new TF1("ftemplate", fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 5);
                ftemplate->SetNpx(500);
 
                // normalization inside likelihood function (temp)
-               ftemplate->SetParameters( masspoints[j], 1.0, 1-k, 1.0, 1.0, 1.0 );
+               ftemplate->SetParameters( masspoints[j], 1.0, 1-k, 1.0, 1.0 );
                double integralsig = (sb[k] == "sig") ? ftemplate->Integral(dist->lbnd, dist->rbnd) : 1.0;
-               double integralbkg = (sb[k] == "bkg") ? ftemplate->Integral(dist->lbnd, dist->rbnd) : 1.0;
                ftemplate->SetParameters( masspoints[j], 1.0, 1-k,
-                     1.0, integralsig, integralbkg );
+                     1.0, integralsig );
                ftemplate->SetLineWidth(2);
 
                // TGraph with GP covariance
@@ -957,8 +954,6 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
          TDirectory *dir = fileout->mkdir( ("mtshape_"+name).c_str() );
          dir->cd();
 
-         //for(unsigned int k=0; k < sizeof(sb)/sizeof(sb[0]); k++){ // sig,bkg
-         int k=0;
          //for(double x=dist->lbnd; x <= dist->rbnd; x+=10){ // bin of mbl
          for(int i=0; i < NTP ; i++){ // bin of mbl
             double x = dist->ptrain[i][NMP/2][NJP/2];
@@ -967,8 +962,8 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
             ssx << x;
             string sx = ssx.str();
 
-            TCanvas *canvas = new TCanvas( ("c"+sb[k]+"_"+name+sx).c_str(),
-                  ("c"+sb[k]+"_"+name+sx).c_str(), 800, 800);
+            TCanvas *canvas = new TCanvas( ("c"+name+sx).c_str(),
+                  ("c"+name+sx).c_str(), 800, 800);
             canvas->SetFillColor(0);
             canvas->cd();
 
@@ -977,22 +972,19 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
             Shapes * fptr = new Shapes( name, dist->ptrain, dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
             fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
             fptr->aGPsig = dist->aGPsig;
-            fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
-            fptr->aGPbkg = dist->aGPbkg;
-            TF1 *ftemplate = new TF1("ftemplate", fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 6);
+            TF1 *ftemplate = new TF1("ftemplate", fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 4);
             int count=0;
             for(double m=160.0; m <= 183.0; m+=0.5){ // value of mt
                // normalization inside likelihood function (temp)
-               ftemplate->SetParameters( m, 1.0, 1-k, 1.0, 1.0, 1.0 );
-               double integralsig = (sb[k] == "sig") ? ftemplate->Integral(dist->lbnd,dist->rbnd) : 1.0;
-               double integralbkg = 1.0;//(sb[k] == "bkg") ? ftemplate->Integral(0,dist->range) : 1.0;
-               ftemplate->SetParameters( m, 1.0, 1-k, 1.0, integralsig, integralbkg );
+               ftemplate->SetParameters( m, 1.0, 1.0, 1.0 );
+               double integralsig = ftemplate->Integral(dist->lbnd,dist->rbnd);
+               ftemplate->SetParameters( m, 1.0, 1.0, integralsig );
 
                gtemplate->SetPoint(count, m, ftemplate->Eval(x));
                count++;
             }
             gtemplate->SetTitle( hists_[NJP/2][name]["ttbar172_signal"]->GetTitle()
-                  + TString(" "+sb[k]+" shape @ "+dist->title+" = "+sx) );
+                  + TString(" shape @ "+dist->title+" = "+sx) );
             gtemplate->SetLineColor(2);
             gtemplate->SetLineWidth(2);
 
@@ -1005,18 +997,11 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
                string smass = ssmass.str();
 
                TH1D *hmc;
-               if( sb[k] == "sig" ){
-                  hmc = (TH1D*)hists_[NJP/2][name]["ttbar"+smass+"_signal"]->Clone("hmc");
-                  hmc->Add( hists_[NJP/2][name]["ttbar"+smass+"_mistag"] );
-                  hmc->Add( hists_[NJP/2][name]["ttbar"+smass+"_taus"] );
-                  hmc->Add( hists_[NJP/2][name]["ttbar"+smass+"_hadronic"] );
-                  hmc->Add( hists_[NJP/2][name]["other"] );
-               }else{
-                  hmc = (TH1D*)hists_[NJP/2][name]["ttbar"+smass+"_mistag"]->Clone("hmc");
-                  hmc->Add( hists_[NJP/2][name]["ttbar"+smass+"_taus"] );
-                  hmc->Add( hists_[NJP/2][name]["ttbar"+smass+"_hadronic"] );
-                  hmc->Add( hists_[NJP/2][name]["other"] );
-               }
+               hmc = (TH1D*)hists_[NJP/2][name]["ttbar"+smass+"_signal"]->Clone("hmc");
+               hmc->Add( hists_[NJP/2][name]["ttbar"+smass+"_mistag"] );
+               hmc->Add( hists_[NJP/2][name]["ttbar"+smass+"_taus"] );
+               hmc->Add( hists_[NJP/2][name]["ttbar"+smass+"_hadronic"] );
+               hmc->Add( hists_[NJP/2][name]["other"] );
                hmc->Scale( 1.0/hmc->Integral("width") );
 
                gmc->SetPoint(count, masspoints[j], hmc->GetBinContent(hmc->FindBin(x)) );
@@ -1063,8 +1048,8 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
             ssx << x;
             string sx = ssx.str();
 
-            TCanvas *canvas2 = new TCanvas( ("c"+sb[k]+"_"+name+sx+"2").c_str(),
-                  ("c"+sb[k]+"_"+name+sx).c_str(), 800, 800);
+            TCanvas *canvas2 = new TCanvas( ("c"+name+sx+"2").c_str(),
+                  ("c"+name+sx).c_str(), 800, 800);
             canvas2->SetFillColor(0);
             canvas2->cd();
 
@@ -1075,20 +1060,19 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
             fptr2->aGPsig = dist->aGPsig;
             fptr2->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
             fptr2->aGPbkg = dist->aGPbkg;
-            TF1 *ftemplate2 = new TF1("ftemplate2", fptr2, &Shapes::Ftot, dist->lbnd, dist->rbnd, 6);
+            TF1 *ftemplate2 = new TF1("ftemplate2", fptr2, &Shapes::Ftot, dist->lbnd, dist->rbnd, 4);
             int count=0;
             for(double j=0.95; j <= 1.05; j+=0.001){ // value of jes
                // normalization inside likelihood function (temp)
-               ftemplate2->SetParameters( 172.5, j, 1-k, 1.0, 1.0, 1.0 );
-               double integralsig = (sb[k] == "sig") ? ftemplate2->Integral(dist->lbnd,dist->rbnd) : 1.0;
-               double integralbkg = 1.0;//(sb[k] == "bkg") ? ftemplate2->Integral(0,dist->range) : 1.0;
-               ftemplate2->SetParameters( 172.5, j, 1-k, 1.0, integralsig, integralbkg );
+               ftemplate2->SetParameters( 172.5, j, 1.0, 1.0);
+               double integralsig = ftemplate2->Integral(dist->lbnd,dist->rbnd);
+               ftemplate2->SetParameters( 172.5, j, 1.0, integralsig );
 
                gtemplate2->SetPoint(count, j, ftemplate2->Eval(x));
                count++;
             }
             gtemplate2->SetTitle( hists_[NJP/2][name]["ttbar172_signal"]->GetTitle()
-                  + TString(" "+sb[k]+" shape @ "+dist->title+" = "+sx) );
+                  + TString(" shape @ "+dist->title+" = "+sx) );
             gtemplate2->SetLineColor(2);
             gtemplate2->SetLineWidth(2);
 
@@ -1098,18 +1082,11 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
             for(int j=0; j < NJP; j++){
 
                TH1D *hmc2;
-               if( sb[k] == "sig" ){
-                  hmc2 = (TH1D*)hists_[j][name]["ttbar172_signal"]->Clone("hmc2");
-                  hmc2->Add( hists_[j][name]["ttbar172_mistag"] );
-                  hmc2->Add( hists_[j][name]["ttbar172_taus"] );
-                  hmc2->Add( hists_[j][name]["ttbar172_hadronic"] );
-                  hmc2->Add( hists_[j][name]["other"] );
-               }else{
-                  hmc2 = (TH1D*)hists_[j][name]["ttbar172_mistag"]->Clone("hmc2");
-                  hmc2->Add( hists_[j][name]["ttbar172_taus"] );
-                  hmc2->Add( hists_[j][name]["ttbar172_hadronic"] );
-                  hmc2->Add( hists_[j][name]["other"] );
-               }
+               hmc2 = (TH1D*)hists_[j][name]["ttbar172_signal"]->Clone("hmc2");
+               hmc2->Add( hists_[j][name]["ttbar172_mistag"] );
+               hmc2->Add( hists_[j][name]["ttbar172_taus"] );
+               hmc2->Add( hists_[j][name]["ttbar172_hadronic"] );
+               hmc2->Add( hists_[j][name]["other"] );
                hmc2->Scale( 1.0/hmc2->Integral("width") );
 
                gmc2->SetPoint(count, jfactpoints[j], hmc2->GetBinContent(hmc2->FindBin(x)) );
@@ -1190,22 +1167,20 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
                dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
          fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr->aGPsig = dist->aGPsig;
-         fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
-         fptr->aGPbkg = dist->aGPbkg;
-         TF1 *fmbl_tot = new TF1( ("f"+name+"_tot").c_str(), fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 6);
+         TF1 *fmbl_tot = new TF1( ("f"+name+"_tot").c_str(), fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 4);
 
-         fmbl_tot->SetParameters( 166.5, jfactpoints[j], 1.0, 1.0, 1.0, 1.0 );
-         fmbl_tot->SetParameters( 166.5, jfactpoints[j], 1.0, 1.0, fmbl_tot->Integral(dist->lbnd, dist->rbnd), 1.0 );
+         fmbl_tot->SetParameters( 166.5, jfactpoints[j], 1.0, 1.0 );
+         fmbl_tot->SetParameters( 166.5, jfactpoints[j], 1.0, fmbl_tot->Integral(dist->lbnd, dist->rbnd) );
          fmbl_tot->SetLineColor(2);
          fmbl_tot->DrawCopy("same");
 
-         fmbl_tot->SetParameters( 172.5, jfactpoints[j], 1.0, 1.0, 1.0, 1.0 );
-         fmbl_tot->SetParameters( 172.5, jfactpoints[j], 1.0, 1.0, fmbl_tot->Integral(dist->lbnd, dist->rbnd), 1.0 );
+         fmbl_tot->SetParameters( 172.5, jfactpoints[j], 1.0, 1.0 );
+         fmbl_tot->SetParameters( 172.5, jfactpoints[j], 1.0, fmbl_tot->Integral(dist->lbnd, dist->rbnd) );
          fmbl_tot->SetLineColor(1);
          fmbl_tot->DrawCopy("same");
 
-         fmbl_tot->SetParameters( 178.5, jfactpoints[j], 1.0, 1.0, 1.0, 1.0 );
-         fmbl_tot->SetParameters( 178.5, jfactpoints[j], 1.0, 1.0, fmbl_tot->Integral(dist->lbnd, dist->rbnd), 1.0 );
+         fmbl_tot->SetParameters( 178.5, jfactpoints[j], 1.0, 1.0 );
+         fmbl_tot->SetParameters( 178.5, jfactpoints[j], 1.0, fmbl_tot->Integral(dist->lbnd, dist->rbnd) );
          fmbl_tot->SetLineColor(3);
          fmbl_tot->DrawCopy("same");
 
@@ -1266,22 +1241,20 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
                dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
          fptr_jfact->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr_jfact->aGPsig = dist->aGPsig;
-         fptr_jfact->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
-         fptr_jfact->aGPbkg = dist->aGPbkg;
-         TF1 *fmbl_tot_jfact = new TF1( ("f"+name+"_tot").c_str(), fptr_jfact, &Shapes::Ftot, dist->lbnd, dist->rbnd, 6);
+         TF1 *fmbl_tot_jfact = new TF1( ("f"+name+"_tot").c_str(), fptr_jfact, &Shapes::Ftot, dist->lbnd, dist->rbnd, 4);
 
-         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[0], 1.0, 1.0, 1.0, 1.0 );
-         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[0], 1.0, 1.0, fmbl_tot_jfact->Integral(dist->lbnd, dist->rbnd), 1.0 );
+         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[0], 1.0, 1.0 );
+         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[0], 1.0, fmbl_tot_jfact->Integral(dist->lbnd, dist->rbnd) );
          fmbl_tot_jfact->SetLineColor(2);
          fmbl_tot_jfact->DrawCopy("same");
 
-         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[NJP/2], 1.0, 1.0, 1.0, 1.0 );
-         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[NJP/2], 1.0, 1.0, fmbl_tot_jfact->Integral(dist->lbnd, dist->rbnd), 1.0 );
+         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[NJP/2], 1.0, 1.0 );
+         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[NJP/2], 1.0, fmbl_tot_jfact->Integral(dist->lbnd, dist->rbnd) );
          fmbl_tot_jfact->SetLineColor(1);
          fmbl_tot_jfact->DrawCopy("same");
 
-         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[NJP-1], 1.0, 1.0, 1.0, 1.0 );
-         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[NJP-1], 1.0, 1.0, fmbl_tot_jfact->Integral(dist->lbnd, dist->rbnd), 1.0 );
+         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[NJP-1], 1.0, 1.0 );
+         fmbl_tot_jfact->SetParameters( 172.5, jfactpoints[NJP-1], 1.0, fmbl_tot_jfact->Integral(dist->lbnd, dist->rbnd) );
          fmbl_tot_jfact->SetLineColor(3);
          fmbl_tot_jfact->DrawCopy("same");
 
@@ -1306,9 +1279,7 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
                dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
          fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr->aGPsig = dist->aGPsig;
-         fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
-         fptr->aGPbkg = dist->aGPbkg;
-         TF1 *fmbl_tot = new TF1( ("f"+name+"_tot").c_str(), fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 6);
+         TF1 *fmbl_tot = new TF1( ("f"+name+"_tot").c_str(), fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 4);
 
          vector<double> mbl_val = {30, 50, 70, 90, 110, 130, 150, 170, 190, 210, 230};
          vector<double> mt2_val = {90, 100, 110, 130, 140, 150, 170, 180, 190, 210, 230};
@@ -1327,8 +1298,8 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
                hshape_2d->GetBinXYZ(bin, bx, by, bz);
                double jsf = hshape_2d->GetXaxis()->GetBinCenter( bx );
                double mt = hshape_2d->GetYaxis()->GetBinCenter( by );
-               fmbl_tot->SetParameters( mt, jsf, 1.0, 1.0, 1.0, 1.0 );
-               fmbl_tot->SetParameters( mt, jsf, 1.0, 1.0, fmbl_tot->Integral(dist->lbnd, dist->rbnd), 1.0 );
+               fmbl_tot->SetParameters( mt, jsf, 1.0, 1.0 );
+               fmbl_tot->SetParameters( mt, jsf, 1.0, fmbl_tot->Integral(dist->lbnd, dist->rbnd) );
                //int bin = hshape_2d->FindBin(jsf, mt);
                hshape_2d->SetBinContent(bin, fmbl_tot->Eval(var));
             }

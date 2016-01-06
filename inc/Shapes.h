@@ -23,9 +23,8 @@ class Shapes{
       ~Shapes();
 
       double Ftot(double*, double*);
-      double Fsig_param(double, double);
-      double Fmbl_gp(double, double, double, string);
-      double Fmbl_gp_var(double, double, double, string);
+      double Fmbl_gp(double, double, double);
+      double Fmbl_gp_var(double, double, double);
 
       string name;
       double lx, lmass, gnorm1, gnorm2, ljfact;
@@ -36,12 +35,9 @@ class Shapes{
       //vector<double> ptrain;
       double ptrain [NTP][NMP][NJP];
       TMatrixD Ainv_sig;
-      TMatrixD Ainv_bkg;
       TVectorD aGPsig;
-      TVectorD aGPbkg;
-      //TMatrixD Kinv;
       void SetGPopts();
-      void TrainGP( vector< map< string, map<string, TH1D*> > >&, double&, double& );
+      void TrainGP( vector< map< string, map<string, TH1D*> > >&, double& );
       double GPkern(double, double, double, double, double, double);
 
       void LearnGPparams( vector< map< string, map<string, TH1D*> > >& );

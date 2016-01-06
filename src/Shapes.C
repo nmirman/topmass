@@ -26,7 +26,6 @@ Shapes::Shapes( string var, double ptraintmp[NTP][NMP][NJP], double gplength_x, 
    lmass = gplength_mt;
    gnorm1 = norm1;
    gnorm2 = norm2;
-   //ntrain = 100;
    ltrain = lbound;
    rtrain = rbound;
    //for(int i=0; i < ntrain; i++) ptrain.push_back( ltrain + (i+0.5)*(rtrain-ltrain)/ntrain );
@@ -47,10 +46,6 @@ Shapes::Shapes( string var, double ptraintmp[NTP][NMP][NJP], double gplength_x, 
    rbx = 0.0;
 
    double rho = 0.0;
-   //if( name == "mbl_gp" ) rho = 0.905;
-   //else if( name == "mt2_221_gp" ) rho = 0.0596;
-   //if( name == "mbl_gp" ) rho = 0.697;
-   //else if( name == "mt2_221_gp" ) rho = 0.0538;
    // JES 5 point
    //if( name == "mbl_gp" ) rho = 0.698;
    //else if( name == "mt2_221_gp" ) rho = 0.690;
@@ -81,59 +76,24 @@ Shapes::~Shapes(){
 //
 
 double Shapes::Ftot(double *px, double *pp){
-
    double x = px[0];
    double mt = pp[0];
    double jfact = pp[1];
-   double k = pp[2];
-   double norm = pp[3];
-   double integralsig = pp[4];
-   double integralbkg = pp[5];
+   double norm = pp[2];
+   double integralsig = pp[3];
 
-   //if( k != 1 ) cout << "ERROR BKG GP SHAPE" << endl;
-
-   double val = norm*(k*Fmbl_gp(x, mt, jfact, "sig")/integralsig
-         /*+ (1-k)*Fmbl_gp(x, mt, jfact, "bkg")/integralbkg*/);
+   double val = norm*Fmbl_gp(x, mt, jfact)/integralsig;
 
    if( val <= 0 or (x > lbx and x < rbx) ) return 1E-10;
    else return val;
 }
 
-double Shapes::Fsig_param(double x, double mt){
-
-   double par [9];
-   par[0] = 0.04314 - 0.0001872*mt;
-   par[1] = -89.26 + 1.139*mt;
-   par[2] = 20.86 + 0.004963*mt;
-   par[3] = -0.005268 + 7.442E-05*mt;
-   par[4] = -90.66 + 0.9241*mt;
-   par[5] = -26.65 + 0.2591*mt;
-   par[6] = 0.02192 + -6.172E-05*mt;
-   par[7] = -23.11 + 0.3386*mt;
-   par[8] = -15.22 + 0.1252*mt;
-
-   double gaus1 = par[0]*exp( -0.5*pow((x-par[1])/par[2],2) );
-   double gaus2 = par[3]*exp( -0.5*pow((x-par[4])/par[5],2) );
-   double landau = par[6]*TMath::Landau(x,par[7],par[8],false);
-
-   return gaus1+gaus2+landau;
-}
-
-double Shapes::Fmbl_gp(double x, double mt, double jfact, string sb){
+double Shapes::Fmbl_gp(double x, double mt, double jfact){
 
    double fgp = 0;
    for(unsigned int i=0; i < ptrainsize; i++){
       for(int j=0; j < NMP; j++){
          for(int k=0; k < NJP; k++){
-            /*
-            double agp = 0;
-            if( sb.compare("sig") == 0 ) agp = aGPsig[i+j*ptrainsize+k*ptrainsize*NMP];
-            else if( sb.compare("bkg") == 0 ) agp = aGPbkg[i+j*ptrainsize+k*ptrainsize*NMP];
-            else{
-               cout << "ERROR in GP shape." << endl;
-               return -1;
-            }
-            */
             fgp += aGPsig[i+j*ptrainsize+k*ptrainsize*NMP]
                * GPkern( x, ptrain[i][j][k], mt, masspnts[j], jfact, jfactpnts[k] );
          }
@@ -143,7 +103,7 @@ double Shapes::Fmbl_gp(double x, double mt, double jfact, string sb){
    return fgp;
 }
 
-double Shapes::Fmbl_gp_var(double x, double mt, double jfact, string sb){
+double Shapes::Fmbl_gp_var(double x, double mt, double jfact){
 
    int ntrain = ptrainsize;
 
@@ -159,12 +119,7 @@ double Shapes::Fmbl_gp_var(double x, double mt, double jfact, string sb){
 
    double c1=0, c2=0;
    c1 = GPkern( x, x, mt, mt, jfact, jfact );
-   if( sb.compare("sig") == 0 ) k *= Ainv_sig;
-   else if( sb.compare("bkg") == 0 ) k *= Ainv_bkg;
-   else{
-      cout << "ERROR in GP shape." << endl;
-      return -1;
-   }
+   k *= Ainv_sig;
    c2 = kT*k;
 
    return (c1-c2);
@@ -177,13 +132,12 @@ double Shapes::GPkern(double x1, double x2, double m1, double m2, double j1, dou
 }
 
 void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
-     double &m2llsig, double &m2llbkg ){
+     double &m2llsig ){
 
    int ntrain = ptrainsize;
 
    // histograms
    vector<TH1D*> hgp_sig;
-   vector<TH1D*> hgp_bkg;
    for(int i=0; i < NMP*NJP; i++){
 
       int im, ijfact;
@@ -206,17 +160,8 @@ void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
       hgp_sig[i]->Add( hists_[ijfact][name]["other"] );
       hgp_sig[i]->Scale( 1.0/hgp_sig[i]->Integral("width") );
 
-      // background shape
-      hgp_bkg.push_back( (TH1D*)hists_[ijfact][name]["ttbar"+smass+"_mistag"]
-            ->Clone( ("hgp_bkg"+smass).c_str()) );
-      hgp_bkg[i]->Add( hists_[ijfact][name]["ttbar"+smass+"_hadronic"] );
-      hgp_bkg[i]->Add( hists_[ijfact][name]["ttbar"+smass+"_taus"] );
-      hgp_bkg[i]->Add( hists_[ijfact][name]["other"] );
-      hgp_bkg[i]->Scale( 1.0/hgp_bkg[i]->Integral("width") );
-
       for(int n=0; n < hgp_sig[i]->GetNbinsX(); n++){
          if( hgp_sig[i]->GetBinError(n) < 5E-06 ) hgp_sig[i]->SetBinError(n, 5E-06);
-         if( hgp_bkg[i]->GetBinError(n) < 5E-06 ) hgp_bkg[i]->SetBinError(n, 5E-06);
       }
 
    }
@@ -240,115 +185,65 @@ void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
    }
    // compute noise matrix
    TMatrixD Nsig(ntrain*NMP*NJP,ntrain*NMP*NJP);
-   TMatrixD Nbkg(ntrain*NMP*NJP,ntrain*NMP*NJP);
    for(int i=0; i < ntrain*NMP*NJP; i++){
       int im = i % ntrain;
       int index = i / ntrain;
       int imass, ijfact;
       iGP( index, imass, ijfact );
       double binerr_sig = hgp_sig[index]->GetBinError( hgp_sig[index]->FindBin(ptrain[im][imass][ijfact]) );
-      double binerr_bkg = hgp_bkg[index]->GetBinError( hgp_bkg[index]->FindBin(ptrain[im][imass][ijfact]) );
       binerr_sig *= sqrt(gnorm2);
-      binerr_bkg *= sqrt(gnorm2);
       for(int j=0; j < ntrain*NMP*NJP; j++){
          if( i==j ){
             Nsig[i][j] = binerr_sig*binerr_sig;//pow( max(binerr_sig,0.001), 2 );
-            Nbkg[i][j] = binerr_bkg*binerr_bkg;//pow( max(binerr_bkg,0.001), 2 );
          }else{
             Nsig[i][j] = 0;
-            Nbkg[i][j] = 0;
          }
      }
    }
 
    // inverse of sum
    TMatrixD Asig = K + Nsig;
-   TMatrixD Abkg = K + Nbkg;
    cout << "---> cholesky decomposition of signal matrix... "; fflush(stdout);
    TDecompChol Cholsig(Asig);
    cout << "done!" << endl;
-   //cout << "---> cholesky decomposition of background matrix... "; fflush(stdout);
-   //TDecompChol Cholbkg(Abkg);
-   //cout << "done!" << endl;
    TMatrixD AsigU = Cholsig.GetU();
-   //TMatrixD AbkgU = Cholbkg.GetU();
    bool status = 0;
    cout << "---> invert signal matrix... "; fflush(stdout);
    TMatrixDSym Asinv_sig = Cholsig.Invert(status);
    cout << "done!" << endl;
-   //cout << "---> invert background matrix... "; fflush(stdout);
-   //TMatrixDSym Asinv_bkg = Cholbkg.Invert(status);
-   //cout << "done!" << endl;
    Ainv_sig.Clear();
-   Ainv_bkg.Clear();
    Ainv_sig.ResizeTo( ntrain*NMP*NJP, ntrain*NMP*NJP );
-   Ainv_bkg.ResizeTo( ntrain*NMP*NJP, ntrain*NMP*NJP );
    Ainv_sig = (TMatrixD)Asinv_sig;
-   //Ainv_bkg = (TMatrixD)Asinv_bkg;
-
-   /*
-   TMatrixD Ktmp = K;
-   for(int i=0; i < ntrain*NMP*NJP; i++) Ktmp[i][i] += 10E-9;
-   cout << "---> cholesky decomposition of covariance matrix... "; fflush(stdout);
-   TDecompChol CholK(Ktmp);
-   cout << "done!" << endl;
-   status = 0;
-   cout << "---> invert covariance matrix... "; fflush(stdout);
-   TMatrixDSym Ksinv = CholK.Invert(status);
-   cout << "done!" << endl;
-   Kinv.Clear();
-   Kinv.ResizeTo( ntrain*NMP*NJP, ntrain*NMP*NJP );
-   Kinv = (TMatrixD)Ksinv;
-   */
 
    TMatrixD Ainv_sigtemp = Ainv_sig;
-   //TMatrixD Ainv_bkgtemp = Ainv_bkg;
 
    // vector of training points
    TVectorD ysig(ntrain*NMP*NJP);
-   TVectorD ybkg(ntrain*NMP*NJP);
    for(int i=0; i < ntrain*NMP*NJP; i++){
       int im = i % ntrain;
       int index = i / ntrain;
       int imass, ijfact;
       iGP( index, imass, ijfact );
       ysig[i] = hgp_sig[index]->GetBinContent( hgp_sig[index]->FindBin(ptrain[im][imass][ijfact]) );
-      //ybkg[i] = hgp_bkg[index]->GetBinContent( hgp_bkg[index]->FindBin(ptrain[im]) );
    }
 
    // alpha vector
    aGPsig.Clear();
-   aGPbkg.Clear();
 
-   aGPsig.ResizeTo( ntrain*NMP*NJP );
+   aGPsig.ResizeTo( ntrain*NMP );
    aGPsig = Ainv_sigtemp*ysig;
 
-   aGPbkg.ResizeTo( ntrain*NMP*NJP );
-   //aGPbkg = Ainv_bkgtemp*ybkg;
-
    // compute marginal likelihood
-   //TDecompLU lusig(Asig);
-   //TDecompLU lubkg(Abkg);
-   //TMatrixD AsigLU = lusig.GetLU();
-   //TMatrixD AbkgLU = lubkg.GetLU();
-
    double ldetsig = 0.0;
-   double ldetbkg = 0.0;
    for(int i=0; i < Cholsig.GetNrows(); i++){
       ldetsig += 2*log(AsigU[i][i]);
-      //ldetbkg += 2*log(AbkgU[i][i]);
    }
 
    double term1sig = -0.5*ysig*aGPsig;
    double term2sig = -0.5*ldetsig;
    double term3sig = -0.5*ntrain*log(2*TMath::Pi());
 
-   //double term1bkg = -0.5*ybkg*aGPbkg;
-   //double term2bkg = -0.5*ldetbkg;
-   //double term3bkg = -0.5*ntrain*log(2*TMath::Pi());
-
    m2llsig = -2.0*(term1sig+term2sig+term3sig);
-   //m2llbkg = -2.0*(term1bkg+term2bkg+term3bkg);
 
    return;
 }
@@ -469,8 +364,8 @@ double Shapes::GPm2ll( const double *x ){
    gnorm2 = x[1];
    lx = x[2];
    lmass = x[3];
-   double m2llsig, m2llbkg;
-   TrainGP( *hists_train_, m2llsig, m2llbkg );
+   double m2llsig;
+   TrainGP( *hists_train_, m2llsig );
 
    return m2llsig;
 }
@@ -554,6 +449,7 @@ double Shapes::GPm2llX( const double *x ){
    return m2ll_tot;
 
    */
+      return x[0]; // temporary placeholder
 }
 
 double Shapes::GPm2llLOOCV( const double *x ){
@@ -598,8 +494,8 @@ double Shapes::GPm2llLOOCV( const double *x ){
    }
 
    // precompute Ky vector
-   double m2llsig, m2llbkg;
-   TrainGP( *hists_train_, m2llsig, m2llbkg );
+   double m2llsig;
+   TrainGP( *hists_train_, m2llsig );
 
    // vector of training points
    TVectorD ysig(ntrain*NMP*NJP);

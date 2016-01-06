@@ -89,7 +89,6 @@ int main(int argc, char* argv[]){
    double mcmass=0;
    double fitchi2=0;
    double tsig_mbl_chi2 [NMP] = {0};
-   double tbkg_mbl_chi2 [NMP] = {0};
    string nsyst = "";
    int statval_numPE = -1;
    int statval_PE = -1;
@@ -124,7 +123,6 @@ int main(int argc, char* argv[]){
    tree->Branch("mcmass", &mcmass);
    tree->Branch("fitchi2", &fitchi2);
    tree->Branch("tsig_mbl_chi2", tsig_mbl_chi2, "tsig_mbl_chi2[7]/D");
-   tree->Branch("tbkg_mbl_chi2", tbkg_mbl_chi2, "tbkg_mbl_chi2[7]/D");
    tree->Branch("syst", &nsyst);
    tree->Branch("statval_numPE", &statval_numPE);
    tree->Branch("statval_PE", &statval_PE);
@@ -589,19 +587,17 @@ int main(int argc, char* argv[]){
                string name = it->first;
                Distribution *dist = &(it->second);
 
-               double m2llsig, m2llbkg;
+               double m2llsig;
 
                if( dist->activate ){
                   Shapes * fptr = new Shapes( name, dist->ptrain,
                         dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
                   cout << "Training " << name << ":" << endl;
-                  fptr->TrainGP( hists_jvec_train_, m2llsig, m2llbkg );
+                  fptr->TrainGP( hists_jvec_train_, m2llsig);
                   cout << endl;
 
                   dist->aGPsig.ResizeTo( fptr->aGPsig.GetNoElements() );
                   dist->aGPsig = fptr->aGPsig;
-                  dist->aGPbkg.ResizeTo( fptr->aGPbkg.GetNoElements() );
-                  dist->aGPbkg = fptr->aGPbkg;
 
                   delete fptr;
 
@@ -670,22 +666,18 @@ int main(int argc, char* argv[]){
                string name = it->first;
                Distribution *dist = &(it->second);
 
-               double m2llsig, m2llbkg;
+               double m2llsig;
 
                if( dist->activate ){
                   Shapes * fptr = new Shapes( name, dist->ptrain,
                         dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
-                  fptr->TrainGP( hists_jvec_train_, m2llsig, m2llbkg );
+                  fptr->TrainGP( hists_jvec_train_, m2llsig );
 
                   dist->aGPsig.ResizeTo( fptr->aGPsig.GetNoElements() );
                   dist->aGPsig = fptr->aGPsig;
-                  dist->aGPbkg.ResizeTo( fptr->aGPbkg.GetNoElements() );
-                  dist->aGPbkg = fptr->aGPbkg;
 
                   dist->Ainv_sig.ResizeTo( fptr->aGPsig.GetNoElements(), fptr->aGPsig.GetNoElements() );
                   dist->Ainv_sig = fptr->Ainv_sig;
-                  dist->Ainv_bkg.ResizeTo( fptr->aGPbkg.GetNoElements(), fptr->aGPbkg.GetNoElements() );
-                  dist->Ainv_bkg = fptr->Ainv_bkg;
 
                   delete fptr;
                }
@@ -696,7 +688,6 @@ int main(int argc, char* argv[]){
 
             for(int j=0; j < NMP; j++){
                tsig_mbl_chi2[j] = fitter.tsig_mbl_chi2[j];
-               tbkg_mbl_chi2[j] = fitter.tbkg_mbl_chi2[j];
             }
 
    }
@@ -718,20 +709,16 @@ int main(int argc, char* argv[]){
             dist->gnorm1 = fptrtmp->gnorm1;
             dist->gnorm2 = fptrtmp->gnorm2;
 
-            double m2llsig, m2llbkg;
+            double m2llsig;
             Shapes * fptr = new Shapes( name, dist->ptrain,
                   dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
-            fptr->TrainGP( hists_jvec_train_, m2llsig, m2llbkg );
+            fptr->TrainGP( hists_jvec_train_, m2llsig );
 
             dist->aGPsig.ResizeTo( fptr->aGPsig.GetNoElements() );
             dist->aGPsig = fptr->aGPsig;
-            dist->aGPbkg.ResizeTo( fptr->aGPbkg.GetNoElements() );
-            dist->aGPbkg = fptr->aGPbkg;
 
             dist->Ainv_sig.ResizeTo( fptr->aGPsig.GetNoElements(), fptr->aGPsig.GetNoElements() );
             dist->Ainv_sig = fptr->Ainv_sig;
-            dist->Ainv_bkg.ResizeTo( fptr->aGPbkg.GetNoElements(), fptr->aGPbkg.GetNoElements() );
-            dist->Ainv_bkg = fptr->Ainv_bkg;
 
             cout << "begin PlotTemplates" << endl;
             fitter.PlotTemplates( hists_jvec_train_ );

@@ -851,49 +851,45 @@ double Fitter::Min2LL(const double *x){
 
       string name = it->first;
       Distribution *dist = &(it->second);
-      int iparam = -1;
-      if( name.compare("mbl_gp") == 0 ) iparam = 2;
-      if( name.compare("mt2_220_gp") == 0 ) iparam = 3;
-      if( name.compare("maos220_gp") == 0 ) iparam = 4;
-      if( name.compare("maos210_gp") == 0 ) iparam = 5;
-      if( name.compare("mt2_221_gp") == 0 ) iparam = 6;
 
       if( dist->activate ){// only do this if we're fitting the variable in question
+         cout << __LINE__ << endl;
 
          // normalization inside likelihood function (temp)
          Shapes * fptr = new Shapes( name, dist->ptrain, 
                dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
          fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr->aGPsig = dist->aGPsig;
-         fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
-         fptr->aGPbkg = dist->aGPbkg;
 
-         TF1 *fshape_tot = new TF1( ("f"+name+"_tot").c_str(), fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 6);
-         fshape_tot->SetParameters( x[0], x[1], 1.0, 1.0, 1.0, 1.0 );
+         cout << __LINE__ << endl;
+         TF1 *fshape_tot = new TF1( ("f"+name+"_tot").c_str(), fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 4);
+         fshape_tot->SetParameters( x[0], x[1], 1.0, 1.0 );
 
+         cout << __LINE__ << endl;
          high_resolution_clock::time_point start_int = high_resolution_clock::now();
+         double test = fshape_tot->Eval(100);
          double integralsig = fshape_tot->Integral(dist->lbnd, dist->rbnd);
          high_resolution_clock::time_point stop_int = high_resolution_clock::now();
          duration<double> time_span = duration_cast<duration<double>>(stop_int-start_int);
          clocks[0] += time_span.count();
+         cout << __LINE__ << endl;
 
-         //fshape_tot->SetParameters( x[0], x[1], 0.0, 1.0, 1.0, 1.0 );
-         //double integralbkg = fshape_tot->Integral(dist->lbnd, dist->rbnd);
          delete fshape_tot;
          delete fptr;
 
+         cout << __LINE__ << endl;
          Shapes shape( name, dist->ptrain, 
                dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
          shape.aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          shape.aGPsig = dist->aGPsig;
-         shape.aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
-         shape.aGPbkg = dist->aGPbkg;
+         cout << __LINE__ << endl;
 
-         double pfit [] = {x[0], x[1], 1.0/*x[iparam]*/, 1.0, integralsig, 1.0/*integralbkg*/};
+         double pfit [] = {x[0], x[1], 1.0, integralsig};
 
          // evaluate likelihood
          high_resolution_clock::time_point start_loop = high_resolution_clock::now();
          for( vector<Event>::iterator ev = eventvec_fit->begin(); ev < eventvec_fit->end(); ev++ ){
+         cout << ev-eventvec_fit->begin() << endl;
             if( !(ev->fit_event) ) continue;
 
             if ( name.compare("mbl_gp") == 0 ){ // for mbl
@@ -964,14 +960,11 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_, string outf
    cout << "Plotting fit results." << endl;
 
    const double *xmin = gMinuit->X();
-   const double *xerr = gMinuit->Errors();
-   double minvalue = gMinuit->MinValue();
+   //const double *xerr = gMinuit->Errors();
+   //double minvalue = gMinuit->MinValue();
 
    TFile *fileout = new TFile( outfile.c_str() , "RECREATE" );
    fileout->cd();
-
-   //double xmin1s [] = {xmin[2], xmin[3], xmin[4], xmin[3], xmin[4]}; // the background for each variable, as it is positioned in minuit's parameter vector
-   //double xerr1s [] = {xerr[1], xerr[1], xerr[2], xerr[3], xerr[4]}; // the background for each variable, as it is positioned in minuit's parameter vector
 
    // loop over distributions
    double chi2 = 0;
@@ -979,12 +972,6 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_, string outf
 
       string name = it->first;
       Distribution *dist = &(it->second);
-      int iparam = -1;
-      if( name.compare("mbl_gp") == 0 ) iparam = 2;
-      if( name.compare("mt2_220_gp") == 0 ) iparam = 3;
-      if( name.compare("maos220_gp") == 0 ) iparam = 4;
-      if( name.compare("maos210_gp") == 0 ) iparam = 5;
-      if( name.compare("mt2_221_gp") == 0 ) iparam = 6;
 
       if( dist->activate ){// only do this if we're fitting the variable in question
 
@@ -993,10 +980,8 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_, string outf
                dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
          fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr->aGPsig = dist->aGPsig;
-         fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
-         fptr->aGPbkg = dist->aGPbkg;
 
-         TF1 *ftemplate = new TF1( "ftemplate", fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 6);
+         TF1 *ftemplate = new TF1( "ftemplate", fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 4);
 
          TCanvas *canvas = new TCanvas( ("c_"+name).c_str(), ("c_"+name).c_str(), 800, 800);
          canvas->SetFillColor(0);
@@ -1039,12 +1024,10 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_, string outf
          hdata->Draw();
 
          // normalization inside likelihood function (temp)
-         ftemplate->SetParameters( xmin[0], xmin[1], 1.0, 1.0, 1.0, 1.0 );
+         ftemplate->SetParameters( xmin[0], xmin[1], 1.0, 1.0, 1.0 );
          double integralsig = ftemplate->Integral(dist->lbnd, dist->rbnd);
-         ftemplate->SetParameters( xmin[0], xmin[1], 0.0, 1.0, 1.0, 1.0 );
-         //double integralbkg = ftemplate->Integral(dist->lbnd, dist->rbnd);
-         ftemplate->SetParameters( xmin[0], xmin[1], 1.0/*xmin[iparam]*/,
-               hdata->Integral("width"), integralsig, 1.0/*integralbkg*/ );
+         ftemplate->SetParameters( xmin[0], xmin[1],
+               hdata->Integral("width"), integralsig );
 
          ftemplate->SetLineWidth(2);
          ftemplate->DrawCopy("same");

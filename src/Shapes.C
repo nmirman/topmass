@@ -18,12 +18,13 @@ using namespace std;
 // constructor and destructor
 //
 
-Shapes::Shapes( string var, double ptraintmp[NTP][NMP][NJP], double gplength_x, double gplength_mt, double gplength_jfact, double norm1, double norm2, double lbound, double rbound ){
+Shapes::Shapes( string var, double ptraintmp[NTP][NMP][NJP], double gplength_x, double gplength_mt, double gplength_jfact, double norm1, double norm2, double rho, double lbound, double rbound ){
 
    name = var;
    // GP options
    lx = gplength_x;
    lmass = gplength_mt;
+   grho = rho;
    gnorm1 = norm1;
    gnorm2 = norm2;
    ltrain = lbound;
@@ -45,15 +46,8 @@ Shapes::Shapes( string var, double ptraintmp[NTP][NMP][NJP], double gplength_x, 
    lbx = 0.0;
    rbx = 0.0;
 
-   double rho = 0.0;
-   // JES 5 point
-   //if( name == "mbl_gp" ) rho = 0.698;
-   //else if( name == "mt2_221_gp" ) rho = 0.690;
-   if( name == "mbl_gp" ) rho = 0.892;
-   else if( name == "mt2_221_gp" ) rho = 0.884;
-   else cout << "ERROR IN GP CORR: DIST NOT FOUND" << endl;
    // to avoid divisions in GPkern
-   irho2 = 1.0/(1-rho*rho);
+   irho2 = 1.0/(1-grho*grho);
    mjfcorr = rho/(lmass*ljfact);
    ilx2 = 1.0/(lx*lx);
    ilmass2 = 1.0/(lmass*lmass);
@@ -127,7 +121,7 @@ double Shapes::Fmbl_gp_var(double x, double mt, double jfact){
 
 double Shapes::GPkern(double x1, double x2, double m1, double m2, double j1, double j2){
 
-   return 1E-06*gnorm2*gnorm1*exp( -0.5*( ilx2*(x1-x2)*(x1-x2) + ilmass2*irho2*(m1-m2)*(m1-m2)
+   return 1E-06*gnorm1*gnorm2*exp( -0.5*( ilx2*(x1-x2)*(x1-x2) + ilmass2*irho2*(m1-m2)*(m1-m2)
             + iljfact2*irho2*(j1-j2)*(j1-j2) - 2*mjfcorr*irho2*(x1-x2)*(j1-j2) ));
 }
 
@@ -160,8 +154,10 @@ void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
       hgp_sig[i]->Add( hists_[ijfact][name]["other"] );
       hgp_sig[i]->Scale( 1.0/hgp_sig[i]->Integral("width") );
 
-      for(int n=0; n < hgp_sig[i]->GetNbinsX(); n++){
-         if( hgp_sig[i]->GetBinError(n) < 5E-06 ) hgp_sig[i]->SetBinError(n, 5E-06);
+      for(int n=0; n <= hgp_sig[i]->GetNbinsX(); n++){
+         if( hgp_sig[i]->GetBinError(n) < 5E-06 ){
+            hgp_sig[i]->SetBinError(n, 5E-06);
+         }
       }
 
    }
@@ -191,10 +187,9 @@ void Shapes::TrainGP( vector< map< string, map<string, TH1D*> > >& hists_,
       int imass, ijfact;
       iGP( index, imass, ijfact );
       double binerr_sig = hgp_sig[index]->GetBinError( hgp_sig[index]->FindBin(ptrain[im][imass][ijfact]) );
-      binerr_sig *= sqrt(gnorm2);
       for(int j=0; j < ntrain*NMP*NJP; j++){
          if( i==j ){
-            Nsig[i][j] = binerr_sig*binerr_sig;//pow( max(binerr_sig,0.001), 2 );
+            Nsig[i][j] = gnorm2*binerr_sig*binerr_sig;
          }else{
             Nsig[i][j] = 0;
          }
@@ -314,6 +309,45 @@ void Shapes::LearnGPparams( vector< map< string, map<string, TH1D*> > >& hists_ 
    //dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}", 0.54, 2.1, 7.2, 8.1, ljf, 20, 300 );
 
    do_gpvar = false;
+
+   gMinuit->SetVariable(0, "gpnorm1", gnorm1, 0.1);
+   gMinuit->SetFixedVariable(1, "gpnorm2", gnorm2);
+   gMinuit->SetFixedVariable(2, "lx", sqrt(1.0/ilx2));
+   gMinuit->SetFixedVariable(3, "lmass", sqrt(1.0/ilmass2));
+   gMinuit->SetFixedVariable(4, "ljf", sqrt(1.0/iljfact2));
+   gMinuit->SetFixedVariable(5, "rho", mjfcorr/sqrt(iljfact2*ilmass2));
+
+   //cout << "############ STAGE 0 FIT ###########" << endl;
+   //gMinuit->Minimize();
+   const double *xs3 = gMinuit->X();
+   gnorm1 = xs3[0];
+   gnorm2 = xs3[1];
+   grho = xs3[5];
+   irho2 = 1.0/(1-grho*grho);
+   ilx2 = 1.0/(xs3[2]*xs3[2]);
+   ilmass2 = 1.0/(xs3[3]*xs3[3]);
+   iljfact2 = 1.0/(xs3[4]*xs3[4]);
+   mjfcorr = sqrt(iljfact2*ilmass2)*grho;
+
+   gMinuit->SetFixedVariable(0, "gpnorm1", gnorm1);
+   gMinuit->SetFixedVariable(1, "gpnorm2", gnorm2);
+   gMinuit->SetVariable(2, "lx", sqrt(1.0/ilx2), 1.0);
+   gMinuit->SetVariable(3, "lmass", sqrt(1.0/ilmass2), 1.0);
+   gMinuit->SetFixedVariable(4, "ljf", sqrt(1.0/iljfact2));
+   gMinuit->SetFixedVariable(5, "rho", mjfcorr/sqrt(iljfact2*ilmass2));
+
+   cout << "############ STAGE 1 FIT ###########" << endl;
+   gMinuit->Minimize();
+   const double *xs = gMinuit->X();
+   gnorm1 = xs[0];
+   gnorm2 = xs[1];
+   grho = xs[5];
+   irho2 = 1.0/(1-grho*grho);
+   ilx2 = 1.0/(xs[2]*xs[2]);
+   ilmass2 = 1.0/(xs[3]*xs[3]);
+   iljfact2 = 1.0/(xs[4]*xs[4]);
+   mjfcorr = sqrt(iljfact2*ilmass2)*grho;
+
    gMinuit->SetFixedVariable(0, "gpnorm1", gnorm1);
    gMinuit->SetFixedVariable(1, "gpnorm2", gnorm2);
    gMinuit->SetFixedVariable(2, "lx", sqrt(1.0/ilx2));
@@ -321,37 +355,17 @@ void Shapes::LearnGPparams( vector< map< string, map<string, TH1D*> > >& hists_ 
    gMinuit->SetVariable(4, "ljf", sqrt(1.0/iljfact2), 0.1);
    gMinuit->SetLimitedVariable(5, "rho", mjfcorr/sqrt(iljfact2*ilmass2), 0.1, -1 , 1);
 
-   cout << "############ STAGE 1 FIT ###########" << endl;
-   gMinuit->Minimize();
-   const double *xs = gMinuit->X();
-   gnorm1 = xs[0];
-   gnorm2 = xs[1];
-   double rho = xs[5];
-   irho2 = 1.0/(1-rho*rho);
-   ilx2 = 1.0/(xs[2]*xs[2]);
-   ilmass2 = 1.0/(xs[3]*xs[3]);
-   iljfact2 = 1.0/(xs[4]*xs[4]);
-   mjfcorr = sqrt(iljfact2*ilmass2)*rho;
-
-   gMinuit->SetFixedVariable(0, "gpnorm1", gnorm1);
-   gMinuit->SetFixedVariable(1, "gpnorm2", gnorm2);
-   gMinuit->SetVariable(2, "lx", sqrt(1.0/ilx2), 1.0);
-   //gMinuit->SetVariable(3, "lmass", sqrt(1.0/ilmass2), 1.0);
-   gMinuit->SetFixedVariable(3, "lmass", sqrt(1.0/ilmass2));
-   gMinuit->SetFixedVariable(4, "ljf", sqrt(1.0/iljfact2));
-   gMinuit->SetFixedVariable(5, "rho", mjfcorr/sqrt(iljfact2*ilmass2));
-
    cout << "############ STAGE 2 FIT ###########" << endl;
    gMinuit->Minimize();
    const double *xs2 = gMinuit->X();
    gnorm1 = xs2[0];
    gnorm2 = xs2[1];
-   rho = xs2[5];
-   irho2 = 1.0/(1-rho*rho);
+   grho = xs2[5];
+   irho2 = 1.0/(1-grho*grho);
    ilx2 = 1.0/(xs2[2]*xs2[2]);
    ilmass2 = 1.0/(xs2[3]*xs2[3]);
    iljfact2 = 1.0/(xs2[4]*xs2[4]);
-   mjfcorr = sqrt(iljfact2*ilmass2)*rho;
+   mjfcorr = sqrt(iljfact2*ilmass2)*grho;
 
    return;
 }

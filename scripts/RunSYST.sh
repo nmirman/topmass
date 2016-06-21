@@ -1,7 +1,9 @@
 #! /bin/bash
 
-#PBS -o results_2Dfit_syst_test1_20151210/output${JOBNUM}.txt
+#PBS -o systplots/output.txt
 #PBS -j oe
+
+JOBNUM=$PBS_ARRAYID
 
 cd $PBS_O_WORKDIR
 
@@ -63,6 +65,9 @@ do
    syst[ipdf+i]=PDFvar$i
 done
 
-./DoFit --run_number ${JOBNUM} --syst ${syst[$JOBNUM]} --fit --masspnt 172.5 --mt2_221 --mbl --jfactor --outdir results_2Dfit_syst_test1_20151210
+#iter=$(($JOBNUM%51))
+#hybiter=$(($JOBNUM/51))
+#hyb=(0.50 0.75 0.25 0.60 0.90 0.80 0.85 0.95)
 
-#./DoFit --run_number ${JOBNUM} --syst ${syst[$JOBNUM]} --diagnostics --masspnt 172.5 --mt2_221 --mbl --outdir results_mbl221syst_jfactor_20151026
+#./DoFit --run_number ${JOBNUM} --syst ${syst[$JOBNUM]} --fit --masspnt 172.5 --maos210 --mt2_221 --outdir results_2Dfit_syst_20160614_maos
+./DoFit --syst ${syst[$JOBNUM]} --diagnostics --data --mbl --mt2_221 --maos210 --outdir systplots

@@ -49,6 +49,7 @@ struct Event {
 
    int nvertices;
    double weight;
+   double weightcorr;
 
    // kinematic variables for Maos
    double mt2_210grid;
@@ -92,7 +93,7 @@ struct Event {
    vector<float> pdf_weights;
 
    // pass various maos cuts
-   vector<bool> maoscut210;
+   //vector<bool> maoscut210;
    vector<bool> maoscut220;
 
    Event(){
@@ -151,6 +152,7 @@ struct Distribution {
    double glx;
    double glmt;
    double gljf;
+   double grho;
 
    TMatrixD Ainv_sig;
    TMatrixD Ainv_bkg;
@@ -168,8 +170,9 @@ struct Distribution {
 
    double ptrain [NTP][NMP][NJP];
 
-   Distribution( string n="", string t="", double n1=1.0, double n2=1.0, double lx=1.0, double lmt=1.0, double ljf=0.1, double lb=0, double rb=300 )
-      : name(n), title(t), gnorm1(n1), gnorm2(n2), glx(lx), glmt(lmt), gljf(ljf), lbnd(lb), rbnd(rb) {
+   Distribution( string n="", string t="", double n1=1.0, double n2=1.0, double lx=1.0,
+         double lmt=1.0, double ljf=0.1, double rho=0.5, double lb=0, double rb=300 )
+      : name(n), title(t), gnorm1(n1), gnorm2(n2), glx(lx), glmt(lmt), gljf(ljf), grho(rho), lbnd(lb), rbnd(rb) {
          activate = false;
    }
 
@@ -211,6 +214,8 @@ class Fitter{
 
       void FindPTrain( map< string, map<string, TH1D*> >&, vector<Event>&, int );
 
+      void ComputeProfile(int, vector<Event>&, string);
+
       double linapprox( double, double, double, double );
 
       map<string, Distribution> dists;
@@ -234,10 +239,15 @@ class Fitter{
 
       double jtest;
       double gplength_jfact;
+      double whyb;
 
       double mt_fix;
 
       static int clocks [100];
+
+      bool use_data;
+      int NDATA;
+
 
    private:
 

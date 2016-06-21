@@ -51,19 +51,23 @@ void Fitter::DeclareHists( map< string, map<string, TH1D*> >& hists_, map< strin
       // variables
       //
       hists_["mbl_gp"][name] = new TH1D( ("hmbl_gp_"+namel).c_str(),
-            "M_{bl};M_{bl} (GeV);Events", 75, dists["mbl_gp"].lbnd, dists["mbl_gp"].rbnd );
+            ";M_{bl} [GeV];events per 1.9 GeV", NTP, dists["mbl_gp"].lbnd, dists["mbl_gp"].rbnd );
       hists_["mt2_220_gp"][name] = new TH1D( ("hmt2_220_gp_"+namel).c_str(),
-            "M_{T2} 220;M_{T2} 220 (GeV);Events", 100, dists["mt2_220_gp"].lbnd, dists["mt2_220_gp"].rbnd );
+            ";M_{T2}^{bl} [GeV];events per 1.3 GeV", NTP, dists["mt2_220_gp"].lbnd, dists["mt2_220_gp"].rbnd );
       hists_["mt2_221_gp"][name] = new TH1D( ("hmt2_221_gp_"+namel).c_str(),
-            "M_{T2} 221;M_{T2} 221 (GeV);Events", 75, dists["mt2_221_gp"].lbnd, dists["mt2_221_gp"].rbnd );
+            ";M_{T2}^{bb} [GeV];events per 1.3 GeV", NTP, dists["mt2_221_gp"].lbnd, dists["mt2_221_gp"].rbnd );
       hists_["maos220_gp"][name] = new TH1D( ("hmaos220_gp_"+namel).c_str(),
-            "MAOS from M_{T2} 220;blv mass(GeV);Events", 100, dists["maos220_gp"].lbnd, dists["maos220_gp"].rbnd );
+            ";M_{bl#nu} [GeV];events per 2.7 GeV", NTP, dists["maos220_gp"].lbnd, dists["maos220_gp"].rbnd );
       hists_["maos210_gp"][name] = new TH1D( ("hmaos210_gp_"+namel).c_str(),
-            "MAOS from M_{T2} 210;blv mass(GeV);Events", 100, dists["maos210_gp"].lbnd, dists["maos210_gp"].rbnd );
+            ";M_{bl#nu} [GeV];events per 2.7 GeV", NTP, dists["maos210_gp"].lbnd, dists["maos210_gp"].rbnd );
 
       hists_["mt2_220"][name] = new TH1D( ("hmt2_220_"+namel).c_str(),
             "M_{T2} 220;M_{T2} 220 (GeV);Events/3 GeV", 100, 0, dists["mt2_220_nomatchmbl"].rbnd );
       hists_["mt2_221"][name] = new TH1D( ("hmt2_221_"+namel).c_str(),
+            "M_{T2} 221;M_{T2} 221 (GeV);Events/2 GeV", 100, 50, 250 );
+      hists_["mt2_221_passcut"][name] = new TH1D( ("hmt2_221_passcut_"+namel).c_str(),
+            "M_{T2} 221;M_{T2} 221 (GeV);Events/2 GeV", 100, 50, 250 );
+      hists_["mt2_221_failcut"][name] = new TH1D( ("hmt2_221_failcut_"+namel).c_str(),
             "M_{T2} 221;M_{T2} 221 (GeV);Events/2 GeV", 100, 50, 250 );
       hists_["mbl"][name] = new TH1D( ("hmbl_"+namel).c_str(),
             "M_{bl};M_{bl} (GeV);Events/3 GeV", 100, 0, dists["mbl"].rbnd );
@@ -217,6 +221,11 @@ void Fitter::FillHists( map< string, map<string, TH1D*> >& hists_, map< string, 
          hists_["mt2_221"][type]->Fill( ev->mt2_221, ev->weight );
          hists_["mt2_221_gp"][type]->Fill( ev->mt2_221, ev->weight );
       }
+      if (sin((jet1).DeltaPhi(up221))*sin((jet2).DeltaPhi(up221)) > 0){
+         hists_["mt2_221_passcut"][type]->Fill( ev->mt2_221, ev->weight );
+      } else {
+         hists_["mt2_221_failcut"][type]->Fill( ev->mt2_221, ev->weight );
+      }
 
       //MAOS
       double blv210array [] = { ev->maos210_blvmass1ap, ev->maos210_blvmass1am, ev->maos210_blvmass2ap, ev->maos210_blvmass2am, ev->maos210_blvmass1bp, ev->maos210_blvmass1bm, ev->maos210_blvmass2bp, ev->maos210_blvmass2bm };
@@ -230,12 +239,9 @@ void Fitter::FillHists( map< string, map<string, TH1D*> >& hists_, map< string, 
          }
       }
       
-      vector<bool> useMaos210 = ev->maoscut210;
       for (int i=0; i<8; i++){
-         if (useMaos210[i]){
             hists_["maos210blv"][type]->Fill( blv210array[i], ev->weight );
             hists_["maos210_gp"][type]->Fill( blv210array[i], ev->weight );
-         }
       }
 
       // mbl
@@ -251,9 +257,7 @@ void Fitter::FillHists( map< string, map<string, TH1D*> >& hists_, map< string, 
             if (useMaos220[i]){
                hists2d_["maos220blvVmbl"][type]->Fill( ev->mbls[m], blv220array[i], ev->weight );
             }
-            if (useMaos210[i]){
-               hists2d_["maos210blvVmbl"][type]->Fill( ev->mbls[m], blv210array[i], ev->weight );
-            }
+            hists2d_["maos210blvVmbl"][type]->Fill( ev->mbls[m], blv210array[i], ev->weight );
          }
       }
 
@@ -271,14 +275,10 @@ void Fitter::FillHists( map< string, map<string, TH1D*> >& hists_, map< string, 
             if (useMaos220[i]){
                hists2d_["maos220blvV220"][type]->Fill( ev->mt2_220, blv220array[i], ev->weight );
                for(int j=0; j<8; j++){
-                  if (useMaos210[j]){
-                     hists2d_["maos220blvVmaos210blv"][type]->Fill( blv210array[j], blv220array[i], ev->weight );
-                  }
+                  hists2d_["maos220blvVmaos210blv"][type]->Fill( blv210array[j], blv220array[i], ev->weight );
                }
             }
-            if (useMaos210[i]){
-               hists2d_["maos210blvV220"][type]->Fill( ev->mt2_220, blv210array[i], ev->weight );
-            }
+            hists2d_["maos210blvV220"][type]->Fill( ev->mt2_220, blv210array[i], ev->weight );
          }
       }
 
@@ -412,7 +412,8 @@ void Fitter::PrintHists( map< string, map<string, TH1D*> >& hists_, map< string,
          hallmc->Add( httbar_hadronic );
          hallmc->Add( hother );
 
-         double norm = 1.0;//hdata->Integral("width") / hallmc->Integral("width");
+         double norm = use_data ? hdata->Integral("width") / hallmc->Integral("width") : NDATA;
+         cout << "NORMALIZING " << dname << " PLOTS BY FACTOR " << norm << endl;
 
          // renormalize distribution in mc for all processes
          httbar_signal->Scale( norm );
@@ -459,11 +460,11 @@ void Fitter::PrintHists( map< string, map<string, TH1D*> >& hists_, map< string,
          hstack->GetXaxis()->SetTitleFont(42);
          hstack->GetYaxis()->SetTitleFont(42);
 
-         //hdata->SetMarkerStyle(20);
-         //hdata->Draw( "same EP" );
+         hdata->SetMarkerStyle(20);
+         hdata->Draw( "same EP" );
 
          TLegend * legend = new TLegend(0.717,0.650,0.874,0.870);
-         //legend->AddEntry( hdata, "data" );
+         legend->AddEntry( hdata, "data" );
          legend->AddEntry( httbar_signal, "signal", "f" );
          legend->AddEntry( httbar_mistag, "mistag bkg", "f" );
          legend->AddEntry( httbar_taus, "tau decays", "f" );
@@ -871,7 +872,7 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
                hmc->DrawCopy();
 
                Shapes * fptr = new Shapes( name, dist->ptrain,
-                     dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+                     dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->grho, dist->lbnd, dist->rbnd );
                fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
                fptr->aGPsig = dist->aGPsig;
                fptr->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
@@ -969,7 +970,8 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
 
             // graph with template value at mbl = x
             TGraph *gtemplate = new TGraph();
-            Shapes * fptr = new Shapes( name, dist->ptrain, dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+            Shapes * fptr = new Shapes( name, dist->ptrain, dist->glx, dist->glmt, dist->gljf,
+                  dist->gnorm1, dist->gnorm2, dist->grho, dist->lbnd, dist->rbnd );
             fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
             fptr->aGPsig = dist->aGPsig;
             TF1 *ftemplate = new TF1("ftemplate", fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 4);
@@ -1027,7 +1029,6 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
       }
    }
 
-      /*
    // plot template as a function of jes
    for( map<string, Distribution>::iterator it = dists.begin(); it != dists.end(); it++ ){
 
@@ -1039,7 +1040,6 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
          TDirectory *dir = fileout->mkdir( ("jesshape_"+name).c_str() );
          dir->cd();
 
-         int k=0;
          //for(double x=dist->lbnd; x <= dist->rbnd; x+=10){ // bin of mbl
          for(int i=0; i < NTP ; i++){ // bin of mbl
             double x = dist->ptrain[i][NMP/2][NJP/2];
@@ -1055,11 +1055,10 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
 
             // graph with template value at mbl = x
             TGraph *gtemplate2 = new TGraph();
-            Shapes * fptr2 = new Shapes( name, dist->ptrain, dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+            Shapes * fptr2 = new Shapes( name, dist->ptrain, dist->glx, dist->glmt, dist->gljf,
+               dist->gnorm1, dist->gnorm2, dist->grho, dist->lbnd, dist->rbnd );
             fptr2->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
             fptr2->aGPsig = dist->aGPsig;
-            fptr2->aGPbkg.ResizeTo( dist->aGPbkg.GetNoElements() );
-            fptr2->aGPbkg = dist->aGPbkg;
             TF1 *ftemplate2 = new TF1("ftemplate2", fptr2, &Shapes::Ftot, dist->lbnd, dist->rbnd, 4);
             int count=0;
             for(double j=0.95; j <= 1.05; j+=0.001){ // value of jes
@@ -1110,7 +1109,6 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
          }
       }
    }
-*/
 
    for( map<string, Distribution>::iterator it = dists.begin(); it != dists.end(); it++ ){
 
@@ -1164,7 +1162,7 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
          // mbl likelihood
 
          Shapes * fptr = new Shapes( name, dist->ptrain,
-               dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+               dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->grho, dist->lbnd, dist->rbnd );
          fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr->aGPsig = dist->aGPsig;
          TF1 *fmbl_tot = new TF1( ("f"+name+"_tot").c_str(), fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 4);
@@ -1238,7 +1236,7 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
 
          // likelihood
          Shapes * fptr_jfact = new Shapes( name, dist->ptrain,
-               dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+               dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->grho, dist->lbnd, dist->rbnd );
          fptr_jfact->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr_jfact->aGPsig = dist->aGPsig;
          TF1 *fmbl_tot_jfact = new TF1( ("f"+name+"_tot").c_str(), fptr_jfact, &Shapes::Ftot, dist->lbnd, dist->rbnd, 4);
@@ -1276,7 +1274,7 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
          // plot the shapes in the vicinity of the maximum
          /*
          Shapes * fptr = new Shapes( name, dist->ptrain,
-               dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+               dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->grho, dist->lbnd, dist->rbnd );
          fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr->aGPsig = dist->aGPsig;
          TF1 *fmbl_tot = new TF1( ("f"+name+"_tot").c_str(), fptr, &Shapes::Ftot, dist->lbnd, dist->rbnd, 4);
@@ -1323,4 +1321,63 @@ void Fitter::PlotTemplates( vector< map< string, map<string, TH1D*> > >& hists_ 
 
 }
 
+void Fitter::ComputeProfile( int row, vector<Event>& eventvec, string outdir ){
 
+   // for Min2LL function
+   eventvec_fit = &eventvec;
+
+   //
+   // plot likelihood near minimum
+   //
+
+   ostringstream row_str;
+   row_str << row;
+
+   TFile *fileout = new TFile( (outdir+"/resultsLProfile_"+row_str.str()+".root").c_str(), "RECREATE" );
+   fileout->cd();
+
+   double mt=0, jsf=0, val=0;
+   int rowi=0;
+
+   TTree *tree = new TTree("FitResults", "FitResults");
+   tree->Branch("mt", &mt);
+   tree->Branch("jsf", &jsf);
+   tree->Branch("val", &val);
+   tree->Branch("row", &rowi);
+
+   unsigned int npnts_mt = 100;
+   unsigned int npnts_jsf = 100;
+   double mt_lrange = 172.83;
+   double mt_rrange = 173.03;
+   double jsf_lrange = 0.990;
+   double jsf_rrange = 1.010;
+
+   //double minvalue = 12863083.2607896738;
+
+   // jsf vs mt
+   //TH2D *hLC = new TH2D("hLC", "hLC", npnts_mt, mt_lrange, mt_rrange,
+   //      npnts_jsf, jsf_lrange, jsf_rrange);
+
+   cout << "Generating 2d profile." << endl;
+   for(unsigned int k=0; k < npnts_mt; k++){
+      //for(unsigned int j=0; j <= npnts_jsf; j++){
+         //double mt = hLC->GetXaxis()->GetBinCenter(k);
+         //double jsf = hLC->GetYaxis()->GetBinCenter(j);
+         rowi = row;
+         mt = mt_lrange + 1.0*(mt_rrange-mt_lrange)*k/npnts_mt;
+         jsf = jsf_lrange + 1.0*(jsf_rrange-jsf_lrange)*row/npnts_jsf;
+         const double par [] = {mt, jsf, 1.0, 1.0, 1.0, 1.0, 1.0};
+         val = Min2LL(par);
+         cout << "(mt, jsf) = (" << mt << ", " << jsf << ")" << endl;
+         tree->Fill();
+         //hLC->SetBinContent(k, j, Min2LL(par));
+      //}
+   }
+
+   //hLC->Write();
+
+   tree->Write();
+   fileout->Write();
+   fileout->Close();
+   return;
+}

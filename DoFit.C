@@ -58,10 +58,11 @@ int main(int argc, char* argv[]){
    Fitter fitter;
    map<string, Dataset> datasets;
    vector<Event> eventvec_datamc;
+   vector<Event> eventvec_data;
    vector<Event> eventvec_test;
    map< string, map<string, TH1D*> > hists_all_;
    map< string, map<string, TH1D*> > hists_train_;
-   map< string, map<string, TH1D*> > hists_test_;
+   //map< string, map<string, TH1D*> > hists_test_;
    map< string, map<string, TH2D*> > hists2d_all_;
    map< string, map<string, TH2D*> > hists2d_train_;
    map< string, map<string, TH2D*> > hists2d_test_;
@@ -95,6 +96,7 @@ int main(int argc, char* argv[]){
    vector<int> evlist;
    double jtest = 0;
    double ljf = 0;
+   double whyb = -1;
    
    TTree *tree = new TTree("FitResults", "FitResults");
    tree->Branch("runNumber", &run_number);
@@ -129,16 +131,17 @@ int main(int argc, char* argv[]){
    tree->Branch("evlist", &evlist);
    tree->Branch("jtest", &jtest );
    tree->Branch("ljf", &ljf );
+   tree->Branch("whyb", &whyb);
 
    // option flags
    int c;
-   int do_fit = 0;
-   int do_diagnostics = 0;
-   int use_data = 0;
+   bool do_fit = 0;
+   bool do_diagnostics = 0;
+   bool use_data = 0;
    float masspnt = 0;
    int do_bootstrap = 0;
-   int do_templates = 0;
-   int do_learnparams = 0;
+   bool do_templates = 0;
+   bool do_learnparams = 0;
    int do_mbl = 0;
    int do_mt2_220 = 0;
    int do_mt2_221 = 0;
@@ -152,11 +155,11 @@ int main(int argc, char* argv[]){
 
    struct option longopts[] = {
       { "run_number",   required_argument,   0,                'n' },
-      { "fit",          no_argument,         &do_fit,          'f' },
-      { "diagnostics",  no_argument,         &do_diagnostics,  'd' },
-      { "templates",    no_argument,         &do_templates,    'e' },
-      { "learnparams",  no_argument,         &do_learnparams,  'x' },
-      { "data",         no_argument,         &use_data,        'a' },
+      { "fit",          no_argument,         0,                'f' },
+      { "diagnostics",  no_argument,         0,                'd' },
+      { "templates",    no_argument,         0,                'e' },
+      { "learnparams",  no_argument,         0,                'x' },
+      { "data",         no_argument,         0,                'a' },
       { "profile",      no_argument,         0,                'p' },
       { "masspnt",      required_argument,   0,                'm' },
       { "bootstrap",    no_argument,         &do_bootstrap,    'o' },
@@ -177,11 +180,13 @@ int main(int argc, char* argv[]){
       { "outdir",       required_argument,   0,                'g' },
       { "jtest",        required_argument,   0,                '3' },
       { "ljtest",       required_argument,   0,                '4' },
+      { "whyb",         required_argument,   0,                'w' },
       { "help",         no_argument,         NULL,             'h' },
       { 0, 0, 0, 0 }
    };
 
-   while( (c = getopt_long(argc, argv, "fdexahponbkt21qyzm:c:s:i:9:g:3:4:", longopts, NULL)) != -1 ) {
+   while( (c = getopt_long(argc, argv, "fdexahpon:bkt21q:y:z:m:c:s:i:9:g:3:4:w:", longopts, NULL)) != -1 ) {
+      cout << "c = " << c << endl;
       switch(c)
       {
          case 'n' :
@@ -207,6 +212,7 @@ int main(int argc, char* argv[]){
 
          case 'a' :
             use_data = 1;
+            fitter.use_data = true;
             break;
 
          case 'm' :
@@ -263,6 +269,7 @@ int main(int argc, char* argv[]){
 
          case '9' :
             nsyst = optarg;
+            run_number_str += "_"+string(optarg);
             break;
 
          case 'g' :
@@ -282,6 +289,12 @@ int main(int argc, char* argv[]){
          case '4' :
             fitter.gplength_jfact = atof(optarg);
             ljf  = atof(optarg);
+            break;
+
+         case 'w':
+            whyb = atof(optarg);
+            fitter.whyb = atof(optarg);
+            run_number_str += "_"+string(optarg);
             break;
 
          case 'h' :
@@ -345,6 +358,12 @@ int main(int argc, char* argv[]){
    }
 
    fitter.LoadDatasets( datasets );
+   // check that all datasets are loaded
+   for(map<string, Dataset>::iterator it = datasets.begin(); it != datasets.end(); it++){
+      string name = it->first;
+      Dataset *dat = &(it->second);
+      if( dat->filenames.size() == 0 ) cout << "EMPTY DATASET: " << name << endl;
+   }
 
    // random number seed for bootstrapping (turns on when nonzero)
    int randseed = 0;
@@ -354,6 +373,11 @@ int main(int argc, char* argv[]){
    // events for diagnostics
    // ********************************************************
    if( do_diagnostics ){
+      fflush(stdout);
+      if( use_data ){
+         fitter.ReadDatasets( datasets, eventvec_datamc, "data", "", fracevts, statval_numPE, statval_PE, 0 );
+         cout << "NUMBER OF EVENTS IN DATA = " << eventvec_datamc.size() << endl;
+      }
       fitter.ReadDatasets( datasets, eventvec_datamc, "diagnostics", nsyst, fracevts, statval_numPE, statval_PE, 0 );
       fitter.GetVariables( eventvec_datamc );
       fitter.DeclareHists( hists_all_, hists2d_all_, "all" );
@@ -376,6 +400,7 @@ int main(int argc, char* argv[]){
       double jshift = fitter.jfactpoints[i];
       fitter.ReadDatasets( datasets, eventvec_temp, "train", nsyst, fracevts, statval_numPE, statval_PE, jshift );
 
+      /*
       int pdfvar = -1;
       if( nsyst.find("PDFvar") != string::npos ){
          string nametemp = nsyst;
@@ -383,6 +408,7 @@ int main(int argc, char* argv[]){
          pdfvar = atoi( nametemp.c_str() );
          fitter.PDFReweight( eventvec_temp, pdfvar );
       }
+      */
 
       ostringstream jstring;
       jstring << 100*fitter.jfactpoints[i];
@@ -405,11 +431,15 @@ int main(int argc, char* argv[]){
    // ********************************************************
    
    if( do_fit ){
-      //fitter.ReadDatasets( datasets, eventvec_test, "test", nsyst, fracevts, statval_numPE, statval_PE, 0 );
-      fitter.ReadDatasets( datasets, eventvec_test, "test", nsyst, fracevts, statval_numPE, statval_PE, jtest );
-      fitter.GetVariables( eventvec_test );
-      fitter.DeclareHists( hists_test_, hists2d_test_, "test" );
-      fitter.FillHists( hists_test_, hists2d_test_, eventvec_test );
+      if( use_data){
+         cout << "\nLoading datasets: test events " << endl;
+         fitter.ReadDatasets( datasets, eventvec_data, "data", "", fracevts, statval_numPE, statval_PE, 0 );
+         fitter.GetVariables( eventvec_data );
+      }else{
+         cout << "\nLoading datasets: test events " << endl;
+         fitter.ReadDatasets( datasets, eventvec_test, "test", nsyst, fracevts, statval_numPE, statval_PE, jtest );
+         fitter.GetVariables( eventvec_test );
+      }
    }
 
 
@@ -423,109 +453,28 @@ int main(int argc, char* argv[]){
       map< string, map<string, TH1D*> > hists_fit_;
       map< string, map<string, TH2D*> > hists2d_fit_;
 
-      if( use_data ){ // added 220 distribution to the data fit too, but haven't tested it
+      if( use_data ){ 
 
-         //
-         // turn this feature off for now -- will need to clean up later.
-         //
+            cout << "############# Fitting DATA ###############" << endl;
 
-         /*
-         cout << "REMINDER: EVENT WEIGHTS IN MC" << endl;
-         for(vector<Event>::iterator ev = eventvec_datamc.begin(); ev < eventvec_datamc.end();ev++){
-            if( ev->type.find("data") != string::npos ){
-               if( ev->type.find("bkgcontrol") == string::npos ){
-                  eventvec_fit.push_back(*ev);
-               }else{
-                  eventvec_fit_bkgcontrol.push_back(*ev);
-               }
+            // load events to be fitted
+            for(vector<Event>::iterator ev = eventvec_data.begin(); ev < eventvec_data.end(); ev++){
+               // flag events to be fitted
+               ev->fit_event = true;
+               eventvec_fit.push_back(*ev);
             }
-         }
 
-         // flag events to be fitted
-         for( vector<Event>::iterator ev = eventvec_fit.begin(); ev < eventvec_fit.end(); ev++){
-            ev->fit_event = true;
-            for(map<string, int>::iterator it = datacount.begin(); it != datacount.end(); it++){
-               if( ev->process.compare(it->first) == 0 ) datacount[it->first]+=1;
+            // release memory in eventvec_data
+            vector<Event>().swap( eventvec_data );
+
+            bool statval = statval_numPE != -1;
+            if( do_bootstrap ){
+               evlist = fitter.Resample( eventvec_fit, randseed, statval );
             }
-         }
-         for( vector<Event>::iterator ev = eventvec_fit_bkgcontrol.begin();
-               ev < eventvec_fit_bkgcontrol.end(); ev++){
-            ev->fit_event = true;
-            for(map<string, int>::iterator it = datacount.begin(); it != datacount.end(); it++){
-               if( ev->process.compare(it->first) == 0 ) datacount[it->first]+=1;
-            }
-         }
-         cout << "Fit event count: " << endl;
-         cout << setiosflags(ios::left);
-         for(map<string, int>::iterator it = datacount.begin(); it != datacount.end(); it++){
-            cout << "... " << setw(25) << it->first << ": " << it->second << " events" << endl;
-         }
 
-         fitter.DeclareHists( hists_fit_, "fit" );
-         fitter.FillHists( hists_fit_, eventvec_fit, true );
-         fitter.DeclareHists( hists_fit_bkgcontrol_, "fit_bkgcontrol" );
-         fitter.FillHists( hists_fit_bkgcontrol_, eventvec_fit_bkgcontrol, true );
+            fitter.DeclareHists( hists_fit_, hists2d_fit_, "fit" );
+            fitter.FillHists( hists_fit_, hists2d_fit_, eventvec_fit, true );
 
-         double wgt=0;
-         for(vector<Event>::iterator ev = eventvec_fit.begin(); ev < eventvec_fit.end(); ev++){
-            wgt += ev->weight;
-         }
-         cout << "wgt = " << wgt << endl;
-
-         // do GP training
-         cout << "Training GP." << endl;
-
-         // GP training for mbl
-         if ( lengthscale_mbl != -1){
-            Shapes * fptr = new Shapes( "mbl", fitter.gplength_mbl, fitter.gplength_mt_mbl,
-                  fitter.lbnd, fitter.rbnd );
-            fptr->TrainGP( hists_train_ );
-            fitter.aGPsig.ResizeTo( fptr->aGPsig.GetNoElements() );
-            fitter.aGPsig = fptr->aGPsig;
-            fitter.aGPbkg.ResizeTo( fptr->aGPbkg.GetNoElements() );
-            fitter.aGPbkg = fptr->aGPbkg;
-         }
-
-         // GP training for 220
-         if ( lengthscale_220 != -1){
-            Shapes * fptr220 = new Shapes( "mt2_220_nomatchmbl", fitter.gplength_220, fitter.gplength_mt_220,
-                  fitter.lbnd, fitter.rbnd );
-            fptr220->TrainGP( hists_train_ );
-            fitter.aGPsig220.ResizeTo( fptr220->aGPsig.GetNoElements() );
-            fitter.aGPsig220 = fptr220->aGPsig;
-            fitter.aGPbkg220.ResizeTo( fptr220->aGPbkg.GetNoElements() );
-            fitter.aGPbkg220 = fptr220->aGPbkg;
-         }
-
-         // events for fitting, hists for training
-         fitter.RunMinimizer( eventvec_fit );
-         fitter.PlotResults( hists_fit_ ); // plot fitted events
-
-         // fill results tree
-         mcmass = 0;
-         fitstatus = fitter.gMinuit->Status();
-         const double *par = fitter.gMinuit->X();
-         const double *par_err = fitter.gMinuit->Errors();
-         mt = par[0];
-         kmbl = par[1];
-         k220 = par[2];
-         mt_err = par_err[0];
-         kmbl_err = par_err[1];
-         k220_err = par_err[2];
-         fitchi2 = fitter.fitchi2;
-         gplength_mbl = lengthscale_mbl;
-         gplength_220 = lengthscale_220;
-         gplength_mt_mbl = lengthscale_mt_mbl;
-         gplength_mt_220 = lengthscale_mt_220;
-
-         // TODO
-         //tree->Fill();
-
-         eventvec_fit.clear();
-         eventvec_fit_bkgcontrol.clear();
-         fitter.DeleteHists( hists_fit_ );
-         fitter.DeleteHists( hists_fit_bkgcontrol_ );
-         */
 
       }else{ // loop over mc masses
 
@@ -565,6 +514,16 @@ int main(int argc, char* argv[]){
             vector<Event>().swap( eventvec_test );
 
             fitter.ReweightMC( eventvec_fit, dname );
+
+            int pdfvar = -1;
+            if( nsyst.find("PDFvar") != string::npos ){
+               cout << "Reweighting for PDF systematics." << endl;
+               string nametemp = nsyst;
+               nametemp.erase(0,6);
+               pdfvar = atoi( nametemp.c_str() );
+               fitter.PDFReweight( eventvec_fit, pdfvar );
+            }
+
             bool statval = statval_numPE != -1;
             if( do_bootstrap ){
                evlist = fitter.Resample( eventvec_fit, randseed, statval );
@@ -581,82 +540,86 @@ int main(int argc, char* argv[]){
             fitter.DeclareHists( hists_fit_, hists2d_fit_, "fit" );
             fitter.FillHists( hists_fit_, hists2d_fit_, eventvec_fit, true );
 
-            // do GP training
-            for( map<string, Distribution>::iterator it = fitter.dists.begin(); it != fitter.dists.end(); it++ ){
+         } // loop over mass points
+      } // else (not useData)
 
-               string name = it->first;
-               Distribution *dist = &(it->second);
+      // do GP training
+      for( map<string, Distribution>::iterator it = fitter.dists.begin(); it != fitter.dists.end(); it++ ){
 
-               double m2llsig;
+         string name = it->first;
+         Distribution *dist = &(it->second);
 
-               if( dist->activate ){
-                  Shapes * fptr = new Shapes( name, dist->ptrain,
-                        dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
-                  cout << "Training " << name << ":" << endl;
-                  fptr->TrainGP( hists_jvec_train_, m2llsig);
-                  cout << endl;
+         double m2llsig;
 
-                  dist->aGPsig.ResizeTo( fptr->aGPsig.GetNoElements() );
-                  dist->aGPsig = fptr->aGPsig;
+         if( dist->activate ){
+            Shapes * fptr = new Shapes( name, dist->ptrain,
+                  dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->grho, dist->lbnd, dist->rbnd );
+            cout << "Training " << name << ":" << endl;
+            fptr->TrainGP( hists_jvec_train_, m2llsig);
+            cout << endl;
 
-                  delete fptr;
+            dist->aGPsig.ResizeTo( fptr->aGPsig.GetNoElements() );
+            dist->aGPsig = fptr->aGPsig;
 
-               }
+            delete fptr;
 
-            }
-
-            typedef map<string, TH1D*> tmap;
-            typedef map<string, tmap> hmap;
-            for( hmap::iterator h = hists_train_.begin(); h != hists_train_.end(); h++){
-               for( tmap::iterator t = h->second.begin(); t != h->second.end(); t++){
-                  for(int n=1; n < t->second->GetNbinsX(); n++){
-                     if( t->second->GetBinContent(n) == 0 )
-                        t->second->SetBinError(n, 1.0/35000);
-                  }
-               }
-            }
-
-            // events for fitting, hists for training
-            
-            high_resolution_clock::time_point start_RunMinimizer = high_resolution_clock::now();
-            fitter.RunMinimizer( eventvec_fit );
-            high_resolution_clock::time_point stop_RunMinimizer = high_resolution_clock::now();
-            time_span_RunMinimizer = duration_cast<duration<double>>(stop_RunMinimizer-start_RunMinimizer);
-            fitter.PlotResults( hists_fit_, outdir+"/plotsFitResults"+run_number_str+".root" ); // plot fitted events
-
-            cout << "Fit Chi2 = " << fitter.fitchi2 << endl;
-
-
-            // fill results tree
-            // any additional variables need to be added here
-            mcmass = mass;
-            fitstatus = fitter.gMinuit->Status();
-            const double *par = fitter.gMinuit->X();
-            const double *par_err = fitter.gMinuit->Errors();
-            mt = par[0];
-            mt_err = par_err[0];
-            mt_fix = fitter.mt_fix;
-            jesfactor = par[1];
-            jesfactor_err = par_err[1];
-            kmbl = par[2];
-            kmbl_err = par_err[2];
-            k220 = par[3];
-            k220_err = par_err[3];
-            kmaos220 = par[4];
-            kmaos220_err = par_err[4];
-            kmaos210 = par[5];
-            kmaos210_err = par_err[5]; 
-            k221 = par[6];
-            k221_err = par_err[6];
-            fitchi2 = fitter.fitchi2;
-
-            eventvec_fit.clear();
-            fitter.DeleteHists( hists_fit_, hists2d_fit_ );
          }
 
       }
 
-   }
+      typedef map<string, TH1D*> tmap;
+      typedef map<string, tmap> hmap;
+      for( hmap::iterator h = hists_train_.begin(); h != hists_train_.end(); h++){
+         for( tmap::iterator t = h->second.begin(); t != h->second.end(); t++){
+            for(int n=1; n < t->second->GetNbinsX(); n++){
+               if( t->second->GetBinContent(n) == 0 )
+                  t->second->SetBinError(n, 1.0/35000);
+            }
+         }
+      }
+
+      if( fitter.compute_profile ){
+         fitter.ComputeProfile(run_number, eventvec_fit, outdir);
+         return 0;
+      }
+
+      // events for fitting, hists for training
+      high_resolution_clock::time_point start_RunMinimizer = high_resolution_clock::now();
+      fitter.RunMinimizer( eventvec_fit );
+      high_resolution_clock::time_point stop_RunMinimizer = high_resolution_clock::now();
+      time_span_RunMinimizer = duration_cast<duration<double>>(stop_RunMinimizer-start_RunMinimizer);
+      fitter.PlotResults( hists_fit_, outdir+"/plotsFitResults"+run_number_str+".root" ); // plot fitted events
+
+      cout << "Fit Chi2 = " << fitter.fitchi2 << endl;
+
+
+      // fill results tree
+      // any additional variables need to be added here
+      mcmass = masspnt;
+      fitstatus = fitter.gMinuit->Status();
+      const double *par = fitter.gMinuit->X();
+      const double *par_err = fitter.gMinuit->Errors();
+      mt = par[0];
+      mt_err = par_err[0];
+      mt_fix = fitter.mt_fix;
+      jesfactor = par[1];
+      jesfactor_err = par_err[1];
+      kmbl = par[2];
+      kmbl_err = par_err[2];
+      k220 = par[3];
+      k220_err = par_err[3];
+      kmaos220 = par[4];
+      kmaos220_err = par_err[4];
+      kmaos210 = par[5];
+      kmaos210_err = par_err[5]; 
+      k221 = par[6];
+      k221_err = par_err[6];
+      fitchi2 = fitter.fitchi2;
+
+      eventvec_fit.clear();
+      fitter.DeleteHists( hists_fit_, hists2d_fit_ );
+
+      }
 
    if( do_templates ){
 
@@ -670,7 +633,7 @@ int main(int argc, char* argv[]){
 
                if( dist->activate ){
                   Shapes * fptr = new Shapes( name, dist->ptrain,
-                        dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+                        dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->grho, dist->lbnd, dist->rbnd );
                   fptr->TrainGP( hists_jvec_train_, m2llsig );
 
                   dist->aGPsig.ResizeTo( fptr->aGPsig.GetNoElements() );
@@ -701,7 +664,7 @@ int main(int argc, char* argv[]){
          if( dist->activate ){
             cout << "Learning hyperparameters for distribution " << name << "..." << endl;
             Shapes * fptrtmp = new Shapes( name, dist->ptrain,
-                  dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+                  dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->grho, dist->lbnd, dist->rbnd );
             fptrtmp->LearnGPparams( hists_jvec_train_ );
 
             dist->glx = fptrtmp->lx;
@@ -711,7 +674,7 @@ int main(int argc, char* argv[]){
 
             double m2llsig;
             Shapes * fptr = new Shapes( name, dist->ptrain,
-                  dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+                  dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->grho, dist->lbnd, dist->rbnd );
             fptr->TrainGP( hists_jvec_train_, m2llsig );
 
             dist->aGPsig.ResizeTo( fptr->aGPsig.GetNoElements() );

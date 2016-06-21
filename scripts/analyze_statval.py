@@ -1,7 +1,16 @@
 #! /usr/bin/env python
 
 from ROOT import *
+import CMS_lumi, tdrstyle
 import sys
+
+tdrstyle.setTDRStyle()
+
+iPeriod = 0
+iPos = 11
+CMS_lumi.lumi_sqrtS = '8 TeV'
+CMS_lumi.writeExtraText = 1
+CMS_lumi.extraText = 'Simulation Preliminary'
 
 file = TFile( sys.argv[1] )
 tree = file.Get('FitResults')
@@ -60,9 +69,9 @@ for i in range(numPE):
 
 
 # now make a pull plot
-pull = RooRealVar("pull", "Pull Plot", -5, 5, "")
-pullMean = RooRealVar("pullmean", "pullmean", 0, -3, 3, "")
-pullSigma = RooRealVar("pullsigma", "pullsigma", 1, 0, 3, "")
+pull = RooRealVar("pull", "pull", -5, 5, "")
+pullMean = RooRealVar("#mu_{pull}", "pullmean", 0, -3, 3, "")
+pullSigma = RooRealVar("#sigma_{pull}", "pullsigma", 1, 0, 3, "")
 pulldat = RooDataSet("pull", "pull", RooArgSet(pull) )
 
 for i in range(numPE):
@@ -78,13 +87,20 @@ pullgaus.fitTo(pulldat)
 # display the fit
 fPull = pull.frame()
 pulldat.plotOn(fPull, RooFit.Binning(20))
-pulldat.statOn(fPull, RooFit.Layout(0.7, 0.97, 0.94), RooFit.What("N"))
+#pulldat.statOn(fPull, RooFit.Layout(0.7, 0.97, 0.94), RooFit.What("N"))
 pullgaus.plotOn(fPull)
 plotShow = RooArgSet(pullMean, pullSigma)
-pullgaus.paramOn(fPull, RooFit.Parameters(plotShow), RooFit.Layout(0.17, 0.48, 0.94),
+pullgaus.paramOn(fPull, RooFit.Parameters(plotShow), RooFit.Layout(0.63, 0.95, 0.91),
       RooFit.Format("NELU",RooFit.AutoPrecision(2)))
-#if m == 4:
+fPull.getAttLine().SetBorderSize(0)
+
+c = TCanvas('c','c',800,800)
 fPull.Draw()
+
+CMS_lumi.CMS_lumi(c, iPeriod, iPos)
+c.Draw()
+c.Print('pull_mt.pdf')
+
 raw_input('...')
 sys.exit()
 

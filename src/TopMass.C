@@ -61,6 +61,10 @@ Fitter::Fitter(){
    gplength_jfact = 0.1;
 
    mt_fix = 0;
+   whyb = -1;
+
+   NDATA = 41640;
+   use_data = false;
 
 }
 
@@ -71,41 +75,35 @@ Fitter::~Fitter(){
 
 const double Fitter::masspoints[NMP] = {166.5, 169.5, 171.5, 172.5, 173.5, 175.5, 178.5};
 const double Fitter::jfactpoints[NJP] = {0.970, 0.985, 1.000, 1.015, 1.030};
-//const double Fitter::jfactpoints[NJP] = {0.960, 0.980, 1.000, 1.020, 1.040};
 int Fitter::clocks[100] = {0};
 
 void Fitter::InitializeDists(){
    double ljf = gplength_jfact;
 
    // gaussian process length scales
-   // name(n), title(t), gnorm1(n1), gnorm2(n2), glx(lx), glmt(lmt), gljf(lfj), lbnd(lb), rbnd(rb)
+   // name(n), title(t), gnorm1(n1), gnorm2(n2), glx(lx), glmt(lmt), gljf(ljf), grho(rho), lbnd(lb), rbnd(rb)
    // name(n), title(t), theta1, theta0, theta2, theta3
-   //dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}", 0.54, 2.1, 6.82, 6.71, 0.086, 20, 300 );
-   //dists[ "mt2_221_gp" ] = Distribution( "mt2_221_gp", "M_{T2} 221", 0.94, 1.74, 19.0, 1.65, 0.176, 90, 250 );
-   //dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}", 0.54, 2.1, 5.79, 5.68, 0.0823, 20, 250 );
-   //dists[ "mt2_221_gp" ] = Distribution( "mt2_221_gp", "M_{T2} 221", 0.94, 1.74, 19.03, 1.635, 0.180, 90, 250 );
-   //dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}", 0.54, 2.1, 5.79, 5.68, 0.0823, 20, 230 );
-   //dists[ "mt2_221_gp" ] = Distribution( "mt2_221_gp", "M_{T2} 221", 0.94, 1.74, 19.03, 1.635, 0.180, 90, 230 );
-
    // 5 point JES
-   //dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}",             0.54, 2.1, 4.75, 4.66, 0.109, 20, 230 ); //[-3,3]
-   //dists[ "mt2_221_gp" ] = Distribution( "mt2_221_gp", "M_{T2} 221", 0.94, 1.74, 8.08, 8.06, 0.138, 90, 230 ); //[-3,3]
-   dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}",             0.54, 2.1, 10, 20, 0.214, 20, 230 ); //[-3,3]
-   dists[ "mt2_221_gp" ] = Distribution( "mt2_221_gp", "M_{T2} 221", 0.94, 1.74, 10, 20, 0.215, 90, 230 ); //[-3,3]
-   //dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}",             0.54, 2.1, 4.49, 4.40, 0.0731, 20, 230 ); //[-4,4]
-   //dists[ "mt2_221_gp" ] = Distribution( "mt2_221_gp", "M_{T2} 221", 0.94, 1.74, 11.15, 11.82, 0.171, 90, 230 ); //[-4,4]
+   //dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}",             1.14, 1.0, 4.75, 4.66, 0.109, 0.698, 20, 230 ); //[-3,3]
+   //dists[ "mt2_221_gp" ] = Distribution( "mt2_221_gp", "M_{T2} 221", 1.84, 1.0, 8.08, 8.06, 0.138, 0.690, 90, 230 ); //[-3,3]
+   //dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}",             0.54, 2.1, 10, 20, 0.214, 0.892, 20, 230 ); //[-3,3]
+   //dists[ "mt2_221_gp" ] = Distribution( "mt2_221_gp", "M_{T2} 221", 0.94, 1.74, 10, 20, 0.215, 0.884, 90, 230 ); //[-3,3]
+   
+   // retuning
+   //dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}", 1.14, 1.0, 8.08, 8.06, 0.188, 0.704, 40, 180 ); //[-3,3]
+   dists[ "mbl_gp" ] = Distribution( "mbl_gp", "M_{bl}", 1.14, 1.0, 10.8, 10.8, 0.22, 0.704, 40, 180 ); //[-3,3]
+   dists[ "mt2_221_gp" ] = Distribution( "mt2_221_gp", "M_{T2} 221", 1.84, 1.0, 8.08, 8.06, 0.138, 0.690, 105, 205 ); //[-3,3]
 
    // test
-
-   dists[ "mt2_220_gp" ] = Distribution( "mt2_220_gp", "M_{T2} 220", 0.94, 1.74, 7.1, 1.9, ljf, 50, 300 );
-   dists[ "maos210_gp" ] = Distribution( "maos210_gp","blv mass from Maos neutrinos from M_{T2} 210", 0.42, 1.82, 9.92, 24.2, ljf, 100, 500 );
-   dists[ "maos220_gp" ] = Distribution( "maos220_gp","blv mass from Maos neutrinos from M_{T2} 220", 1.6, 6.4, 19.2, 19.2, ljf, 100, 500 );
+   dists[ "mt2_220_gp" ] = Distribution( "mt2_220_gp", "M_{T2} 220", 0.94, 1.74, 7.1, 1.9, ljf, 0.0, 50, 300 );
+   dists[ "maos210_gp" ] = Distribution( "maos210_gp","blv mass from Maos neutrinos from M_{T2} 210", 0.42, 1.82, 8.5, 30, 0.196, 0.683, 100, 300 );
+   dists[ "maos220_gp" ] = Distribution( "maos220_gp","blv mass from Maos neutrinos from M_{T2} 220", 1.6, 6.4, 19.2, 19.2, ljf, 0.0, 100, 500 );
 
  
-   dists[ "maos220blv" ] = Distribution( "maos220blv","blv mass from Maos neutrinos from M_{T2} 220", 1.6, 6.4, 19.2, 19.2, ljf, 0, 500 );
-   dists[ "mbl" ] = Distribution( "mbl", "M_{bl}", 0.54, 2.1, 7.2, 8.1, ljf, 0, 300 );
-   dists[ "mt2_220_nomatchmbl" ] = Distribution( "mt2_220_nomatchmbl", "M_{T2} 220", 0.94, 1.74, 7.1, 1.9, ljf, 0, 300 );
-   dists[ "maos210blv" ] = Distribution( "maos210blv","blv mass from Maos neutrinos from M_{T2} 210", 0.42, 1.82, 9.92, 24.2, ljf, 0, 500 );
+   dists[ "maos220blv" ] = Distribution( "maos220blv","blv mass from Maos neutrinos from M_{T2} 220", 1.6, 6.4, 19.2, 19.2, ljf, 0.0, 0, 500 );
+   dists[ "mbl" ] = Distribution( "mbl", "M_{bl}", 0.54, 2.1, 7.2, 8.1, ljf, 0.0, 0, 300 );
+   dists[ "mt2_220_nomatchmbl" ] = Distribution( "mt2_220_nomatchmbl", "M_{T2} 220", 0.94, 1.74, 7.1, 1.9, ljf, 0.0, 0, 300 );
+   dists[ "maos210blv" ] = Distribution( "maos210blv","blv mass from Maos neutrinos from M_{T2} 210", 0.42, 1.82, 9.92, 24.2, ljf, 0.0, 0, 500 );
 }
 
 void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
@@ -120,47 +118,57 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
    string path;
    if( pch != NULL ) path = "root://cmseos:1094//eos/uscms/store/user/nmirman/Ntuples/TopMass/20141030/";
    //if( pch == NULL ) path = "/afs/cern.ch/work/n/nmirman/public/Ntuples/TopMass/20150226/";
-   if( pch == NULL ) path = "root://osg-se.cac.cornell.edu//xrootd/path/cms/store/user/nmirman/Ntuples/TopMassNtuples/";
-   string date = "20151020";
+   //if( pch == NULL ) path = "root://osg-se.cac.cornell.edu//xrootd/path/cms/store/user/nmirman/Ntuples/TopMassNtuples/";
+   //if( pch == NULL ) path = "/mnt/xrootd/user/nmirman/Ntuples/TopMassNtuples/";
+   if( pch == NULL ) path = "root://osg-se.cac.cornell.edu//store/user/nmirman/Ntuples/TopMassNtuples/";
+   //string date = "20151020";
+   string date = "20160601";
 
    // filenames
-   //datasets[ "data" ]      = Dataset( path, "ntuple_data.root" );
-   datasets[ "t_tw" ]      = Dataset( "T_tW" );
-   datasets[ "tbar_tw" ]   = Dataset( "Tbar_tW" );
-   datasets[ "dy" ]        = Dataset( "DYJetsToLL" );
-   datasets[ "wjets" ]     = Dataset( "WJetsToLNu" );
-   datasets[ "ww" ]        = Dataset( "WW" );
-   datasets[ "wz" ]        = Dataset( "WZ" );
-   datasets[ "zz" ]        = Dataset( "ZZ" );
-   datasets[ "ttbar166" ]  = Dataset( "TTJets_msdecay_mass166_5" ); 
-   datasets[ "ttbar169" ]  = Dataset( "TTJets_msdecay_mass169_5" ); 
-   datasets[ "ttbar171" ]  = Dataset( "TTJets_msdecay_mass171_5" );
-   datasets[ "ttbar172" ]  = Dataset( "TTJets_msdecay" );
-   datasets[ "ttbar173" ]  = Dataset( "TTJets_msdecay_mass173_5" ); 
-   datasets[ "ttbar175" ]  = Dataset( "TTJets_msdecay_mass175_5" ); 
-   datasets[ "ttbar178" ]  = Dataset( "TTJets_msdecay_mass178_5" ); 
-   datasets[ "ttbarsyst_scaleup" ]        = Dataset( "TTJets_msdecay_scaleup" );
-   datasets[ "ttbarsyst_scaledown" ]      = Dataset( "TTJets_msdecay_scaledown" );
-   datasets[ "ttbarsyst_matchingup" ]     = Dataset( "TTJets_msdecay_matchingup" );
-   datasets[ "ttbarsyst_matchingdown" ]   = Dataset( "TTJets_msdecay_matchingdown" );
+   datasets[ "data_doubleelectron" ]      = Dataset( "DoubleElectron" );
+   datasets[ "data_doublemu" ]            = Dataset( "DoubleMu" );
+   datasets[ "data_doublemuparked" ]      = Dataset( "DoubleMuParked" );
+   datasets[ "data_mueg" ]                = Dataset( "MuEG" );
+   datasets[ "t_tw" ]      = Dataset( "T_tW-channel-DR_TuneZ2star_8TeV-powheg-tauola" );
+   datasets[ "tbar_tw" ]   = Dataset( "Tbar_tW-channel-DR_TuneZ2star_8TeV-powheg-tauola" );
+   datasets[ "dy" ]        = Dataset( "DYJetsToLL_M-50_matchingdown_8TeV-madgraph" );
+   datasets[ "wjets" ]     = Dataset( "WJetsToLNu_TuneZ2Star_8TeV-madgraph-tarball" );
+   datasets[ "ww" ]        = Dataset( "WW_TuneZ2star_8TeV_pythia6_tauola" );
+   datasets[ "wz" ]        = Dataset( "WZ_TuneZ2star_8TeV_pythia6_tauola" );
+   datasets[ "zz" ]        = Dataset( "ZZ_TuneZ2star_8TeV_pythia6_tauola" );
+   datasets[ "ttbar166" ]  = Dataset( "TTJets_MSDecays_mass166_5_TuneZ2star_8TeV-madgraph-tauola" ); 
+   datasets[ "ttbar169" ]  = Dataset( "TTJets_MSDecays_mass169_5_TuneZ2star_8TeV-madgraph-tauola" ); 
+   datasets[ "ttbar171" ]  = Dataset( "TTJets_MSDecays_mass171_5_TuneZ2star_8TeV-madgraph-tauola" );
+   datasets[ "ttbar172" ]  = Dataset( "TTJets_MSDecays_central_TuneZ2star_8TeV-madgraph-tauola" );
+   datasets[ "ttbar173" ]  = Dataset( "TTJets_MSDecays_mass173_5_TuneZ2star_8TeV-madgraph-tauola" ); 
+   datasets[ "ttbar175" ]  = Dataset( "TTJets_MSDecays_mass175_5_TuneZ2star_8TeV-madgraph-tauola" ); 
+   datasets[ "ttbar178" ]  = Dataset( "TTJets_MSDecays_mass178_5_TuneZ2star_8TeV-madgraph-tauola" ); 
+   datasets[ "ttbarsyst_scaleup" ]        = Dataset( "TTJets_MSDecays_scaleup_TuneZ2star_8TeV-madgraph-tauola" );
+   datasets[ "ttbarsyst_scaledown" ]      = Dataset( "TTJets_MSDecays_scaledown_TuneZ2star_8TeV-madgraph-tauola" );
+   datasets[ "ttbarsyst_matchingup" ]     = Dataset( "TTJets_MSDecays_matchingup_TuneZ2star_8TeV-madgraph-tauola" );
+   datasets[ "ttbarsyst_matchingdown" ]   = Dataset( "TTJets_MSDecays_matchingdown_TuneZ2star_8TeV-madgraph-tauola" );
 
-   datasets[ "ttbarsyst_TuneP11_fulllept" ]        = Dataset( "TTJets_FullLeptMGDecays_TuneP11" );
-   datasets[ "ttbarsyst_TuneP11_semilept" ]        = Dataset( "TTJets_SemiLeptMGDecays_TuneP11" );
-   datasets[ "ttbarsyst_TuneP11_hadronic" ]        = Dataset( "TTJets_HadronicMGDecays_TuneP11" );
+   datasets[ "ttbarsyst_TuneP11_fulllept" ]        = Dataset( "TTJets_FullLeptMGDecays_TuneP11_8TeV-madgraph-tauola" );
+   datasets[ "ttbarsyst_TuneP11_semilept" ]        = Dataset( "TTJets_SemiLeptMGDecays_TuneP11_8TeV-madgraph-tauola" );
+   datasets[ "ttbarsyst_TuneP11_hadronic" ]        = Dataset( "TTJets_HadronicMGDecays_TuneP11_8TeV-madgraph-tauola" );
 
-   datasets[ "ttbarsyst_TuneP11noCR_fulllept" ]    = Dataset( "TTJets_FullLeptMGDecays_TuneP11noCR" );  
-   datasets[ "ttbarsyst_TuneP11noCR_semilept" ]    = Dataset( "TTJets_SemiLeptMGDecays_TuneP11noCR" );  
-   datasets[ "ttbarsyst_TuneP11noCR_hadronic" ]    = Dataset( "TTJets_HadronicMGDecays_TuneP11noCR" );  
+   datasets[ "ttbarsyst_TuneP11noCR_fulllept" ]    = Dataset( "TTJets_FullLeptMGDecays_TuneP11noCR_8TeV-madgraph-tauola" );  
+   datasets[ "ttbarsyst_TuneP11noCR_semilept" ]    = Dataset( "TTJets_SemiLeptMGDecays_TuneP11noCR_8TeV-madgraph-tauola" );  
+   datasets[ "ttbarsyst_TuneP11noCR_hadronic" ]    = Dataset( "TTJets_HadronicMGDecays_TuneP11noCR_8TeV-madgraph-tauola" );  
 
-   datasets[ "ttbarsyst_TuneP11mpiHi_fulllept" ]   = Dataset( "TTJets_FullLeptMGDecays_TuneP11mpiHi" );  
-   datasets[ "ttbarsyst_TuneP11mpiHi_semilept" ]   = Dataset( "TTJets_SemiLeptMGDecays_TuneP11mpiHi" );  
-   datasets[ "ttbarsyst_TuneP11mpiHi_hadronic" ]   = Dataset( "TTJets_HadronicMGDecays_TuneP11mpiHi" );  
+   datasets[ "ttbarsyst_TuneP11mpiHi_fulllept" ]   = Dataset( "TTJets_FullLeptMGDecays_TuneP11mpiHi_8TeV-madgraph-tauola" );  
+   datasets[ "ttbarsyst_TuneP11mpiHi_semilept" ]   = Dataset( "TTJets_SemiLeptMGDecays_TuneP11mpiHi_8TeV-madgraph-tauola" );  
+   datasets[ "ttbarsyst_TuneP11mpiHi_hadronic" ]   = Dataset( "TTJets_HadronicMGDecays_TuneP11mpiHi_8TeV-madgraph-tauola" );  
 
-   datasets[ "ttbarsyst_TuneP11TeV_fulllept" ]     = Dataset( "TTJets_FullLeptMGDecays_TuneP11TeV" );  
-   datasets[ "ttbarsyst_TuneP11TeV_semilept" ]     = Dataset( "TTJets_SemiLeptMGDecays_TuneP11TeV" );  
-   datasets[ "ttbarsyst_TuneP11TeV_hadronic" ]     = Dataset( "TTJets_HadronicMGDecays_TuneP11TeV" );  
+   datasets[ "ttbarsyst_TuneP11TeV_fulllept" ]     = Dataset( "TTJets_FullLeptMGDecays_TuneP11TeV_8TeV-madgraph-tauola" );  
+   datasets[ "ttbarsyst_TuneP11TeV_semilept" ]     = Dataset( "TTJets_SemiLeptMGDecays_TuneP11TeV_8TeV-madgraph-tauola" );  
+   datasets[ "ttbarsyst_TuneP11TeV_hadronic" ]     = Dataset( "TTJets_HadronicMGDecays_TuneP11TeV_8TeV-madgraph-tauola" );  
 
    // for mc weights
+   datasets[ "data_doubleelectron" ].mc_nevts = 1;
+   datasets[ "data_doublemu" ].mc_nevts = 1;      
+   datasets[ "data_doublemuparked" ].mc_nevts = 1;
+   datasets[ "data_mueg" ].mc_nevts = 1;          
    datasets[ "dy" ].mc_nevts         = 30459503;
    datasets[ "ww" ].mc_nevts         = 10000431;
    datasets[ "wz" ].mc_nevts         = 10000283;
@@ -196,6 +204,10 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
    datasets[ "ttbarsyst_TuneP11TeV_semilept" ].mc_nevts     = 7853450;
    datasets[ "ttbarsyst_TuneP11TeV_hadronic" ].mc_nevts     = 7946264;
 
+   datasets[ "data_doubleelectron" ].mc_xsec = 1;
+   datasets[ "data_doublemu" ].mc_xsec = 1;      
+   datasets[ "data_doublemuparked" ].mc_xsec = 1;
+   datasets[ "data_mueg" ].mc_xsec = 1;          
    datasets[ "dy" ].mc_xsec          = 3351.97;
    datasets[ "ww" ].mc_xsec          = 54.838;
    datasets[ "wz" ].mc_xsec          = 33.21;
@@ -233,39 +245,44 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
 
    // read files from list
 
-    ifstream inFile;
-    inFile.open("file_catalog.txt");
+   ifstream inFile;
+   inFile.open("file_catalog.txt");
 
-    while(!inFile.eof()){
+   while(!inFile.eof()){
 
-       string xrdopt = "cache";
+      string xrdopt = "cache";
 
-       // get line from file
-       string line;
-       getline(inFile,line);
-       stringstream stream(line);
+      // get line from file
+      string line;
+      getline(inFile,line);
+      stringstream stream(line);
 
-       // get ntuple attributes
-       string indate, indir;
-       stream >> indate;
-       stream >> indir;
+      // get ntuple attributes
+      string indate, indir;
+      stream >> indate;
+      stream >> indir;
+      if( indate == date )
+         cout << " ***** " << indir << " ***** " << endl;
 
-       for(map<string, Dataset>::iterator it = datasets.begin(); it != datasets.end(); it++){
-          string name = it->first;
-          Dataset *dat = &(it->second);
+      for(map<string, Dataset>::iterator it = datasets.begin(); it != datasets.end(); it++){
+         string name = it->first;
+         Dataset *dat = &(it->second);
 
-          if( indate == date and indir == dat->dir ){
-             dat->path = path+"/"+indate+"/"+indir+"/";
-             string file;
-             while( stream >> file ){
-                dat->filenames.push_back( file );
-             }
-          }
-       }
+         if( indate == date and indir == dat->dir ){
+            dat->path = path+"/"+indate+"/"+indir+"/";
+            string file;
+            cout << "... reading " << dat->dir << ": ";// << dat->filenames.size() << " files" << endl;
+            while( stream >> file ){
+               dat->filenames.push_back( file );
+               //cout << " " << file;
+            }
+            cout << dat->filenames.size() << " files" << endl;
+         }
+      }
 
-    }
+   }
 
-    inFile.close();
+   inFile.close();
 
    return;
 }
@@ -273,9 +290,30 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
 void Fitter::ReadDatasets(map<string, Dataset>& datasets, vector<Event>& events, string type, string nsyst,
       double fracevts, double statval_numPE, double statval_PE, double jshift){
 
+   if( type == "train" ){
+      cout << "Loading standard (no syst) samples for training set." << endl;
+      nsyst.clear();
+   }
+
    for(map<string, Dataset>::iterator it = datasets.begin(); it != datasets.end(); it++){
       string name = it->first;
       Dataset *dat = &(it->second);
+
+      // read data
+      if( type == "data" ){
+         if( name.find("data") != string::npos ){
+            ReadNtuple( *dat, "data", 1.0, "Central", events, 0, fracevts, statval_numPE, statval_PE, 0 );
+         }
+         continue;
+      }
+      // don't read data in MC runs
+      if( type != "data" and name.find("data") != string::npos ){
+         continue;
+      }
+      // don't read MC in data runs
+      if( type == "data" and name.find("data") == string::npos ){
+         continue;
+      }
 
       string nametmp = name;
 
@@ -316,29 +354,34 @@ void Fitter::ReadDatasets(map<string, Dataset>& datasets, vector<Event>& events,
       }
 
       int numevents = chain.GetEntries();
+      double lumi = 19700.0;
+      double renorm = lumi*numevents*(dat->mc_xsec/dat->mc_nevts);
       cout << setiosflags(ios::left);
       cout << "... " << setw(25) << name
-         << ": " << numevents << " events, " << numevents*(dat->mc_xsec/dat->mc_nevts)
-         << " (reweighted)" << endl;
+         << ": " << numevents << " events, " << renorm << " (reweighted)" << endl;
+
 
       if( type == "diagnostics" ){
-         ReadNtuple( *dat, nametmp, dat->mc_xsec/dat->mc_nevts,
-               tsyst.c_str(), events, 0, -1, -1, -1, jshift );
+         ReadNtuple( *dat, nametmp, lumi*dat->mc_xsec/dat->mc_nevts,
+               tsyst.c_str(), events, 0, fracevts, -1, -1, jshift );
       }
 
-      string test_syst = "Central";
-      if( nsyst.find("JES") != string::npos ){
-         tsyst = "Central";
-         test_syst = nsyst;
+      //string test_syst = "Central";
+      //if( nsyst.find("JES") != string::npos ){
+      tsyst = "Central";
+      string test_syst = nsyst;
+      if( nsyst.find("PDFvar") != string::npos or nsyst.find("MC") != string::npos or nsyst.empty() ){
+         test_syst = "Central";
       }
+      //}
       // events for training and testing
-      if( name.compare("data") != 0 ){
+      if( name.find("data") == string::npos ){
          if( type == "train" ){
-            ReadNtuple( *dat, nametmp, dat->mc_xsec/dat->mc_nevts,
+            ReadNtuple( *dat, nametmp, lumi*dat->mc_xsec/dat->mc_nevts,
                   tsyst.c_str(), events, 0, fracevts, -1, -1, jshift );
          }
          if( type == "test" ){
-            ReadNtuple( *dat, nametmp, dat->mc_xsec/dat->mc_nevts,
+            ReadNtuple( *dat, nametmp, lumi*dat->mc_xsec/dat->mc_nevts,
                   test_syst.c_str(), events, 0, fracevts, statval_numPE, statval_PE, jshift );
          }
       }
@@ -447,7 +490,8 @@ void Fitter::ReadNtuple( Dataset dat, string process, double mcweight,
 
       // global quantities
       evtemp.process = process;
-      evtemp.weight = mcweight * weight_pu * weight_toppt * weight_btag * weight_mu * weight_elec * weight_bfrag;
+      evtemp.weightcorr =  weight_pu * weight_toppt * weight_btag * weight_mu * weight_elec * weight_bfrag;
+      evtemp.weight = mcweight * evtemp.weightcorr;
       evtemp.nvertices = nvert;
 
       // jets, leptons, met
@@ -462,7 +506,9 @@ void Fitter::ReadNtuple( Dataset dat, string process, double mcweight,
 
       evtemp.isemu = nmuons==1 and nelectrons==1;
 
-      evtemp.pdf_weights = *pdf_weights;
+      if( process.find("data") == string::npos ){
+         evtemp.pdf_weights = *pdf_weights;
+      }
 
       //
       // classify events
@@ -511,10 +557,27 @@ void Fitter::ReadNtuple( Dataset dat, string process, double mcweight,
       bool jet1_ok = evtemp.jet1.Pt() > 30 and fabs(evtemp.jet1.Eta()) < 2.5;
       bool jet2_ok = evtemp.jet2.Pt() > 30 and fabs(evtemp.jet2.Eta()) < 2.5;
       bool jetmass_ok = evtemp.jet1.M() < 40 and evtemp.jet2.M() < 40;
-      if ( jet1_ok and jet2_ok /*and jetmass_ok*/ and met_ok )
+      bool dilep_ok = (nmuons + nelectrons) == 2;
+      if ( jet1_ok and jet2_ok /*and jetmass_ok*/ and met_ok and dilep_ok)
          eventvec.push_back( evtemp );
 
    }
+
+   // renormalize event weights (small correction)
+   /*
+   double weightcorr_total = 0;
+   double weightsum = 0;
+   double numevts = eventvec.size();
+   for( vector<Event>::iterator ev = eventvec.begin(); ev < eventvec.end(); ev++ ){
+      weightcorr_total += ev->weightcorr;
+   }
+   for( vector<Event>::iterator ev = eventvec.begin(); ev < eventvec.end(); ev++ ){
+      ev->weight *= numevts/weightcorr_total;
+      weightsum += ev->weight;
+   }
+   cout << " ... sum of weights = " << weightsum
+      << " (corrected by " << numevts/weightcorr_total << ")" << endl;
+      */
 
    return;
 }
@@ -651,7 +714,6 @@ void Fitter::GetVariables( vector<Event>& eventvec ){
       TLorentzVector maos220_neu1ap, maos220_neu1am, maos220_neu2ap, maos220_neu2am, maos220_neu1bp, maos220_neu1bm, maos220_neu2bp, maos220_neu2bm;
 
       //blv masses
-      
       double maos210_blv1ap, maos210_blv1am, maos210_blv2ap, maos210_blv2am, maos210_blv1bp, maos210_blv1bm, maos210_blv2bp, maos210_blv2bm;
       double maos220_blv1ap, maos220_blv1am, maos220_blv2ap, maos220_blv2am, maos220_blv1bp, maos220_blv1bm, maos220_blv2bp, maos220_blv2bm;
 
@@ -660,16 +722,16 @@ void Fitter::GetVariables( vector<Event>& eventvec ){
 
          ev->mt2_210grid = Calc.MaosReturn210( maos210_neu1p, maos210_neu1m, maos210_neu2p, maos210_neu2m, maos210_blv1ap, maos210_blv1am, maos210_blv2ap, maos210_blv2am, maos210_blv1bp, maos210_blv1bm, maos210_blv2bp, maos210_blv2bm );
 
-         ev->maos210_blvmass1ap = maos210_blv1ap;
-         ev->maos210_blvmass1am = maos210_blv1am;
-         ev->maos210_blvmass2ap = maos210_blv2ap;
-         ev->maos210_blvmass2am = maos210_blv2am;
-         ev->maos210_blvmass1bp = maos210_blv1bp;
-         ev->maos210_blvmass1bm = maos210_blv1bm;
-         ev->maos210_blvmass2bp = maos210_blv2bp;
-         ev->maos210_blvmass2bm = maos210_blv2bm;
+         ev->maos210_blvmass1ap = std::isnan(maos210_blv1ap) ? -1 : maos210_blv1ap;
+         ev->maos210_blvmass1am = std::isnan(maos210_blv1am) ? -1 : maos210_blv1am;
+         ev->maos210_blvmass2ap = std::isnan(maos210_blv2ap) ? -1 : maos210_blv2ap;
+         ev->maos210_blvmass2am = std::isnan(maos210_blv2am) ? -1 : maos210_blv2am;
+         ev->maos210_blvmass1bp = std::isnan(maos210_blv1bp) ? -1 : maos210_blv1bp;
+         ev->maos210_blvmass1bm = std::isnan(maos210_blv1bm) ? -1 : maos210_blv1bm;
+         ev->maos210_blvmass2bp = std::isnan(maos210_blv2bp) ? -1 : maos210_blv2bp;
+         ev->maos210_blvmass2bm = std::isnan(maos210_blv2bm) ? -1 : maos210_blv2bm;
 
-         ev->maoscut210 = MaosCut210(ev, maos210_neu1p, maos210_neu1m, maos210_neu2p, maos210_neu2m);
+         //ev->maoscut210 = MaosCut210(ev, maos210_neu1p, maos210_neu1m, maos210_neu2p, maos210_neu2m);
 
       }
       if( compute_maos220 ){
@@ -732,7 +794,7 @@ vector<int> Fitter::Resample( vector<Event>& eventvec, int randseed, bool statva
       if( ev->weight > maxweight ) maxweight = ev->weight;
    }
 
-   int numevts_data = 49243;
+   int numevts_data = NDATA;
    vector<int> evlist;
    if( statval ) numevts_data = eventvec.size();
    // resample with replacement, taking into account event weights
@@ -782,42 +844,12 @@ void Fitter::RunMinimizer( vector<Event>& eventvec ){
    }
    */
 
-   // If we're fitting mbl, set mbl background as a limited variable, otherwise set it as a fixed variable
-   if (false/*dists["mbl_gp"].activate*/){
-      gMinuit->SetLimitedVariable(2, "norm", 0.7, 0.1, 0, 1.0);
-   } else {
-      //gMinuit->SetFixedVariable(2, "norm", 0.7226);
-      gMinuit->SetFixedVariable(2, "norm", 1.0);
-   }
-
-   // If we're fitting 220, set 220 background as a limited variable, otherwise set it as a fixed variable
-   if (false/*dists["mt2_220_gp"].activate*/){
-      gMinuit->SetLimitedVariable(3, "norm220", 0.7, 0.1, 0, 1.0);
-   } else {
-      //gMinuit->SetFixedVariable(3, "norm220", 0.70712);
-      gMinuit->SetFixedVariable(3, "norm220", 1.0);
-   }
-
-   //MAOS 220
-   if (dists["maos220_gp"].activate){
-      gMinuit->SetLimitedVariable(4, "norm_maos220", 0.7, 0.1, 0, 1.0);
-   } else {
-      gMinuit->SetFixedVariable(4, "norm_maos220", 0.70712);
-   }
-
-   //MAOS 210
-   if (dists["maos210_gp"].activate){
-      gMinuit->SetLimitedVariable(5, "norm_maos210", 0.7, 0.1, 0, 1.0);
-   } else {
-      gMinuit->SetFixedVariable(5, "norm_maos210", 0.70712);
-   }
-
-   if (false/*dists["mt2_221_gp"].activate*/){
-      gMinuit->SetLimitedVariable(6, "norm221", 0.7, 0.1, 0, 1.0);
-   } else {
-      //gMinuit->SetFixedVariable(6, "norm221", 0.6661);
-      gMinuit->SetFixedVariable(6, "norm221", 1.0);
-   }
+   // Fix all s/b normalization terms to unity.
+   gMinuit->SetFixedVariable(2, "norm", 1.0);
+   gMinuit->SetFixedVariable(3, "norm220", 1.0);
+   gMinuit->SetFixedVariable(4, "norm_maos220", 1.0);
+   gMinuit->SetFixedVariable(5, "norm_maos210", 1.0);
+   gMinuit->SetFixedVariable(6, "norm221", 1.0);
 
    // set event vector and minimize
    eventvec_fit = &eventvec;
@@ -856,7 +888,7 @@ double Fitter::Min2LL(const double *x){
 
          // normalization inside likelihood function (temp)
          Shapes * fptr = new Shapes( name, dist->ptrain, 
-               dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+               dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->grho, dist->lbnd, dist->rbnd );
          fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr->aGPsig = dist->aGPsig;
 
@@ -864,7 +896,6 @@ double Fitter::Min2LL(const double *x){
          fshape_tot->SetParameters( x[0], x[1], 1.0, 1.0 );
 
          high_resolution_clock::time_point start_int = high_resolution_clock::now();
-         double test = fshape_tot->Eval(100);
          double integralsig = fshape_tot->Integral(dist->lbnd, dist->rbnd);
          high_resolution_clock::time_point stop_int = high_resolution_clock::now();
          duration<double> time_span = duration_cast<duration<double>>(stop_int-start_int);
@@ -874,7 +905,7 @@ double Fitter::Min2LL(const double *x){
          delete fptr;
 
          Shapes shape( name, dist->ptrain, 
-               dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+               dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->grho, dist->lbnd, dist->rbnd );
          shape.aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          shape.aGPsig = dist->aGPsig;
 
@@ -918,13 +949,10 @@ double Fitter::Min2LL(const double *x){
             else if ( name.compare("maos210_gp") == 0 ){ // for Maos 210
                double blv210array [] = { ev->maos210_blvmass1ap, ev->maos210_blvmass1am, ev->maos210_blvmass2ap, ev->maos210_blvmass2am, ev->maos210_blvmass1bp, ev->maos210_blvmass1bm, ev->maos210_blvmass2bp, ev->maos210_blvmass2bm };
 
-               vector<bool> useMaos210 = ev->maoscut210;
                for ( unsigned int j=0; j < sizeof(blv210array)/sizeof(blv210array[0]); j++){           
                   if( blv210array[j] < dist->lbnd or blv210array[j] > dist->rbnd ) continue;
-                  if (useMaos210[j]){
-                     double val = shape.Ftot( &(blv210array[j]), pfit );
-                     m2ll -= 2.0*ev->weight*log( val );
-                  }
+                  double val = shape.Ftot( &(blv210array[j]), pfit );
+                  m2ll -= 2.0*ev->weight*log( val );
 
                }
             }
@@ -945,6 +973,21 @@ double Fitter::Min2LL(const double *x){
    duration<double> time_span_m2ll = duration_cast<duration<double>>(stop_m2ll-start_m2ll);
    clocks[2] += time_span_m2ll.count();
 
+   // gaussian constraint
+   double sigma_jsf = 0.0047;
+   double sigma_c_sq = sigma_jsf*sigma_jsf*(1-whyb)/whyb;
+
+   // rescale number of events in MC sample
+   int nevts_data = NDATA;
+   int nevts_sample = 0;
+   for( vector<Event>::iterator ev = eventvec_fit->begin(); ev < eventvec_fit->end(); ev++ ){
+      nevts_sample += ev->weight;
+   }
+   if( nevts_sample != 0 ) sigma_c_sq /= double(nevts_sample)/nevts_data;
+
+   if( whyb > 0 ){
+      m2ll += pow(1-x[1], 2)/sigma_c_sq;
+   }
    cout << m2ll << ": " << x[0] << " " << x[1] << endl;
    return m2ll;
 }
@@ -970,7 +1013,7 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_, string outf
 
          // normalization inside likelihood function (temp)
          Shapes * fptr = new Shapes( name, dist->ptrain,
-               dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->lbnd, dist->rbnd );
+               dist->glx, dist->glmt, dist->gljf, dist->gnorm1, dist->gnorm2, dist->grho, dist->lbnd, dist->rbnd );
          fptr->aGPsig.ResizeTo( dist->aGPsig.GetNoElements() );
          fptr->aGPsig = dist->aGPsig;
 
@@ -1071,12 +1114,12 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_, string outf
             //
             // plot likelihood near minimum
             //
-            unsigned int npnts_mt = 10;
-            unsigned int npnts_kmbl = 10;
-            double mt_lrange = xmin[0]-3*xerr[0];
-            double mt_rrange = xmin[0]+3*xerr[0];
-            double kmbl_lrange = xmin1s[iparam]-3*xerr1s[iparam];
-            double kmbl_rrange = xmin1s[iparam]+3*xerr1s[iparam];
+            unsigned int npnts_mt = 20;
+            unsigned int npnts_jsf = 20;
+            double mt_lrange = 172.23;
+            double mt_rrange = 172.63;
+            double jsf_lrange = 0.992
+            double jsf_rrange = 1.008;
 
             // mt profile
             TGraph *gLmt = new TGraph();
@@ -1085,47 +1128,29 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_, string outf
                cout << "mt profile, pnt " << k << endl;
                double mt = mt_lrange + (mt_rrange-mt_lrange)*k/npnts_mt;
 
+         ftemplate->SetParameters( xmin[0], xmin[1],
+               hdata->Integral("width"), integralsig );
+
                // normalization inside likelihood function (temp)
                ftemplate->SetParameters( mt, 1.0, 1.0, 1.0, 1.0 );
                double integralsigk = ftemplate->Integral(dist->lbnd, dist->rbnd);
-               ftemplate->SetParameters( mt, 0.0, 1.0, 1.0, 1.0 );
-               double integralbkgk = ftemplate->Integral(dist->lbnd, dist->rbnd);
                ftemplate->SetParameters( mt, xmin1s[iparam], 1.0, integralsigk, integralbkgk );
 
                const double par [] = {mt, xmin1s[iparam], 1.0, integralsigk, integralbkgk};
                gLmt->SetPoint(k, mt, Min2LL(par) - minvalue);
             }
 
-            // kvariable profile
-            TGraph *gLkmbl = new TGraph();
-
-            for(unsigned int k=0; k <= npnts_kmbl; k++){
-               cout << "kmbl profile, pnt " << k << endl;
-               double kmbl = kmbl_lrange + (kmbl_rrange-kmbl_lrange)*k/npnts_kmbl;
-
-               // normalization inside likelihood function (temp)
-               ftemplate->SetParameters( xmin[0], 1.0, 1.0, 1.0, 1.0 );
-               double integralsigk = ftemplate->Integral(dist->lbnd, dist->rbnd);
-               ftemplate->SetParameters( xmin[0], 0.0, 1.0, 1.0, 1.0 );
-               double integralbkgk = ftemplate->Integral(dist->lbnd, dist->rbnd);
-               ftemplate->SetParameters( xmin[0], kmbl, 1.0, integralsigk, integralbkgk );
-
-               const double par [] = {xmin[0], kmbl, 1.0, integralsigk, integralbkgk};
-               gLkmbl->SetPoint(k, kmbl, Min2LL(par) - minvalue);
-            }
-
-
-            // kmbl vs mt
+            // jsf vs mt
             TH2D *hLmbl = new TH2D("hLmbl", "hLmbl", npnts_mt, mt_lrange, mt_rrange,
-                  npnts_kmbl, kmbl_lrange, kmbl_rrange);
+                  npnts_jsf, jsf_lrange, jsf_rrange);
 
             if( false ){ 
                cout << "Generating 2d profile." << endl;
                for(unsigned int k=0; k <= npnts_mt; k++){
-                  for(unsigned int j=0; j <= npnts_kmbl; j++){
+                  for(unsigned int j=0; j <= npnts_jsf; j++){
                      double mt = hLmbl->GetXaxis()->GetBinCenter(k);
-                     double kmbl = hLmbl->GetYaxis()->GetBinCenter(j);
-                     const double par [] = {mt, kmbl, xmin[2], xmin[3]}; //what's going on here? Why is there xmin[2] and xmin[3] in the original code; there should only be 2 things in xmin.
+                     double jsf = hLmbl->GetYaxis()->GetBinCenter(j);
+                     const double par [] = {mt, jsf, xmin[2], xmin[3]}; //what's going on here? Why is there xmin[2] and xmin[3] in the original code; there should only be 2 things in xmin.
                      hLmbl->SetBinContent(k, j, Min2LL(par) - minvalue);
                   }
                }
@@ -1137,11 +1162,11 @@ void Fitter::PlotResults( map< string, map<string, TH1D*> >& hists_, string outf
             gLmt->Draw("ACP");
             cLmt->Write("cLmt");
 
-            TCanvas *cLkmbl = new TCanvas( ("cLkmbl_"+dist->name).c_str(), ("cLkmbl_"+dist->name).c_str(), 800, 800);
-            cLkmbl->cd();
-            gLkmbl->SetMarkerStyle(20);
-            gLkmbl->Draw("ACP");
-            cLkmbl->Write("cLkmbl");
+            TCanvas *cLjsf = new TCanvas( ("cLjsf_"+dist->name).c_str(), ("cLjsf_"+dist->name).c_str(), 800, 800);
+            cLjsf->cd();
+            gLjsf->SetMarkerStyle(20);
+            gLjsf->Draw("ACP");
+            cLjsf->Write("cLjsf");
 
             TCanvas *cLmbl = new TCanvas( ("cLmbl_"+dist->name).c_str(), ("cLmbl_"+dist->name).c_str(), 800, 800);
             cLmbl->cd();
@@ -1263,7 +1288,7 @@ void Fitter::FindPTrain( map< string, map<string, TH1D*> >& hists_, vector<Event
 
       } // mass loop
 
-      if( name != "mt2_221_gp" and name != "mbl_gp" ){
+      if( name != "mt2_221_gp" and name != "mbl_gp" and name != "maos210" ){
          for(int im=0; im < NMP; im++){
             for(int i=0; i < NTP; i++){
                dist->ptrain[i][im][ijshift] = hist->GetBinCenter(i+1);

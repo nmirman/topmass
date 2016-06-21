@@ -19,7 +19,7 @@ class Shapes{
 
    public:
 
-      Shapes( string, double[NTP][NMP][NJP] , double, double, double, double, double, double, double );
+      Shapes( string, double[NTP][NMP][NJP] , double, double, double, double, double, double, double, double );
       ~Shapes();
 
       double Ftot(double*, double*);
@@ -27,7 +27,7 @@ class Shapes{
       double Fmbl_gp_var(double, double, double);
 
       string name;
-      double lx, lmass, gnorm1, gnorm2, ljfact;
+      double lx, lmass, gnorm1, gnorm2, ljfact, grho;
       double lbx, rbx;
       double ltrain;
       double rtrain;

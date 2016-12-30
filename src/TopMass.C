@@ -121,8 +121,8 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
    //if( pch == NULL ) path = "root://osg-se.cac.cornell.edu//xrootd/path/cms/store/user/nmirman/Ntuples/TopMassNtuples/";
    //if( pch == NULL ) path = "/mnt/xrootd/user/nmirman/Ntuples/TopMassNtuples/";
    if( pch == NULL ) path = "root://osg-se.cac.cornell.edu//store/user/nmirman/Ntuples/TopMassNtuples/";
-   //string date = "20151020";
-   string date = "20160601";
+   //string date = "20160601";
+   string date = "20160714";
 
    // filenames
    datasets[ "data_doubleelectron" ]      = Dataset( "DoubleElectron" );
@@ -164,6 +164,8 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
    datasets[ "ttbarsyst_TuneP11TeV_semilept" ]     = Dataset( "TTJets_SemiLeptMGDecays_TuneP11TeV_8TeV-madgraph-tauola" );  
    datasets[ "ttbarsyst_TuneP11TeV_hadronic" ]     = Dataset( "TTJets_HadronicMGDecays_TuneP11TeV_8TeV-madgraph-tauola" );  
 
+   datasets[ "ttbarsyst_powheg" ]     = Dataset( "TT_CT10_TuneZ2star_8TeV-powheg-tauola" );  
+
    // for mc weights
    datasets[ "data_doubleelectron" ].mc_nevts = 1;
    datasets[ "data_doublemu" ].mc_nevts = 1;      
@@ -204,6 +206,8 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
    datasets[ "ttbarsyst_TuneP11TeV_semilept" ].mc_nevts     = 7853450;
    datasets[ "ttbarsyst_TuneP11TeV_hadronic" ].mc_nevts     = 7946264;
 
+   datasets[ "ttbarsyst_powheg" ].mc_nevts = 6474753+21675970;
+
    datasets[ "data_doubleelectron" ].mc_xsec = 1;
    datasets[ "data_doublemu" ].mc_xsec = 1;      
    datasets[ "data_doublemuparked" ].mc_xsec = 1;
@@ -242,6 +246,8 @@ void Fitter::LoadDatasets( map<string, Dataset>& datasets ){
    datasets[ "ttbarsyst_TuneP11TeV_fulllept" ].mc_xsec     = 234*0.09;  
    datasets[ "ttbarsyst_TuneP11TeV_semilept" ].mc_xsec     = 234*0.45;  
    datasets[ "ttbarsyst_TuneP11TeV_hadronic" ].mc_xsec     = 234*0.44;  
+
+   datasets[ "ttbarsyst_powheg" ].mc_xsec = 234;
 
    // read files from list
 
@@ -407,8 +413,8 @@ void Fitter::ReadNtuple( Dataset dat, string process, double mcweight,
    double jet1PtRes, jet1PhiRes, jet1EtaRes, jet2PtRes, jet2PhiRes, jet2EtaRes;
    int lpPdgIdGEN, lmPdgIdGEN, nPdgIdGEN, nbPdgIdGEN;
    int jet1GenId, jet2GenId;
-   float weight_pu=1, weight_toppt=1, weight_btag=1, weight_mu=1, weight_elec=1, weight_bfrag=1;
-   int nmuons, nelectrons;
+   float weight_pu=1, weight_toppt=1, weight_btag=1, weight_mu=1, weight_elec=1, weight_bfrag=1, weight_trigger=1;
+   int nmuons=0, nelectrons=0, njets=0, nbjets=0;
    vector<float> *pdf_weights = 0;
 
    // open ntuple
@@ -435,6 +441,8 @@ void Fitter::ReadNtuple( Dataset dat, string process, double mcweight,
    tree->SetBranchAddress("jet2PhiResolution", &jet2PhiRes);
    tree->SetBranchAddress("jet2EtaResolution", &jet2EtaRes);
    tree->SetBranchAddress("vertices", &nvert);
+   tree->SetBranchAddress("jetnumber", &njets);
+   tree->SetBranchAddress("numBJets", &nbjets);
 
    if( process.find("ttbar") != string::npos ){
       tree->SetBranchAddress("lpPdgIdGEN", &lpPdgIdGEN);
@@ -452,6 +460,7 @@ void Fitter::ReadNtuple( Dataset dat, string process, double mcweight,
       tree->SetBranchAddress("weight_mu", &weight_mu);
       tree->SetBranchAddress("weight_elec", &weight_elec);
       tree->SetBranchAddress("weight_bfrag", &weight_bfrag);
+      tree->SetBranchAddress("weight_trigger", &weight_trigger);
    }
 
    tree->SetBranchAddress("nmuons", &nmuons);
@@ -483,6 +492,7 @@ void Fitter::ReadNtuple( Dataset dat, string process, double mcweight,
    }
 
    // fill event vector
+   double weight_temp=0;
    for(int ev=start; ev < end; ev++){
       tree->GetEntry(ev);
 
@@ -490,9 +500,14 @@ void Fitter::ReadNtuple( Dataset dat, string process, double mcweight,
 
       // global quantities
       evtemp.process = process;
-      evtemp.weightcorr =  weight_pu * weight_toppt * weight_btag * weight_mu * weight_elec * weight_bfrag;
+      evtemp.weightcorr =  weight_pu * weight_toppt * weight_btag * weight_mu * weight_elec * weight_bfrag * weight_trigger;
       evtemp.weight = mcweight * evtemp.weightcorr;
       evtemp.nvertices = nvert;
+      weight_temp += evtemp.weight;
+
+      if( process.find("data") != string::npos ){
+         evtemp.weight = 1.0;
+      }
 
       // jets, leptons, met
       evtemp.jet1 = *jet1;
@@ -503,6 +518,9 @@ void Fitter::ReadNtuple( Dataset dat, string process, double mcweight,
 
       evtemp.met = *met;
       evtemp.met_uncl = *metUncl;
+
+      evtemp.njets = njets;
+      evtemp.nbjets = nbjets;
 
       evtemp.isemu = nmuons==1 and nelectrons==1;
 
@@ -562,6 +580,7 @@ void Fitter::ReadNtuple( Dataset dat, string process, double mcweight,
          eventvec.push_back( evtemp );
 
    }
+   cout << " --> total weight = " << weight_temp << endl;
 
    // renormalize event weights (small correction)
    /*

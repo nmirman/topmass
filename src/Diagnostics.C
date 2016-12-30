@@ -117,6 +117,8 @@ void Fitter::DeclareHists( map< string, map<string, TH1D*> >& hists_, map< strin
             "lepton #phi;#phi;Events", 100, -3.5, 3.5 );
       hists_["bb_pt"][name] = new TH1D( ("hbb_pt_"+namel).c_str(),
             "bb p_{T};p_{T} (GeV);Events/2.5 GeV", 100, 0, 250 );
+      hists_["bl_pt"][name] = new TH1D( ("hbl_pt_"+namel).c_str(),
+            "bl p_{T};p_{T} (GeV);Events/2.5 GeV", 100, 0, 250 );
       hists_["bb_eta"][name] = new TH1D( ("hbb_eta_"+namel).c_str(),
             "bb Rapidity;Rapidity;Events", 100, -3, 3 );
       hists_["bb_phi"][name] = new TH1D( ("hbb_phi_"+namel).c_str(),
@@ -139,6 +141,8 @@ void Fitter::DeclareHists( map< string, map<string, TH1D*> >& hists_, map< strin
             "bb invariant mass;m_{bb} (GeV);Events/4 GeV", 100, 0, 400 );
       hists_["ll_m"][name] = new TH1D( ("hll_m_"+namel).c_str(),
             "ll invariant mass;m_{ll} (GeV);Events/4 GeV", 100, 0, 400 );
+      hists_["bl_m"][name] = new TH1D( ("hbl_m_"+namel).c_str(),
+            "bl invariant mass;m_{bl} (GeV);Events/4 GeV", 100, 0, 400 );
       hists_["bbl_m"][name] = new TH1D( ("hbbl_m_"+namel).c_str(),
             "bbl invariant mass;m_{bbl} (GeV);Events/6 GeV", 100, 0, 600 );
       hists_["bll_m"][name] = new TH1D( ("hbll_m_"+namel).c_str(),
@@ -151,6 +155,10 @@ void Fitter::DeclareHists( map< string, map<string, TH1D*> >& hists_, map< strin
             "#DeltaR between bb;#DeltaR;Events", 100, 0, 5.0 );
       hists_["bl_dR"][name] = new TH1D( ("hbl_dR_"+namel).c_str(),
             "#DeltaR between bl;#DeltaR;Events", 100, 0, 5.0 );
+      hists_["bl_dphi"][name] = new TH1D( ("hbl_dphi_"+namel).c_str(),
+            "#Delta#phi between bl;#Delta#phi;Events", 100, 0, 3.5 );
+      hists_["bl_deta"][name] = new TH1D( ("hbl_dR_"+namel).c_str(),
+            "#Delta#eta between bl;#Delta#eta;Events", 100, 0, 6.0 );
       hists_["ll_dR"][name] = new TH1D( ("hll_dR_"+namel).c_str(),
             "#DeltaR between ll;#DeltaR;Events", 100, 0, 5.0 );
 
@@ -161,6 +169,11 @@ void Fitter::DeclareHists( map< string, map<string, TH1D*> >& hists_, map< strin
             "MET_{y};MET_{y} (GeV);Events/4 GeV", 100, -200, 200 );
       hists_["met"][name] = new TH1D( ("hmet_"+namel).c_str(),
             "total MET;MET (GeV);Events/3 GeV", 100, 0, 300 );
+
+      hists_["njets"][name] = new TH1D( ("hnjets_"+namel).c_str(),
+            "N jets;N jets;Events", 20, 0, 20 );
+      hists_["nbjets"][name] = new TH1D( ("hnbjets_"+namel).c_str(),
+            "N b jets;N b jets;Events", 20, 0, 20 );
    }
 
    return;
@@ -216,6 +229,10 @@ void Fitter::FillHists( map< string, map<string, TH1D*> >& hists_, map< string, 
       TLorentzVector bll2 = jet2 + lep1 + lep2;
       TLorentzVector bbl1 = jet1 + jet2 + lep1;
       TLorentzVector bbl2 = jet1 + jet2 + lep2;
+      TLorentzVector bl1 = jet1 + lep1;
+      TLorentzVector bl2 = jet2 + lep1;
+      TLorentzVector bl3 = jet1 + lep2;
+      TLorentzVector bl4 = jet2 + lep2;
 
       if (sin((jet1).DeltaPhi(up221))*sin((jet2).DeltaPhi(up221)) > 0){
          hists_["mt2_221"][type]->Fill( ev->mt2_221, ev->weight );
@@ -282,16 +299,28 @@ void Fitter::FillHists( map< string, map<string, TH1D*> >& hists_, map< string, 
          }
       }
 
+      hists_["njets"][type]->Fill( ev->njets, ev->weight );
+      hists_["nbjets"][type]->Fill( ev->nbjets, ev->weight );
+
       //
       // kinematic distributions
       //
 
       double bb_dR = fabs(jet1.DeltaR(jet2));
       double ll_dR = fabs(lep1.DeltaR(lep2));
+
       double bl_dR1 = fabs(jet1.DeltaR(lep1));
       double bl_dR2 = fabs(jet2.DeltaR(lep1));
       double bl_dR3 = fabs(jet1.DeltaR(lep2));
       double bl_dR4 = fabs(jet2.DeltaR(lep2));
+      double bl_dphi1 = fabs(jet1.DeltaPhi(lep1));
+      double bl_dphi2 = fabs(jet2.DeltaPhi(lep1));
+      double bl_dphi3 = fabs(jet1.DeltaPhi(lep2));
+      double bl_dphi4 = fabs(jet2.DeltaPhi(lep2));
+      double bl_deta1 = /*bl1.M() > 140 ? -1 :*/ fabs(jet1.Eta()-lep1.Eta());
+      double bl_deta2 = /*bl2.M() > 140 ? -1 :*/ fabs(jet2.Eta()-lep1.Eta());
+      double bl_deta3 = /*bl3.M() > 140 ? -1 :*/ fabs(jet1.Eta()-lep2.Eta());
+      double bl_deta4 = /*bl4.M() > 140 ? -1 :*/ fabs(jet2.Eta()-lep2.Eta());
 
       // pt, eta, phi
       hists_["b_pt"][type]->Fill( jet1.Pt(), ev->weight );
@@ -316,6 +345,11 @@ void Fitter::FillHists( map< string, map<string, TH1D*> >& hists_, map< string, 
       hists_["bbll_eta"][type]->Fill( bbll.Rapidity(), ev->weight );
       hists_["bbll_phi"][type]->Fill( bbll.Phi(), ev->weight );
 
+      hists_["bl_pt"][type]->Fill( bl1.Pt(), ev->weight );
+      hists_["bl_pt"][type]->Fill( bl2.Pt(), ev->weight );
+      hists_["bl_pt"][type]->Fill( bl3.Pt(), ev->weight );
+      hists_["bl_pt"][type]->Fill( bl4.Pt(), ev->weight );
+
       // invariant mass
       hists_["bb_m"][type]->Fill( bb.M(), ev->weight );
       hists_["ll_m"][type]->Fill( ll.M(), ev->weight );
@@ -325,6 +359,11 @@ void Fitter::FillHists( map< string, map<string, TH1D*> >& hists_, map< string, 
       hists_["bbl_m"][type]->Fill( bbl1.M(), ev->weight );
       hists_["bbl_m"][type]->Fill( bbl2.M(), ev->weight );
 
+      hists_["bl_m"][type]->Fill( bl1.M(), ev->weight );
+      hists_["bl_m"][type]->Fill( bl2.M(), ev->weight );
+      hists_["bl_m"][type]->Fill( bl3.M(), ev->weight );
+      hists_["bl_m"][type]->Fill( bl4.M(), ev->weight );
+
       // dR
       hists_["bb_dR"][type]->Fill( bb_dR, ev->weight );
       hists_["ll_dR"][type]->Fill( ll_dR, ev->weight );
@@ -332,6 +371,14 @@ void Fitter::FillHists( map< string, map<string, TH1D*> >& hists_, map< string, 
       hists_["bl_dR"][type]->Fill( bl_dR2, ev->weight );
       hists_["bl_dR"][type]->Fill( bl_dR3, ev->weight );
       hists_["bl_dR"][type]->Fill( bl_dR4, ev->weight );
+      hists_["bl_dphi"][type]->Fill( bl_dphi1, ev->weight );
+      hists_["bl_dphi"][type]->Fill( bl_dphi2, ev->weight );
+      hists_["bl_dphi"][type]->Fill( bl_dphi3, ev->weight );
+      hists_["bl_dphi"][type]->Fill( bl_dphi4, ev->weight );
+      hists_["bl_deta"][type]->Fill( bl_deta1, ev->weight );
+      hists_["bl_deta"][type]->Fill( bl_deta2, ev->weight );
+      hists_["bl_deta"][type]->Fill( bl_deta3, ev->weight );
+      hists_["bl_deta"][type]->Fill( bl_deta4, ev->weight );
 
       // met
       hists_["met"][type]->Fill( met.Pt(), ev->weight );

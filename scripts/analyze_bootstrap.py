@@ -11,8 +11,8 @@ iPeriod = 0
 iPos = 11
 CMS_lumi.lumi_sqrtS = '8 TeV'
 CMS_lumi.writeExtraText = 1
-CMS_lumi.extraText = 'Simulation Preliminary'
-fit_type = 'MAOS fit'
+CMS_lumi.extraText = 'Simulation'
+fit_type = '1D fit'
 
 file = TFile( sys.argv[1] )
 tree = file.Get('FitResults')
@@ -67,7 +67,25 @@ for i in range( tree.GetEntries() ):
    if tree.fitStatus != 0:
       continue
 
-   mt = tree.mt#0.2*tree.mt + 0.8*tree.mt_fix
+   mode = sys.argv[2]
+   whyb = 0.8
+   if mode == '1d':
+      mt = tree.mt_fix
+   elif mode == '2d':
+      mt = tree.mt
+      fit_type = '2D fit'
+   elif mode == 'hyb':
+      mt = (1-whyb)*tree.mt + whyb*tree.mt_fix
+      fit_type = 'Hybrid fit'
+   elif mode == 'maos':
+      mt = tree.mt
+      fit_type = 'MAOS fit'
+   elif mode == 'jsf':
+      mt = tree.jesfactor
+      fit_type = '2D fit'
+   else:
+      print 'ERROR: fit mode not recognized!'
+      sys.exit()
 
    countmt[iter] += 1
    meanmt[iter] += mt
@@ -157,8 +175,8 @@ for i in range(7):
 
 print 'chi2 = '+str(chi2)
 gresults.SetMarkerStyle(20)
-gresults.GetXaxis().SetTitle('GEN Mass [GeV]')
-gresults.GetYaxis().SetTitle('MEAS - GEN Mass [GeV]')
+gresults.GetXaxis().SetTitle('M_{t}^{MC} [GeV]')
+gresults.GetYaxis().SetTitle('M_{t}^{fit} - M_{t}^{MC} [GeV]')
 
 fline = TF1('fline','[0]*x',150,200)
 fline.SetParameter(0,0.0)

@@ -47,6 +47,9 @@ struct Event {
    // classify events
    string type;
 
+   int njets;
+   int nbjets;
+
    int nvertices;
    double weight;
    double weightcorr;
@@ -102,6 +105,9 @@ struct Event {
 
       nvertices = 0;
       weight = 0;
+
+      njets = 0;
+      nbjets = 0;
 
       jet1 = TLorentzVector();
       jet2 = TLorentzVector();

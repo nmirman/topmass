@@ -1,6 +1,6 @@
 #! /bin/bash
 
-#PBS -o systplots/output.txt
+#PBS -o results_systplots/output.txt
 #PBS -j oe
 
 JOBNUM=$PBS_ARRAYID
@@ -64,10 +64,11 @@ for i in {0..49}
 do
    syst[ipdf+i]=PDFvar$i
 done
+syst[101]=MCpowheg
 
 #iter=$(($JOBNUM%51))
 #hybiter=$(($JOBNUM/51))
 #hyb=(0.50 0.75 0.25 0.60 0.90 0.80 0.85 0.95)
 
-#./DoFit --run_number ${JOBNUM} --syst ${syst[$JOBNUM]} --fit --masspnt 172.5 --maos210 --mt2_221 --outdir results_2Dfit_syst_20160614_maos
-./DoFit --syst ${syst[$JOBNUM]} --diagnostics --data --mbl --mt2_221 --maos210 --outdir systplots
+#./DoFit --run_number ${JOBNUM} --syst ${syst[$JOBNUM]} --fit --masspnt 172.5 --maos210 --mt2_221 --outdir results_2Dfit_syst_20160715_maos
+./DoFit --syst ${syst[$JOBNUM]} --diagnostics --data --mbl --mt2_221 --maos210 --outdir results_systplots

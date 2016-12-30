@@ -186,7 +186,6 @@ int main(int argc, char* argv[]){
    };
 
    while( (c = getopt_long(argc, argv, "fdexahpon:bkt21q:y:z:m:c:s:i:9:g:3:4:w:", longopts, NULL)) != -1 ) {
-      cout << "c = " << c << endl;
       switch(c)
       {
          case 'n' :

@@ -1,6 +1,6 @@
 # TopMass
 
-This project determines the top quark mass from data collected by the [CMS experiment](https://cms.cern) at CERN.  The resulting paper can be viewed [here](https://arxiv.org/abs/1704.06142).
+This project determines the top quark mass from data collected by the [CMS experiment](https://cms.cern) at CERN.  The resulting paper can be viewed [here](https://journals.aps.org/prd/abstract/10.1103/PhysRevD.96.032002).
 
 ### How to run:
 
